@@ -1,0 +1,17 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
+
+    <item android:id="@+id/action_settings" android:title="@string/action_settings"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_read_battery" android:title="Read Battery"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_reset_service" android:title="Reset Service"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_db_writing_mode" android:title="DB Writing Mode"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_log_mode" android:title="Log Mode"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <!--<item android:id="@+id/action_gen_test_data_for_merge" android:title="Session Generation for Merge Test"-->
+        <!--android:orderInCategory="100" app:showAsAction="never" />-->
+</menu>

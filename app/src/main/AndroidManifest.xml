@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.h3.hrm3200" >
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/icon_h3hrm"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name=".MainActivity"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo" >-->
+
+
+            <!-- <intent-filter> -->
+            <!-- <action android:name="android.intent.action.MAIN" /> -->
+
+
+            <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
+            <!-- </intent-filter> -->
+        </activity>
+        <activity
+            android:name=".DeviceScanActivity"
+            android:label="@string/title_activity_device_scan"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo" >-->
+        </activity>
+
+        <!-- @android:style/Theme.Holo -->
+
+        <activity
+            android:name=".UserSettingActivity"
+            android:label="USER INFO"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo" >-->
+        </activity>
+        <activity
+            android:name=".SessionDataActivity"
+            android:label="@string/title_activity_session_data"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo" >-->
+        </activity>
+
+        <service
+            android:name=".BluetoothLeService"
+            android:enabled="true"
+            android:exported="false" >
+        </service>
+
+        <activity
+            android:name=".GraphActivity"
+            android:label="@string/title_activity_graph"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo" >-->
+        </activity>
+        <activity
+            android:name=".SplashActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:finishOnTaskLaunch="true"
+            android:hardwareAccelerated="false"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.NoTitleBar" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".GoogleFitActivity"
+            android:label="@string/title_activity_google_fit"
+            android:logo="@drawable/icon_home"
+            android:screenOrientation="portrait"
+            android:theme="@style/CustomActionBarTheme">
+            <!--android:theme="@android:style/Theme.Holo">-->
+        </activity>
+    </application>
+
+</manifest>

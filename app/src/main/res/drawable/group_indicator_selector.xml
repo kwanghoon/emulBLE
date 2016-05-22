@@ -1,0 +1,28 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_expanded="true" android:drawable="@drawable/group_indicator_expanded" />
+    <item android:state_expanded="false" android:drawable="@drawable/group_indicator"/>
+</selector>
+
+
+<!--<selector xmlns:android="http://schemas.android.com/apk/res/android">-->
+<!--<item android:state_expanded="true">-->
+    <!---->
+
+    <!--<layer-list>-->
+        <!--<item-->
+            <!--android:drawable="@drawable/group_indicator_expanded">-->
+        <!--</item>-->
+    <!--</layer-list>-->
+<!--</item>-->
+
+
+<!--<item android:state_expanded="false">-->
+
+    <!--<layer-list>-->
+        <!--<item-->
+            <!--android:drawable="@drawable/group_indicator">-->
+        <!--</item>-->
+    <!--</layer-list>-->
+<!--</item>-->
+
+<!--</selector>-->

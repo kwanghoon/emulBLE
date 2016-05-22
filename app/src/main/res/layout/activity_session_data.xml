@@ -1,0 +1,58 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.h3.hrm3200.SessionDataActivity">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true">
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="0dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/textView3"
+            android:layout_weight="1"
+            android:background="@drawable/sessiondata_title" />
+
+        <ExpandableListView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:id="@+id/expandableListView"
+            android:layout_gravity="center_horizontal"
+            android:layout_weight="9" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"></LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_weight="1">
+
+            <ImageButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/imageBtnSDDelete"
+                android:layout_weight="1"
+                android:background="@drawable/sessiondata_delete"
+                android:onClick="onClick" />
+
+            <ImageButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/imageBtnSDGooglesync"
+                android:layout_weight="1"
+                android:background="@drawable/sessiondata_google"
+                android:onClick="onClick" />
+        </LinearLayout>
+
+    </LinearLayout>
+</RelativeLayout>

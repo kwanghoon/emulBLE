@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.h3.hrm3200.SessionDataActivity">
+    <item android:id="@+id/action_settings" android:title="Clear all sessions"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_gen_csv" android:title="Generate a CSV file"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_merge_sessions" android:title="Merge the two sessions"
+        android:orderInCategory="100" app:showAsAction="never" />
+    <item android:id="@+id/action_read_googlefit_upload_data" android:title="Read Google Fit data"
+        android:orderInCategory="100" app:showAsAction="never" />
+</menu>
