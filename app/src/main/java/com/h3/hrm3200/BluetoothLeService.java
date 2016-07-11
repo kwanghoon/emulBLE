@@ -1,19 +1,28 @@
 package com.h3.hrm3200;
 
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
+//import android.bluetooth.BluetoothAdapter;
+//import android.bluetooth.BluetoothDevice;
+//import android.bluetooth.BluetoothGatt;
+//import android.bluetooth.BluetoothGattCallback;
+//import android.bluetooth.BluetoothGattCharacteristic;
+//import android.bluetooth.BluetoothGattDescriptor;
+//import android.bluetooth.BluetoothGattService;
+//import android.bluetooth.BluetoothManager;
+//import android.bluetooth.BluetoothProfile;
+import mocking.android.bluetooth.BluetoothManager;
+import mocking.android.bluetooth.BluetoothAdapter;
+import mocking.android.bluetooth.BluetoothDevice;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothGattCallback;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.BluetoothGattDescriptor;
+import mocking.android.bluetooth.BluetoothGattService;
+import mocking.android.bluetooth.BluetoothProfile;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInstaller;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,10 +30,7 @@ import android.os.IBinder;
 import android.widget.Toast;
 
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 
 public class BluetoothLeService extends Service {
@@ -320,7 +326,9 @@ public class BluetoothLeService extends Service {
         // For API level 18 and above, get a reference to BluetoothAdapter through
         // BluetoothManager.
         if (mBluetoothManager == null) {
-            mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            // for Mocking
+            //mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            mBluetoothManager = new BluetoothManager();
             if (mBluetoothManager == null) {
                 Log.e(TAG, "Unable to initialize BluetoothManager.");
                 return false;
