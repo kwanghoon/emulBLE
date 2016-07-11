@@ -64,6 +64,10 @@ public class PortingLayer {
         this.deviceAddress = arr[0];
     }
 
+    public BluetoothDevice getRemoteDevice() {
+        return btdevemulator.getRemoteDevice();
+    }
+
     // BluetootDevice
     private BluetoothGattCallback btGattCallback;
     private BluetoothGatt gatt;

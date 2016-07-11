@@ -27,6 +27,10 @@ public class BluetoothDeviceEmulator extends Thread {
     private String btdev_address = "00:11:22:AA:BB:CC";
     private String btdev_name = "HRM3200";
 
+    public BluetoothDevice getRemoteDevice() {
+        return new BluetoothDevice(btdev_address, btdev_name);
+    }
+
     private Handler app_handler;
 
     // app_handler.sendMessage ( ... );

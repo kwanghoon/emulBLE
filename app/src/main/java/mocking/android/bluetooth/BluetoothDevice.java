@@ -21,6 +21,11 @@ public class BluetoothDevice {
         this.portingLayer = portingLayer;
     }
 
+    public BluetoothDevice(String address, String name) {
+        this.address = address;
+        this.name = name;
+    }
+
     public String getAddress() {
         return address;
     }
@@ -35,6 +40,10 @@ public class BluetoothDevice {
         portingLayer.connectGatt(gatt, callback);
 
         return gatt;
+    }
+
+    public void setPortingLayer(PortingLayer portinLayer) {
+        this.portingLayer = portinLayer;
     }
 
 

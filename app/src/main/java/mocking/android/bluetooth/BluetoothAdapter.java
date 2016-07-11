@@ -23,6 +23,7 @@ public class BluetoothAdapter {
 
     public BluetoothAdapter() {
         blutooth_enabled = true;
+        portingLayer = null;
     }
 
     public interface LeScanCallback {
@@ -63,11 +64,26 @@ public class BluetoothAdapter {
     public BluetoothDevice getRemoteDevice(String address) {
         Log.w("Mocking", "getRemoteDevice : " + address);
 
+        if (portingLayer == null) { // When BluetoothAdapter.getRemoteDevice() is invoked
+                                    // without any scanning operation
+            portingLayer = new PortingLayer();
+
+            // 1. create a BluetoothDeviceEmulator
+            portingLayer.createBTDevEmulator();
+
+            // 2. get bluetooh device directly without scanning
+            BluetoothDevice btdev = portingLayer.getRemoteDevice();
+            btdev.setPortingLayer(portingLayer);  // CAUTION!! Must set the portingLayer.
+            bondedDevices.add(btdev);
+        }
+
+
         for (BluetoothDevice btdev : bondedDevices) {
             if (btdev.getAddress().equals(address))
-                return  btdev;
+                return btdev;
         }
         return null;
+
     }
 
 
