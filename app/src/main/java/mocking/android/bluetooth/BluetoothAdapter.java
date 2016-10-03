@@ -8,6 +8,8 @@ import com.h3.hrm3200.Log;
 import java.util.ArrayList;
 import java.util.List;
 
+import emul.bluetooth.BluetoothLE;
+
 /**
  * Created by moonhyeonah on 2016. 5. 22..
  */
@@ -21,9 +23,12 @@ public class BluetoothAdapter {
 
     private PortingLayer portingLayer;
 
-    public BluetoothAdapter() {
+    private BluetoothLE bluetoothLE;
+
+    public BluetoothAdapter(BluetoothLE bluetoothLE) {
         blutooth_enabled = true;
         portingLayer = null;
+        this.bluetoothLE = bluetoothLE;
     }
 
     public interface LeScanCallback {
@@ -42,7 +47,7 @@ public class BluetoothAdapter {
         portingLayer = new PortingLayer();
 
         // 1. create a BluetoothDeviceEmulator
-        portingLayer.createBTDevEmulator();
+        portingLayer.createBTDevEmulator(bluetoothLE);
 
         // 2. send BluetootDeviceEmulator a message to do startLeScan
         portingLayer.setBondedDeviceAddCallback(new BondedDeviceAddCallback() {
@@ -69,7 +74,7 @@ public class BluetoothAdapter {
             portingLayer = new PortingLayer();
 
             // 1. create a BluetoothDeviceEmulator
-            portingLayer.createBTDevEmulator();
+            portingLayer.createBTDevEmulator(bluetoothLE);
 
             // 2. get bluetooh device directly without scanning
             BluetoothDevice btdev = portingLayer.getRemoteDevice();

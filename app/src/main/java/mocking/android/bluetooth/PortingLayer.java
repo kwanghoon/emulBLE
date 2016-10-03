@@ -5,6 +5,8 @@ import android.os.Message;
 
 import java.util.UUID;
 
+import emul.bluetooth.BluetoothLE;
+
 /**
  * Created by moonhyeonah on 2016. 5. 24..
  */
@@ -234,8 +236,8 @@ public class PortingLayer {
         emulHandler.sendMessage(msg);
     }
 
-    public void createBTDevEmulator() {
-        btdevemulator = BluetoothDeviceEmulator.create(myHandler);
+    public void createBTDevEmulator(BluetoothLE bluetoothLE) {
+        btdevemulator = BluetoothDeviceEmulator.create(myHandler, bluetoothLE);
         btdevemulator.start();
 
         emulHandler = btdevemulator.getHandler();

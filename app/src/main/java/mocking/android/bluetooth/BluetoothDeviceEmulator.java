@@ -9,6 +9,8 @@ import com.h3.hrm3200.Log;
 import java.util.Calendar;
 import java.util.Random;
 
+import emul.bluetooth.BluetoothLE;
+
 /**
  * Created by moonhyeonah on 2016. 5. 22..
  */
@@ -24,21 +26,23 @@ TODO:
 이렇게 변경하면 여러 개의 BLE 디바이스를 처리할 수 있는 구조가 된다.
  */
 public class BluetoothDeviceEmulator extends Thread {
-    private String btdev_address = "00:11:22:AA:BB:CC";
-    private String btdev_name = "HRM3200";
 
     public BluetoothDevice getRemoteDevice() {
-        return new BluetoothDevice(btdev_address, btdev_name);
+        return new BluetoothDevice(
+                    bluetoothLE.getBluetoothDeviceAddress(),
+                    bluetoothLE.getBluetoothDeviceName());
     }
 
     private Handler app_handler;
 
     // app_handler.sendMessage ( ... );
 
+    private BluetoothLE bluetoothLE;
 
-    public static BluetoothDeviceEmulator create(Handler app_handler) {
-
-        return new BluetoothDeviceEmulator(app_handler);
+    public static BluetoothDeviceEmulator create(Handler app_handler, BluetoothLE bluetoothLE) {
+        BluetoothDeviceEmulator btdevemul = new BluetoothDeviceEmulator(app_handler);
+        btdevemul.bluetoothLE = bluetoothLE;
+        return btdevemul;
     }
 
     public BluetoothDeviceEmulator(Handler app_handler) {
@@ -47,33 +51,79 @@ public class BluetoothDeviceEmulator extends Thread {
 
     private Handler handler ;
 
+    // for doBLEScan
+    String[] addrNameArr;
+
+    // for doConnect
+    int succ_or_fail;
+    int connect_state;
+
+    // for doDiscoverService
+//    int succ_or_fail;
+
+
+
     public void run() {
         Looper.prepare();
 
         handler = new Handler() {
             public void handleMessage(Message msg) {
+                Message reply_msg;
                 switch(msg.what){
                     case PortingLayer.LESCANCALLBACK_ONLESCAN_REQUEST:
-                        Message reply_msg = Message.obtain();
+//                        reply_msg = Message.obtain();
+//                        reply_msg.what = PortingLayer.LESCANCALLBACK_ONLESCAN_REPLY;
+//                        // Put device, rssi, and scanRecord out of the msg
+//                        reply_msg.obj = new String[] {
+//                                bluetoothLE.getBluetoothDeviceAddress(),
+//                                bluetoothLE.getBluetoothDeviceName()
+//                        };
+//                        app_handler.sendMessage(reply_msg);
+
+
+                        bluetoothLE.doBLEScan(new IBLEScan() {
+                            public void setBLEAddressName(String[] arg) {
+                                addrNameArr = arg;
+                            }
+                        });
+
+                        reply_msg = Message.obtain();
                         reply_msg.what = PortingLayer.LESCANCALLBACK_ONLESCAN_REPLY;
                         // Put device, rssi, and scanRecord out of the msg
-                        reply_msg.obj = new String[] {btdev_address, btdev_name};
+                        reply_msg.obj = addrNameArr;
                         app_handler.sendMessage(reply_msg);
+
 
                         break;
 
                     case PortingLayer.CONNECT_GATT_REQUEST:
+
+                        bluetoothLE.doConnect(new IBLEConnect() {
+                            @Override
+                            public void setConnectResult(int succ_or_fail, int state) {
+                                BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;
+                                BluetoothDeviceEmulator.this.connect_state = state;
+                            }
+                        });
+
                         reply_msg = Message.obtain();
                         reply_msg.what = PortingLayer.CONNECT_GATT_REPLY;
-                        reply_msg.obj = new int[] {BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED};
+                        reply_msg.obj = new int[] {succ_or_fail, connect_state};
                         app_handler.sendMessage(reply_msg);
 
                         break;
 
                     case PortingLayer.DISCOVER_SERVICES_REQUEST:
+
+                        bluetoothLE.doDiscoverService(new IBLEDiscoverService() {
+                            @Override
+                            public void setResult(int succ_or_fail) {
+                                BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;
+                            }
+                        });
                         reply_msg = Message.obtain();
                         reply_msg.what = PortingLayer.DISCOVER_SERVICES_REPLY;
-                        reply_msg.obj = new int[] {BluetoothGatt.GATT_SUCCESS};
+                        reply_msg.obj = new int[] {succ_or_fail};
                         app_handler.sendMessage(reply_msg);
 
                         break;

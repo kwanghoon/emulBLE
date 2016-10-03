@@ -29,6 +29,8 @@ import android.os.IBinder;
 //import android.util.Log;
 import android.widget.Toast;
 
+import com.h3.hrm3200.emul.MyBluetoothLE;
+
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
@@ -328,7 +330,7 @@ public class BluetoothLeService extends Service {
         if (mBluetoothManager == null) {
             // for Mocking
             //mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            mBluetoothManager = new BluetoothManager();
+            mBluetoothManager = new BluetoothManager(new MyBluetoothLE());
             if (mBluetoothManager == null) {
                 Log.e(TAG, "Unable to initialize BluetoothManager.");
                 return false;
