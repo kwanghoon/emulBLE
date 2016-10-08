@@ -6,10 +6,16 @@ import android.os.Message;
 
 import com.h3.hrm3200.Log;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Random;
+import java.util.UUID;
 
 import emul.bluetooth.BluetoothLE;
+
+import static mocking.android.bluetooth.PortingLayer.CHANGE_CHARACTERISTIC_REPLY;
 
 /**
  * Created by moonhyeonah on 2016. 5. 22..
@@ -42,6 +48,7 @@ public class BluetoothDeviceEmulator extends Thread {
     public static BluetoothDeviceEmulator create(Handler app_handler, BluetoothLE bluetoothLE) {
         BluetoothDeviceEmulator btdevemul = new BluetoothDeviceEmulator(app_handler);
         btdevemul.bluetoothLE = bluetoothLE;
+        bluetoothLE.setBluetoothDeviceEmulator(btdevemul);
         return btdevemul;
     }
 
@@ -60,16 +67,29 @@ public class BluetoothDeviceEmulator extends Thread {
 
     // for doDiscoverService
 //    int succ_or_fail;
+    ArrayList<BLEService> bleServiceList;
 
+    // for doConnect
+//    int succ_or_fail;
+//    int connect_state;
 
+    ArrayList<TimedContinuation> continuationQueue;
 
     public void run() {
+        continuationQueue = new ArrayList<TimedContinuation>();
+
         Looper.prepare();
 
         handler = new Handler() {
             public void handleMessage(Message msg) {
+
+
                 Message reply_msg;
                 switch(msg.what){
+                    case PortingLayer.QUIT:
+                        Looper.myLooper().quit();
+                        break;
+
                     case PortingLayer.LESCANCALLBACK_ONLESCAN_REQUEST:
 //                        reply_msg = Message.obtain();
 //                        reply_msg.what = PortingLayer.LESCANCALLBACK_ONLESCAN_REPLY;
@@ -114,74 +134,181 @@ public class BluetoothDeviceEmulator extends Thread {
                         break;
 
                     case PortingLayer.DISCOVER_SERVICES_REQUEST:
+                        Log.v("BluetoothDeviceEmulator", "DISCOVER_SERVICES_REQUET");
 
                         bluetoothLE.doDiscoverService(new IBLEDiscoverService() {
                             @Override
-                            public void setResult(int succ_or_fail) {
+                            public void setResult(int succ_or_fail, ArrayList<BLEService> bleServiceList) {
                                 BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;
+                                BluetoothDeviceEmulator.this.bleServiceList = bleServiceList;
                             }
                         });
                         reply_msg = Message.obtain();
                         reply_msg.what = PortingLayer.DISCOVER_SERVICES_REPLY;
-                        reply_msg.obj = new int[] {succ_or_fail};
+                        reply_msg.arg1 = succ_or_fail;
+                        reply_msg.obj = bleServiceList;
                         app_handler.sendMessage(reply_msg);
 
                         break;
 
-                    case PortingLayer.DEVICE_TIME_REQUEST:
+                    case PortingLayer.WRITE_CHARACTERISTIC_REQUEST: // WriteCharacteristic
+
+                        BluetoothGattCharacteristic btGattCharacteristic =
+                                (BluetoothGattCharacteristic)msg.obj;
+                        bluetoothLE.doWriteCharacteristic(btGattCharacteristic,
+                                new IBLEChangeCharacteristic() {
+                                    public void setResult(UUID serviceUuid, UUID characteristicUuid, byte[] bytes) {
+                                        BluetoothDeviceEmulator.this.serviceUuid = serviceUuid;
+                                        BluetoothDeviceEmulator.this.characteristicUuid = characteristicUuid;
+                                        BluetoothDeviceEmulator.this.bytes = bytes;
+                                    }
+                                });
+
+                        MessageChangeCharacteristic msgCC = new MessageChangeCharacteristic();
+                        msgCC.serviceUuid = BluetoothDeviceEmulator.this.serviceUuid;
+                        msgCC.characteristicUuid = BluetoothDeviceEmulator.this.characteristicUuid;
+                        msgCC.bytes = BluetoothDeviceEmulator.this.bytes;
+
                         reply_msg = Message.obtain();
-                        reply_msg.what = PortingLayer.DEVICE_TIME_REPLY;
-                        reply_msg.arg1 = PortingLayer.HRM_READ;
-                        reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x10, (byte) 0x08, (byte) 0x0F, (byte) 0x05,
-                                (byte) 0x13, (byte) 0x11, (byte) 0x0B, (byte) 0x2D, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
+                        reply_msg.what = CHANGE_CHARACTERISTIC_REPLY;
+                        reply_msg.obj = msgCC;
                         app_handler.sendMessage(reply_msg);
 
-                        break;
-
-                    case PortingLayer.DATA_REQUEST:
-                        deviceStateMachine(msg);
-                        /*
-                        byte in[] = ((BluetoothGattCharacteristic)msg.obj).getValue();
-
-                        if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {  // 측정종료 요청
-                            createHRMData.interrupt();
-
-                            reply_msg = Message.obtain();
-                            reply_msg.what = PortingLayer.CONNECT_GATT_REPLY;
-                            reply_msg.obj = new int[] {BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED};
-                            app_handler.sendMessage(reply_msg);
-
-                            break;
-                        }
-                        reply_msg = Message.obtain();
-                        reply_msg.what = PortingLayer.DATA_REPLY;
-                        reply_msg.arg1 = PortingLayer.HRM_READ;
-                        reply_msg.obj = stateMachine(in);
-                        app_handler.sendMessage(reply_msg);
-                        */
+                        //deviceStateMachine(msg);
                         break;
 
                     case PortingLayer.DISCONNECT_REQUEST:
+
+                        bluetoothLE.doDisconnect(new IBLEDisconnect() {
+                            @Override
+                            public void setDisconnectResult(int succ_or_fail, int state) {
+                                BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;
+                                BluetoothDeviceEmulator.this.connect_state = state;
+                            }
+                        });
+
                         reply_msg = Message.obtain();
                         reply_msg.what = PortingLayer.DISCONNECT_REPLY;
-                        reply_msg.obj = new int[] {BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED};
+                        reply_msg.obj = new int[] {succ_or_fail, connect_state};
                         app_handler.sendMessage(reply_msg);
 
                         break;
                 }
 
+                // doM 메소드에서 callAfter로 지정한 continuation을 app_handler 큐에 추가
+                Log.v("BluetoothDeviceEmulator", "continuationQueue: " + continuationQueue.size());
+                for(TimedContinuation timedContinuation : continuationQueue) {
+                    int msec = timedContinuation.msec;
+                    Runnable continuation = timedContinuation.continuation;
+
+                    app_handler.postDelayed(continuation, msec);
+                }
+                continuationQueue.clear();
 
             }
         };
 
         Looper.loop();
+        System.out.println("BluetoothDeviceEmulator ends....");
+    }
+
+
+    // callAfter에서 사용
+    UUID serviceUuid;
+    UUID characteristicUuid;
+    byte[] bytes;
+    String methodName;
+
+    public void callAfter(int msec, String methodName) {
+        this.methodName = methodName;
+
+        TimedContinuation timedContinuation = new TimedContinuation();
+        timedContinuation.msec = msec;
+        timedContinuation.continuation = new Runnable() {
+            public void run() {
+                try {
+                    Class<?> clz = bluetoothLE.getClass();
+                    Method mth = clz.getMethod(BluetoothDeviceEmulator.this.methodName, IBLEChangeCharacteristic.class);
+
+                   mth.invoke(bluetoothLE, new IBLEChangeCharacteristic() {
+                        public void setResult(UUID serviceUuid, UUID characteristicUuid, byte[] bytes) {
+                            BluetoothDeviceEmulator.this.serviceUuid = serviceUuid;
+                            BluetoothDeviceEmulator.this.characteristicUuid = characteristicUuid;
+                            BluetoothDeviceEmulator.this.bytes = bytes;
+                        }
+                    });
+
+                    // app_handler를 통해서 change characteristic을 앱에 올려주기
+                    Message reply_msg;
+                    MessageChangeCharacteristic msgbody = new MessageChangeCharacteristic();
+
+                    reply_msg = Message.obtain();
+                    reply_msg.what = CHANGE_CHARACTERISTIC_REPLY;
+                    msgbody.serviceUuid = serviceUuid;
+                    msgbody.characteristicUuid = characteristicUuid;
+                    msgbody.bytes = bytes;
+                    reply_msg.obj = msgbody;
+
+                    app_handler.sendMessage(reply_msg);
+
+                    // doM 메소드에서 callAfter로 지정한 continuation을 app_handler 큐에 추가
+                    Log.v("BluetoothDeviceEmulator", "continuationQueue: " + continuationQueue.size());
+                    for(TimedContinuation timedContinuation : continuationQueue) {
+                        int msec = timedContinuation.msec;
+                        Runnable continuation = timedContinuation.continuation;
+
+                        app_handler.postDelayed(continuation, msec);
+                    }
+                    continuationQueue.clear();
+
+                } catch(NoSuchMethodException e) {
+                    System.err.println("NoSuchMethodExcpetion:" + BluetoothDeviceEmulator.this.methodName);
+                } catch(IllegalAccessException e) {
+                    System.err.println("IllegalAccessException:" + BluetoothDeviceEmulator.this.methodName);
+                } catch(InvocationTargetException e) {
+                    System.err.println("InvocationTargetException:" + BluetoothDeviceEmulator.this.methodName);
+                }
+            }
+        };
+        continuationQueue.add(timedContinuation);
+    }
+
+    public void callDoDisconnectAfter(int msec) {
+        TimedContinuation timedContinuation = new TimedContinuation();
+        timedContinuation.msec = msec;
+        timedContinuation.continuation = new Runnable() {
+            public void run() {
+                bluetoothLE.doDisconnect(new IBLEDisconnect() {
+                    @Override
+                    public void setDisconnectResult(int succ_or_fail, int state) {
+                        BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;
+                        BluetoothDeviceEmulator.this.connect_state = state;
+                    }
+                });
+
+                Message reply_msg = Message.obtain();
+                reply_msg.what = PortingLayer.DISCONNECT_REPLY;
+                reply_msg.obj = new int[] {succ_or_fail, connect_state};
+                app_handler.sendMessage(reply_msg);
+
+                // doM 메소드에서 callAfter로 지정한 continuation을 app_handler 큐에 추가
+                Log.v("BluetoothDeviceEmulator", "continuationQueue: " + continuationQueue.size());
+                for(TimedContinuation timedContinuation : continuationQueue) {
+                    int msec = timedContinuation.msec;
+                    Runnable continuation = timedContinuation.continuation;
+
+                    app_handler.postDelayed(continuation, msec);
+                }
+                continuationQueue.clear();
+            }
+        };
+        continuationQueue.add(timedContinuation);
     }
 
     private int sessionNumber = -1;
     private void deviceStateMachine(Message msg) {
         byte in[] = ((BluetoothGattCharacteristic)msg.obj).getValue();
         Message reply_msg;
-
 
         if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {  // 측정종료 요청
             createHRMData.interrupt();
@@ -196,7 +323,7 @@ public class BluetoothDeviceEmulator extends Thread {
             // 저장데이터 유무/다운로드 가능여부(0x81) 전송
 
             reply_msg = Message.obtain();
-            reply_msg.what = PortingLayer.DATA_REPLY;
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
             reply_msg.arg1 = PortingLayer.HRM_READ;
 
             Random random = new Random();
@@ -235,7 +362,7 @@ public class BluetoothDeviceEmulator extends Thread {
 
         else if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x01) {  // 실시간 자료 요청인 경우
             reply_msg = Message.obtain();
-            reply_msg.what = PortingLayer.DATA_REPLY;
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
             reply_msg.arg1 = PortingLayer.HRM_READ;
             reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
             try {
@@ -254,7 +381,7 @@ public class BluetoothDeviceEmulator extends Thread {
 //            }
         else if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x03) {  // 저장 자료 요청인 경우
             reply_msg = Message.obtain();
-            reply_msg.what = PortingLayer.DATA_REPLY;
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
             reply_msg.arg1 = PortingLayer.HRM_READ;
             reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
             app_handler.sendMessage(reply_msg);
@@ -266,7 +393,7 @@ public class BluetoothDeviceEmulator extends Thread {
             sessionNumber = in[3] & 0xff;
 
             reply_msg = Message.obtain();
-            reply_msg.what = PortingLayer.DATA_REPLY;
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
             reply_msg.arg1 = PortingLayer.HRM_READ;
             reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF}; // OK
             app_handler.sendMessage(reply_msg);
@@ -319,7 +446,7 @@ public class BluetoothDeviceEmulator extends Thread {
                 storedData[11] = (byte)(steps%256);
 
                 reply_msg = Message.obtain();
-                reply_msg.what = PortingLayer.DATA_REPLY;
+                reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
                 reply_msg.arg1 = PortingLayer.HRM_READ;
                 reply_msg.obj = storedData;
                 app_handler.sendMessage(reply_msg);
@@ -327,7 +454,7 @@ public class BluetoothDeviceEmulator extends Thread {
 
             // end of session
             reply_msg = Message.obtain();
-            reply_msg.what = PortingLayer.DATA_REPLY;
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
             reply_msg.arg1 = PortingLayer.HRM_READ;
             reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x18, (byte) 0x01, (byte) sessionNumber, (byte) 0xEF};
             app_handler.sendMessageDelayed(reply_msg, 5000);
@@ -345,6 +472,7 @@ public class BluetoothDeviceEmulator extends Thread {
     class MyRunnable implements Runnable {
 
         public MyRunnable() {
+
             super();
         }
 
@@ -365,7 +493,7 @@ public class BluetoothDeviceEmulator extends Thread {
 //                Log.w("Mocking", "createHRMData : " + r);
 
                 Message reply_msg = Message.obtain();
-                reply_msg.what = PortingLayer.DATA_REPLY;
+                reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
                 reply_msg.arg1 = PortingLayer.HRM_READ;
                 reply_msg.obj = realTimeData;
                 app_handler.sendMessage(reply_msg);
@@ -459,7 +587,7 @@ public class BluetoothDeviceEmulator extends Thread {
 */
     private void sendSessionCount() {
         Message reply_msg = Message.obtain();
-        reply_msg.what = PortingLayer.DATA_REPLY;
+        reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
         reply_msg.arg1 = PortingLayer.HRM_READ;
         reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x12, (byte) 0x01, (byte) 0x05, (byte) 0xEF};
         app_handler.sendMessageDelayed(reply_msg, 5000);
@@ -477,7 +605,7 @@ public class BluetoothDeviceEmulator extends Thread {
         int sec = now.get(Calendar.SECOND);
 
         Message reply_msg = Message.obtain();
-        reply_msg.what = PortingLayer.DATA_REPLY;
+        reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
         reply_msg.arg1 = PortingLayer.HRM_READ;
         reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x14, (byte) 0x0B, (byte) sessionNumber,
                         (byte) 0x00, (byte) count, (byte) 0x01, (byte) year, (byte) month, (byte) day,
@@ -492,4 +620,9 @@ public class BluetoothDeviceEmulator extends Thread {
 
         return handler;
     }
+}
+
+class TimedContinuation {
+    int msec;
+    Runnable continuation;
 }

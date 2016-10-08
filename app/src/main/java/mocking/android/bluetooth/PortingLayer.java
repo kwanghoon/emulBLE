@@ -3,6 +3,9 @@ package mocking.android.bluetooth;
 import android.os.Handler;
 import android.os.Message;
 
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
 import java.util.UUID;
 
 import emul.bluetooth.BluetoothLE;
@@ -24,14 +27,18 @@ public class PortingLayer {
     public static final int DISCOVER_SERVICES_REQUEST=20;
     public static final int DISCOVER_SERVICES_REPLY=21;
 
+    public static final int CHANGE_CHARACTERISTIC_REPLY=25;
+
     public static final int DEVICE_TIME_REQUEST=30;
     public static final int DEVICE_TIME_REPLY=31;
 
-    public static final int DATA_REQUEST=40;
-    public static final int DATA_REPLY=41;
+    public static final int WRITE_CHARACTERISTIC_REQUEST =40;
+    public static final int WRITE_CHARACTERISTIC_REPLY =41;
 
     public static final int DISCONNECT_REQUEST=50;
     public static final int DISCONNECT_REPLY=51;
+
+    public static final int QUIT=-1;
 
     // Characteristic 구분
     public static final int HRM_READ=1000;
@@ -90,96 +97,62 @@ public class PortingLayer {
 
     // BluetoothGatt
     public void discoverServices() {
+        Log.v("PortingLayer", "discoverServices");
         Message msg = Message.obtain();
         msg.what = DISCOVER_SERVICES_REQUEST;
         emulHandler.sendMessage(msg);
     }
 
-    // service uuid
-    // "00001800-0000-1000-8000-00805f9b34fb"
-    // "00001801-0000-1000-8000-00805f9b34fb"
-    // "0000180a-0000-1000-8000-00805f9b34fb"
-    // "0000180d-0000-1000-8000-00805f9b34fb" // Heart rate
-    // "0000180f-0000-1000-8000-00805f9b34fb" // battery
-    // "0000ff00-0000-1000-8000-00805f9b34fb" // HRM
-    // characteristic uuid
-    // "00002a00-0000-1000-8000-00805f9b34fb"
-    // "00002a01-0000-1000-8000-00805f9b34fb"
-    // "00002a04-0000-1000-8000-00805f9b34fb"
-    // "00002a19-0000-1000-8000-00805f9b34fb" // battery
-    // "00002a25-0000-1000-8000-00805f9b34fb"
-    // "00002a26-0000-1000-8000-00805f9b34fb"
-    // "00002a27-0000-1000-8000-00805f9b34fb"
-    // "00002a28-0000-1000-8000-00805f9b34fb"
-    // "00002a29-0000-1000-8000-00805f9b34fb"
-    // "00002a37-0000-1000-8000-00805f9b34fb" // Heart rate
-    // "00002a38-0000-1000-8000-00805f9b34fb"
-    // "00002a39-0000-1000-8000-00805f9b34fb"
-    // "00002a50-0000-1000-8000-00805f9b34fb"
-    // "0000ff01-0000-1000-8000-00805f9b34fb" // HRM read
-    // "0000ff02-0000-1000-8000-00805f9b34fb" // HRM write
-    // descripter uuid == > CLIENT_CHARACTERISTIC_CONFIG
-    // "00002902-0000-1000-8000-00805f9b34fb" // 3 times
-
     private void invokeServicesDiscovered(Message msg) {
-        int arr[] = (int[])msg.obj; // e.g., int BluetoothGatt.Success
+        int succ_or_fail = msg.arg1; // e.g., int BluetoothGatt.Success
+        ArrayList<BLEService> bleServiceList = (ArrayList<BLEService>)msg.obj;
 
         UUID serviceUuid, characteristicUuid, descriptorUuid;
 
-        serviceUuid = UUID.fromString("00001800-0000-1000-8000-00805f9b34fb");
-        gatt.addService(serviceUuid);
-        serviceUuid = UUID.fromString("00001801-0000-1000-8000-00805f9b34fb");
-        gatt.addService(serviceUuid);
 
-        serviceUuid = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb");
-        gatt.addService(serviceUuid);
-        characteristicUuid = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb");
-        gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
+        for (BLEService bleService : bleServiceList) {
+            switch ( bleService.kind() ) {
+                case BLEService.SERVICE_UUID_ONLY:
+                    serviceUuid = bleService.serviceUuid();
+                    gatt.addService(serviceUuid);
+                    break;
 
-        serviceUuid = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb");
-        gatt.addService(serviceUuid);
-        characteristicUuid = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb");
-        gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_WRITE);
-        descriptorUuid = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"); // TODO:
-        gatt.getService(serviceUuid).getCharacteristic(characteristicUuid).addDescriptor(descriptorUuid);
+                case BLEService.SERVICE_UUID_WITH_CHARACTERISTICS:
+                    serviceUuid = bleService.serviceUuid();
+                    gatt.addService(serviceUuid);
+                    characteristicUuid = bleService.characteristicUuid();
+                    gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
+                            bleService.properties(), bleService.permission());
+                    break;
 
-        serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
-        gatt.addService(serviceUuid);
-        characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
-        gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY, BluetoothGattCharacteristic.PERMISSION_WRITE);
-        gatt.getService(serviceUuid).getCharacteristic(characteristicUuid).addDescriptor(descriptorUuid);
+                case BLEService.SERVICE_UUID_WITH_CHARACTERISTICS_AND_DESCRIPTOR:
+                    serviceUuid = bleService.serviceUuid();
+                    gatt.addService(serviceUuid);
+                    characteristicUuid = bleService.characteristicUuid();
+                    gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
+                            bleService.properties(), bleService.permission());
+                    descriptorUuid = bleService.descriptorUuid();
+                    gatt.getService(serviceUuid).getCharacteristic(characteristicUuid).addDescriptor(descriptorUuid);
+                    break;
 
-        characteristicUuid = UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb");
-        gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,
-                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE, BluetoothGattCharacteristic.PERMISSION_WRITE);
-        gatt.getService(serviceUuid).getCharacteristic(characteristicUuid).addDescriptor(descriptorUuid);
+                default:
+                    // something wrong!!
+            }
 
+        }
 
-        btGattCallback.onServicesDiscovered(gatt, arr[0]);
-
-        // 디바이스에 장치시간 요청
-        msg = Message.obtain();
-        msg.what = DEVICE_TIME_REQUEST;
-        emulHandler.sendMessage(msg);
+        btGattCallback.onServicesDiscovered(gatt, succ_or_fail);
     }
 
     private void invokeCharacteristicChanged(Message msg) {
-        int arg1 = msg.arg1;
-        byte data[] = (byte[])msg.obj;
+        MessageChangeCharacteristic msgbody = (MessageChangeCharacteristic)msg.obj;
+        byte data[];
         UUID serviceUuid, characteristicUuid;
 
-        if(arg1 == HRM_READ) {
-            serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
-            characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
-        }
-        else {
-            serviceUuid = UUID.randomUUID();
-            characteristicUuid = UUID.randomUUID();
-        }
+        serviceUuid = msgbody.serviceUuid;
+        characteristicUuid = msgbody.characteristicUuid;
+        data = msgbody.bytes;
+
         BluetoothGattCharacteristic characteristic = gatt.getService(serviceUuid).getCharacteristic(characteristicUuid);
         characteristic.setValue(data);
         btGattCallback.onCharacteristicChanged(gatt, characteristic);
@@ -211,18 +184,26 @@ public class PortingLayer {
                     break;
 
                 //
+                case CHANGE_CHARACTERISTIC_REPLY:
+                    invokeCharacteristicChanged(msg);
+                    break;
+
+                //
                 case DEVICE_TIME_REPLY:
                     invokeCharacteristicChanged(msg);
                     break;
 
                 //
-                case DATA_REPLY:
+                case WRITE_CHARACTERISTIC_REPLY:
                     invokeCharacteristicChanged(msg);
                     break;
 
                 //
                 case DISCONNECT_REPLY:
                     invokeConnectionStateChange(msg);
+
+                    // btdevemulator를 kill 시킨다.
+                    emulHandler.sendEmptyMessage(QUIT);
                     break;
             }
 
@@ -231,7 +212,7 @@ public class PortingLayer {
 
     public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
         Message msg = Message.obtain();
-        msg.what = DATA_REQUEST;
+        msg.what = WRITE_CHARACTERISTIC_REQUEST;
         msg.obj = characteristic;
         emulHandler.sendMessage(msg);
     }

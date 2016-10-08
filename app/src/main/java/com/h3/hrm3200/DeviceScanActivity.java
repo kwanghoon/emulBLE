@@ -30,6 +30,9 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.h3.hrm3200.emul.HRM3200;
+
 import java.util.ArrayList;
 
 
@@ -81,7 +84,7 @@ public class DeviceScanActivity extends Activity {
 //        final BluetoothManager btmngr =
 //                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         final BluetoothManager btmngr =
-                (BluetoothManager) new BluetoothManager();
+                (BluetoothManager) new BluetoothManager(new HRM3200());
         mBluetoothAdapter = btmngr.getAdapter();
 
         if (mBluetoothAdapter == null) {

@@ -20,7 +20,6 @@ import mocking.android.bluetooth.BluetoothGattDescriptor;
 import mocking.android.bluetooth.BluetoothGattService;
 import mocking.android.bluetooth.BluetoothProfile;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Binder;
@@ -29,7 +28,7 @@ import android.os.IBinder;
 //import android.util.Log;
 import android.widget.Toast;
 
-import com.h3.hrm3200.emul.MyBluetoothLE;
+import com.h3.hrm3200.emul.HRM3200;
 
 import java.util.Calendar;
 import java.util.List;
@@ -330,7 +329,7 @@ public class BluetoothLeService extends Service {
         if (mBluetoothManager == null) {
             // for Mocking
             //mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            mBluetoothManager = new BluetoothManager(new MyBluetoothLE());
+            mBluetoothManager = new BluetoothManager(new HRM3200());
             if (mBluetoothManager == null) {
                 Log.e(TAG, "Unable to initialize BluetoothManager.");
                 return false;

@@ -52,7 +52,7 @@ public class BluetoothGatt {
     }
 
     public boolean setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enable) {
-        return false;
+        return false;   // 리턴값을 받아서 처리하는 부분이 없어서 fasle 리턴
     }
 
     public boolean writeDescriptor(BluetoothGattDescriptor descriptor) {
