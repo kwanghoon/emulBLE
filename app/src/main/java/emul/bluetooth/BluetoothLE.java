@@ -74,7 +74,7 @@ public class BluetoothLE {
                                       IBLEChangeCharacteristic ibleChangeCharacteristic) {
     }
 
-    public void doNotification() {
+    public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
 
     }
 
