@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import emul.bluetooth.AutoBluetoothLE;
+import emul.bluetooth.BluetoothLE;
 import emul.bluetooth.model.BLEConnectState;
 import emul.bluetooth.model.BLEDisconnectState;
 import emul.bluetooth.model.BLENotificationState;
@@ -18,6 +19,7 @@ import mocking.android.bluetooth.BluetoothGatt;
 import mocking.android.bluetooth.BluetoothGattCharacteristic;
 import mocking.android.bluetooth.BluetoothProfile;
 import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEDisconnect;
 import mocking.android.bluetooth.IBLEDiscoverService;
 
 /**
@@ -27,44 +29,52 @@ import mocking.android.bluetooth.IBLEDiscoverService;
 public class AutoHRM3200 extends AutoBluetoothLE {
     ArrayList<BLEState> path;
 
-    boolean onMeasuring;
-
     public AutoHRM3200() {
         path = new ArrayList<BLEState>();
 
+        // BLE Scan
         BLEScanState bleScanState = new BLEScanState("00:11:22:AA:BB:CC", "HRM3200");
         path.add(bleScanState);
 
+        // BLE Connect
         BLEConnectState bleConnectState =
                 new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
         path.add(bleConnectState);
 
+        // Service Discovery
         BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoverFollowedByDeviceTimeReply();
         path.add(bleServiceDiscoverState);
 
-        DeviceTimeReplyState deviceTimeReplyState = new DeviceTimeReplyState();
+        // State0: Notification of Device Time
+        DeviceTimeReplyState deviceTimeReplyState = new DeviceTimeReplyState(this);
         path.add(deviceTimeReplyState);
 
+        // State1: OK (0x11)
         OK_0x11_State ok_0x11_state = new OK_0x11_State(this);
         path.add(ok_0x11_state);
 
+        // State1-2: App Time (0x80)
         AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(this, 0x10, 0x10);
         // 0x10, 0x00
         // 0x00, 0x00
         path.add(appTime_0x80_state);
 
+        // State5:
         for (int i = 0; i<10; i++) {
-            RealtimeDataReply realtimeDataReply = new RealtimeDataReply();
+            RealtimeDataReply realtimeDataReply = new RealtimeDataReply(this);
             path.add(realtimeDataReply);
         }
 
+        // No corresponding state in the state diagram
         DisconnectByApp disconnectByApp = new DisconnectByApp(this);
         path.add(disconnectByApp);
 
+        // The final state:
         BLEDisconnectState bleDisconnectState =
-                new BLEDisconnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+                new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
         path.add(bleDisconnectState);
 
+        // Initialize a path for testing
         this.setPath(path);
         this.setIndex(0);
     }
@@ -74,10 +84,14 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         if (path != null && index() < path.size()) {
             BLEState state = path.get(index());
             if (state instanceof ServiceDiscoverFollowedByDeviceTimeReply) {
-                ServiceDiscoverFollowedByDeviceTimeReply srvDiscoverState = (ServiceDiscoverFollowedByDeviceTimeReply)state;
-                srvDiscoverState.action(ibleDiscoverService);
+                state.action(ibleDiscoverService);
 
                 incIndex();
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -90,13 +104,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             super(BluetoothGatt.GATT_SUCCESS, bleServiceList());
         }
 
+        @Override
         public void action(IBLEDiscoverService ibleDiscoverService) {
             // Condtion: This method should be called in doDiscoverService()
 
             // Return succ_or_fail and bleServiceList
             super.action(ibleDiscoverService);
-
-            AutoHRM3200.super.callAfter(500, "doNotification");
         }
     }
 
@@ -143,16 +156,24 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             BLEState state = path.get(index());
 
             if (state instanceof DeviceTimeReplyState) {
-                DeviceTimeReplyState deviceTimeReplyState = (DeviceTimeReplyState)state;
-                deviceTimeReplyState.action(ibleChangeCharacteristic);
+                state.action(ibleChangeCharacteristic);
 
                 incIndex();
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
             else if (state instanceof RealtimeDataReply) {
-                RealtimeDataReply realtimeDataReply = (RealtimeDataReply)state;
-                realtimeDataReply.action(ibleChangeCharacteristic);
+                state.action(ibleChangeCharacteristic);
 
                 incIndex();
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -161,6 +182,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
     // For BLENotificatioNState : Device Time Reply
     class DeviceTimeReplyState extends BLENotificationState {
+        public DeviceTimeReplyState(BluetoothLE bluetoothLE) {
+            super(bluetoothLE);
+        }
+
+        @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
             // Condition: This should be called in doNotification
 
@@ -177,16 +203,16 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
     // Realtime Data Reply
     class RealtimeDataReply extends BLENotificationState {
+        public RealtimeDataReply(BluetoothLE bluetoothLE) {
+            super(bluetoothLE);
+        }
+
+        @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            Log.v("HRM3200", "RealtimeDataReply - Begin");
+            Log.v("HRM3200", "RealtimeDataReply");
             ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
                     new byte[]{(byte) 0x80, (byte) 0x1A, (byte) 0x07, (byte) 0xFF, (byte) 0x50,
                             (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
-
-            Log.v("HRM3200", "RealtimeDataReply - End: " + onMeasuring);
-            if (onMeasuring == true) {
-                callAfter(500, "doNotification");
-            }
         }
     }
 
@@ -202,6 +228,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 byte in[] = btGattCharacteristic.getValue();
                 if ((in[1] & 0xff) == 0x11) {
                     ok_0x11_state.action(ibleChangeCharacteristic);
+
+                    BLEState nextstate = path.get(index());
+                    nextstate.setupAction();
+
                     return;
                 }
             }
@@ -212,6 +242,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 byte in[] = btGattCharacteristic.getValue();
                 if ((in[1] & 0xff) == 0x80) {
                     appTime_0x80_state.action(ibleChangeCharacteristic);
+
+                    BLEState nextstate = path.get(index());
+                    nextstate.setupAction();
+
                     return;
                 }
             }
@@ -221,9 +255,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
                 byte in[] = btGattCharacteristic.getValue();
                 if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
-                    onMeasuring = false;
+                    disconnectByApp.action(ibleChangeCharacteristic);
 
-                    callDoDisconnectAfter(500);
+                    BLEState nextstate = path.get(index());
+                    nextstate.setupAction();
+
                     return;
                 }
             }
@@ -256,22 +292,17 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             this.downloadable = downloadable;
         }
 
+        @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
             // out[3] 0x01: 저장 데이터 없음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
             if (storeddata == 0x01 && downloadable == 0x01   ) {
                 ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
                         new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF});
-
-                callAfter(500, "doNotification");
-                onMeasuring = true;
             }
             // out[3] 0x00: 저장 데이터 있음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
             else if (storeddata == 0x00 && downloadable == 0x01) {
                 ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
                         new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF});
-
-                callAfter(500, "doNotification");
-                onMeasuring = true;
             }
             // out[4] : 0x00 : 다운로드 가능 상태, 이 메시지 전송후 0x82 메시지 기다려야 함
             // out[3] 0x00: 저장 데이터 있음 && out[4] 0x00 : 다운로드 가능 상태
@@ -289,6 +320,21 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         public DisconnectByApp(AutoHRM3200 bluetoothLE) {
             super(bluetoothLE);
         }
+
+        @Override
+        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+            // Nothing to do by itself???
+        }
     }
 
+    @Override
+    public void doDisconnect(IBLEDisconnect ibleDisconnect) {
+        if (path != null && index() < path.size()) {
+            BLEState state = path.get(index());
+
+            if (state instanceof BLEDisconnectState) {
+                // We arrive at the final state!!
+            }
+        }
+    }
 }

@@ -2,6 +2,7 @@ package emul.bluetooth.model;
 
 import java.util.ArrayList;
 
+import emul.bluetooth.BluetoothLE;
 import emul.bluetooth.model.BLEState;
 import mocking.android.bluetooth.IBLEChangeCharacteristic;
 
@@ -10,15 +11,22 @@ import mocking.android.bluetooth.IBLEChangeCharacteristic;
  */
 
 public class BLENotificationState extends BLEState {
+    private BluetoothLE bluetoothLE;
 
-    public BLENotificationState() {
-        this(null);
+    public BLENotificationState(BluetoothLE bluetoothLE) {
+        this.bluetoothLE = bluetoothLE;
     }
 
     public BLENotificationState(ArrayList<BLEState> next) {
         this.next = next;
     }
 
+    @Override
+    public void setupAction() {
+        bluetoothLE.callAfter(500, "doNotification");
+    }
+
+    @Override
     public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
         // Condition: This should be called in doNotification
 

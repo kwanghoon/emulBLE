@@ -42,10 +42,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEScanState) {
-                BLEScanState scanState = (BLEScanState)state;
-                scanState.action(iblescan);
+                state.action(iblescan);
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -57,10 +61,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEConnectState) {
-                BLEConnectState connectState = (BLEConnectState)state;
-                connectState.action(ibleconnect);
+                state.action(ibleconnect);
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -72,10 +80,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEServiceDiscoverState) {
-                BLEServiceDiscoverState connectState = (BLEServiceDiscoverState)state;
-                connectState.action(ibleDiscoverService);
+                state.action(ibleDiscoverService);
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -87,10 +99,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEDisconnectState) {
-                BLEDisconnectState disconnectState = (BLEDisconnectState)state;
-                disconnectState.action(ibleDisconnect);
+                state.action(ibleDisconnect);
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -107,10 +123,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEWriteCharacteristicState) {
-                BLEWriteCharacteristicState bleWriteCharacteristicState = (BLEWriteCharacteristicState)state;
-               // bleWriteCharacteristicState.action();
+                //state.action();
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
@@ -122,10 +142,14 @@ public class AutoBluetoothLE extends BluetoothLE {
         if (path != null && index < path.size()) {
             BLEState state = path.get(index);
             if (state instanceof BLEWriteCharacteristicState) {
-                BLEWriteCharacteristicState bleWriteCharacteristicState = (BLEWriteCharacteristicState)state;
-                // bleWriteCharacteristicState.action();
+                // state.action();
 
                 index++;
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
             }
         }
 
