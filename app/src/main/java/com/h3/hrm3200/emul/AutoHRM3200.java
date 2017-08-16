@@ -55,7 +55,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         path.add(ok_0x11_state);
 
         // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(this, 0x10, 0x10);
+        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(this, 0x01, 0x01);
         // 0x10, 0x00
         // 0x00, 0x00
         path.add(appTime_0x80_state);
