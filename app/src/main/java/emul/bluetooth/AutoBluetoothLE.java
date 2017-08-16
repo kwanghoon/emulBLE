@@ -9,6 +9,7 @@ import emul.bluetooth.model.BLEDisconnectState;
 import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
+import emul.bluetooth.model.BLEStateException;
 import emul.bluetooth.model.BLEWriteCharacteristicState;
 import mocking.android.bluetooth.BluetoothGattCharacteristic;
 import mocking.android.bluetooth.IBLEChangeCharacteristic;
@@ -51,9 +52,13 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doBLEScan: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doBLEScan: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     @Override
@@ -70,9 +75,13 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doConnect: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doConnect: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     @Override
@@ -89,9 +98,12 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+            throw new BLEStateException("doDiscoverService: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doDiscoverService: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     @Override
@@ -108,9 +120,11 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+            throw new BLEStateException("doDisconnect: " + state.getClass());
         }
-
-        // Exception ???
+        throw new BLEStateException("doDisconnect: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     @Override
@@ -132,9 +146,13 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doWriteCharacteristic: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doWriteCharacteristic: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     @Override
@@ -151,8 +169,12 @@ public class AutoBluetoothLE extends BluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doNotification: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doNotification: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 }

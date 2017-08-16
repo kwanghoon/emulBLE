@@ -28,6 +28,7 @@ import android.os.IBinder;
 //import android.util.Log;
 import android.widget.Toast;
 
+import com.h3.hrm3200.emul.AutoHRM3200;
 import com.h3.hrm3200.emul.HRM3200;
 
 import java.util.Calendar;
@@ -329,7 +330,7 @@ public class BluetoothLeService extends Service {
         if (mBluetoothManager == null) {
             // for Mocking
             //mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            mBluetoothManager = new BluetoothManager(new HRM3200());
+            mBluetoothManager = new BluetoothManager(new AutoHRM3200());
             if (mBluetoothManager == null) {
                 Log.e(TAG, "Unable to initialize BluetoothManager.");
                 return false;

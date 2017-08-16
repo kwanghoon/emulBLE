@@ -13,6 +13,7 @@ import emul.bluetooth.model.BLENotificationState;
 import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
+import emul.bluetooth.model.BLEStateException;
 import emul.bluetooth.model.BLEWriteCharacteristicState;
 import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.BluetoothGatt;
@@ -66,8 +67,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
 
         // No corresponding state in the state diagram
-        DisconnectByApp disconnectByApp = new DisconnectByApp(this);
-        path.add(disconnectByApp);
+//        DisconnectByApp disconnectByApp = new DisconnectByApp(this);
+//        path.add(disconnectByApp);
 
         // The final state:
         BLEDisconnectState bleDisconnectState =
@@ -93,9 +94,13 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doDiscoverService: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doDiscoverService: fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     // For BLEServiceDiscoverState
@@ -175,9 +180,13 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
                 return;
             }
+
+            throw new BLEStateException("doNotification: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doNotification: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     // For BLENotificatioNState : Device Time Reply
@@ -229,6 +238,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 if ((in[1] & 0xff) == 0x11) {
                     ok_0x11_state.action(ibleChangeCharacteristic);
 
+                    incIndex();
+
                     BLEState nextstate = path.get(index());
                     nextstate.setupAction();
 
@@ -242,6 +253,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 byte in[] = btGattCharacteristic.getValue();
                 if ((in[1] & 0xff) == 0x80) {
                     appTime_0x80_state.action(ibleChangeCharacteristic);
+
+                    incIndex();
 
                     BLEState nextstate = path.get(index());
                     nextstate.setupAction();
@@ -257,15 +270,21 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
                     disconnectByApp.action(ibleChangeCharacteristic);
 
+                    incIndex();
+
                     BLEState nextstate = path.get(index());
                     nextstate.setupAction();
 
                     return;
                 }
             }
+
+            throw new BLEStateException("doWriteCharacteristic: " + state.getClass());
         }
 
-        // Exception ???
+        throw new BLEStateException("doWriteCharacteristic: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 
     class OK_0x11_State extends BLEWriteCharacteristicState {
@@ -273,6 +292,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             super(bluetoothLE);
         }
 
+        @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
             // do nothing
             // 바로 다음에 0x80이 온다.
@@ -334,7 +354,17 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
             if (state instanceof BLEDisconnectState) {
                 // We arrive at the final state!!
+                state.action(ibleDisconnect);
+
+                // No incIndex();
+                return;
             }
+
+            throw new BLEStateException("doDisconnect: " + state.getClass());
         }
+
+        throw new BLEStateException("doDisconnect: path fails "
+                + (path != null) + " "
+                + (index() < path.size()) );
     }
 }
