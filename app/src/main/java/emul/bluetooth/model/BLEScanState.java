@@ -1,5 +1,7 @@
 package emul.bluetooth.model;
 
+import com.h3.hrm3200.Log;
+
 import java.util.ArrayList;
 
 import mocking.android.bluetooth.IBLEScan;
@@ -22,6 +24,12 @@ public class BLEScanState extends BLEState {
         this.btdev_name = btdev_name;
     }
 
+    @Override
+    public void setupAction() {
+        Log.v("[ HRM3200 ]", "BLEScanState - Push the bluetooth scan button ...");
+    }
+
+    @Override
     public void action(IBLEScan iblescan) {
         // Condition: This method should be called in doBLEScan()
 

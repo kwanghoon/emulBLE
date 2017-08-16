@@ -1,5 +1,7 @@
 package emul.bluetooth.model;
 
+import com.h3.hrm3200.Log;
+
 import java.util.ArrayList;
 
 import mocking.android.bluetooth.IBLEConnect;
@@ -20,6 +22,11 @@ public class BLEConnectState extends BLEState {
         this.next = next;
         this.succ_or_fail = succ_or_fail;
         this.state = state;
+    }
+
+    @Override
+    public void setupAction() {
+        Log.v("[ HRM3200 ]", "BLEConnectState - Select one of the scanned bluetooth devices ...");
     }
 
     @Override

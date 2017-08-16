@@ -1,5 +1,7 @@
 package emul.bluetooth.model;
 
+import com.h3.hrm3200.Log;
+
 import java.util.ArrayList;
 
 import emul.bluetooth.BluetoothLE;

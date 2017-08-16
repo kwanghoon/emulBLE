@@ -1,5 +1,7 @@
 package emul.bluetooth.model;
 
+import com.h3.hrm3200.Log;
+
 import java.util.ArrayList;
 import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.IBLEDiscoverService;
@@ -20,6 +22,10 @@ public class BLEServiceDiscoverState extends BLEState {
         this.next = next;
         this.succ_or_fail = succ_or_fail;
         this.bleServiceList = bleServiceList;
+    }
+
+    @Override
+    public void setupAction() {
     }
 
     @Override
