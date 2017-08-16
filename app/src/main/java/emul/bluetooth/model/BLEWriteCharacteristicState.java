@@ -28,13 +28,10 @@ public class BLEWriteCharacteristicState extends BLEState {
                        BluetoothGattCharacteristic btGattCharacteristic,
                        UUID serviceUuid,
                        UUID characteristicUuid,
-                       byte[] bytes,
-                       String nextMethodName) {
+                       byte[] bytes) {
         // Condtion: This should be called in doWriteCharacteristic()
 
         // Return Bluetooth Gatt Characteristic
         ibleChangeCharacgerisitc.setResult(serviceUuid, characteristicUuid, bytes);
-
-        bluetoothLE.callAfter(500, nextMethodName);
     }
 }
