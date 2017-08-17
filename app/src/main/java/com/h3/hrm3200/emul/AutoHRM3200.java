@@ -1,20 +1,28 @@
 package com.h3.hrm3200.emul;
 
-import com.h3.hrm3200.Log;
+import com.h3.hrm3200.emul.model.AppTime_0x80_State;
+import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
+import com.h3.hrm3200.emul.model.DisconnectByApp;
+import com.h3.hrm3200.emul.model.OK_0x11_State;
+import com.h3.hrm3200.emul.model.REQ_Disconnection_0x82_0x02_State;
+import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03;
+import com.h3.hrm3200.emul.model.REQ_RealtimeData_0x82_0x01;
+import com.h3.hrm3200.emul.model.RealtimeDataReply;
+import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice;
 
 import java.util.ArrayList;
 import java.util.UUID;
 
 import emul.bluetooth.AutoBluetoothLE;
-import emul.bluetooth.BluetoothLE;
 import emul.bluetooth.model.BLEConnectState;
 import emul.bluetooth.model.BLEDisconnectState;
-import emul.bluetooth.model.BLENotificationState;
 import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
 import emul.bluetooth.model.BLEStateException;
-import emul.bluetooth.model.BLEWriteCharacteristicState;
 import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.BluetoothGatt;
 import mocking.android.bluetooth.BluetoothGattCharacteristic;
@@ -33,54 +41,9 @@ public class AutoHRM3200 extends AutoBluetoothLE {
     public AutoHRM3200() {
         path = new ArrayList<BLEState>();
 
-        // BLE Scan
-        BLEScanState bleScanState = new BLEScanState("00:11:22:AA:BB:CC", "HRM3200");
-        path.add(bleScanState);
-
-        // BLE Connect
-        BLEConnectState bleConnectState =
-                new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
-        path.add(bleConnectState);
-
-        // Service Discovery
-        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoverFollowedByDeviceTimeReply();
-        path.add(bleServiceDiscoverState);
-
-        // State0: Notification of Device Time
-        DeviceTimeReplyState deviceTimeReplyState = new DeviceTimeReplyState(this);
-        path.add(deviceTimeReplyState);
-
-        // State1: OK (0x11)
-        OK_0x11_State ok_0x11_state = new OK_0x11_State(this);
-        path.add(ok_0x11_state);
-
-        // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(this, 0x01, 0x01);
-        // 0x10, 0x00
-        // 0x00, 0x00
-        path.add(appTime_0x80_state);
-
-        // State5:
-        for (int i = 0; i<10; i++) {
-            RealtimeDataReply realtimeDataReply = new RealtimeDataReply(this);
-            path.add(realtimeDataReply);
-        }
-
-        // A final state disconnected by App
-
-        // User presses the stop button.
-        REQ_Disconnection_0x82_0x02_State req_disconnection_0x82_0x02_state = new REQ_Disconnection_0x82_0x02_State(this);
-        path.add(req_disconnection_0x82_0x02_state);
-
-        // Disconnection by App
-        DisconnectByApp disconnectByApp = new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
-        path.add(disconnectByApp);
-
-        // Another final state disconnected by Device
-
-//        BLEDisconnectState bleDisconnectState =
-//                new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
-//        path.add(bleDisconnectState);
+        // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
+        new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
+        //new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
 
         // Initialize a path for testing
         this.setPath(path);
@@ -115,58 +78,9 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 + (index() < path.size()) );
     }
 
-    // For BLEServiceDiscoverState
-    class ServiceDiscoverFollowedByDeviceTimeReply extends BLEServiceDiscoverState {
-        public ServiceDiscoverFollowedByDeviceTimeReply() {
-            super(BluetoothGatt.GATT_SUCCESS, bleServiceList());
-        }
-
-        @Override
-        public void action(IBLEDiscoverService ibleDiscoverService) {
-            // Condition: This method should be called in doDiscoverService()
-            //           Except this, no extra requirement.
-
-            // Do the default action : Return succ_or_fail and bleServiceList
-            super.action(ibleDiscoverService);
-        }
-    }
-
-    ArrayList<BLEService> bleServiceList() {
-        ArrayList<BLEService> bleServiceList = new ArrayList<BLEService>();
-
-        bleServiceList.add(new BLEService(UUID.fromString("00001800-0000-1000-8000-00805f9b34fb")));
-
-        bleServiceList.add(new BLEService(UUID.fromString("00001801-0000-1000-8000-00805f9b34fb")));
-
-        bleServiceList.add(new BLEService(UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb"),
-                UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb"),
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_WRITE));
-
-        bleServiceList.add(new BLEService(UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb"),
-                UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb"),
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_WRITE,
-                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")));
-
-        bleServiceList.add(new BLEService(UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb"),
-                UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb"),
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_WRITE,
-                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")));
-
-        bleServiceList.add(new BLEService(UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb"),
-                UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb"),
-                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE,
-                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")));
-
-        return bleServiceList;
-    }
-
     // HRM3200 Service UUID and characteristic UUID
-    private UUID serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
-    private UUID characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
+    public static UUID serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
+    public static UUID characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
 
     //////////////////////////////////////////////////////////////////////////
     //  Notification (Change Characterisitcs)
@@ -208,47 +122,6 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 + (index() < path.size()) );
     }
 
-    // For BLENotificatioNState : Device Time Reply
-    class DeviceTimeReplyState extends BLENotificationState {
-        public DeviceTimeReplyState(BluetoothLE bluetoothLE) {
-            super(bluetoothLE);
-        }
-
-        @Override
-        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // Condition: This should be called in doNotification
-            //            Except this, no extra requirement.
-
-            // Action:
-            Log.v("HRM3200-Emul", "DeviceTimeReplyState");
-
-            ibleChangeCharacteristic.setResult(
-                    serviceUuid, characteristicUuid,
-                    new byte[]{(byte) 0x80, (byte) 0x10, (byte) 0x08, (byte) 0x0F, (byte) 0x05,
-                            (byte) 0x13, (byte) 0x11, (byte) 0x0B, (byte) 0x2D, (byte) 0x01, (byte) 0x00, (byte) 0xEF}
-            );
-        }
-    }
-
-    // Realtime Data Reply
-    class RealtimeDataReply extends BLENotificationState {
-        public RealtimeDataReply(BluetoothLE bluetoothLE) {
-            super(bluetoothLE);
-        }
-
-        @Override
-        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // Condition: This should be called in doNotification
-            //            Except this, no extra requirement.
-
-            // Action:
-            Log.v("HRM3200-Emul", "RealtimeDataReply");
-            ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                    new byte[]{(byte) 0x80, (byte) 0x1A, (byte) 0x07, (byte) 0xFF, (byte) 0x50,
-                            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
-        }
-    }
-
     //////////////////////////////////////////////////////////////////////////
     //  Write Characterisitcs  (Commands by Apps)
     //    - doWriteCharacteristic
@@ -285,6 +158,30 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 return;
             }
 
+            else if (state instanceof REQ_RealtimeData_0x82_0x01) {
+                REQ_RealtimeData_0x82_0x01 req_realtimeData_0x82_0x01 = (REQ_RealtimeData_0x82_0x01)state;
+                req_realtimeData_0x82_0x01.action(btGattCharacteristic, ibleChangeCharacteristic);
+
+                incIndex();
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
+            }
+
+            else if (state instanceof REQ_DownloadStoredData_0x82_0x03) {
+                REQ_DownloadStoredData_0x82_0x03 req_downloadStoredData_0x82_0x03 = (REQ_DownloadStoredData_0x82_0x03)state;
+                req_downloadStoredData_0x82_0x03.action(btGattCharacteristic, ibleChangeCharacteristic);
+
+                incIndex();
+
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
+
+                return;
+            }
+
             else if (state instanceof REQ_Disconnection_0x82_0x02_State) {
                 REQ_Disconnection_0x82_0x02_State disconnectByApp = (REQ_Disconnection_0x82_0x02_State) state;
 
@@ -304,104 +201,6 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         throw new BLEStateException("doWriteCharacteristic: path fails "
                 + (path != null) + " "
                 + (index() < path.size()) );
-    }
-
-    class OK_0x11_State extends BLEWriteCharacteristicState {
-        public OK_0x11_State(AutoHRM3200 bluetoothLE) {
-            super(bluetoothLE);
-        }
-
-        @Override
-        public void action(BluetoothGattCharacteristic btGattCharacteristic,
-                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // Condition: This should be called in doWriteCharacteristic
-            //            and something in the following:
-
-            byte in[] = btGattCharacteristic.getValue();
-            if ((in[1] & 0xff) == 0x11) {
-                // do nothing
-                // 바로 다음에 0x80이 온다.
-
-                return;
-            }
-
-            throw new BLEStateException("doWriteCharacteristic: OK_0x11_State : " + (in[1] & 0xff) + "==" + 0x11);
-        }
-    }
-
-    class AppTime_0x80_State extends BLEWriteCharacteristicState {
-        // storeddata : 0x01 ==> no stored data, 0x00 ==> stored data available
-        // downloadable : 0x01 ==> not downloadable, 0x00 ==> ddownloadable
-        private int storeddata;
-        private int downloadable;
-
-        public AppTime_0x80_State(AutoHRM3200 bluetoothLE, int storeddata, int downloadable) {
-            super(bluetoothLE);
-
-            this.storeddata = storeddata;
-            this.downloadable = downloadable;
-        }
-
-        @Override
-        public void action(BluetoothGattCharacteristic btGattCharacteristic,
-                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
-
-            // Condition: This should be called in doWriteCharacteristic
-            //            and something in the following:
-
-            byte in[] = btGattCharacteristic.getValue();
-            if ((in[1] & 0xff) == 0x80) {
-
-                // out[3] 0x01: 저장 데이터 없음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
-                if (storeddata == 0x01 && downloadable == 0x01) {
-                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF});
-                }
-                // out[3] 0x00: 저장 데이터 있음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
-                else if (storeddata == 0x00 && downloadable == 0x01) {
-                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF});
-                }
-                // out[4] : 0x00 : 다운로드 가능 상태, 이 메시지 전송후 0x82 메시지 기다려야 함
-                // out[3] 0x00: 저장 데이터 있음 && out[4] 0x00 : 다운로드 가능 상태
-                else if (storeddata == 0x00 && downloadable == 0x00) {
-                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
-                } else {
-                    throw new BLEStateException("doWriteCharacteristic: AppTime_0x80_State : "
-                            + "storeddata = " + storeddata + ", "
-                            + "downloadable = " + downloadable);
-                }
-
-                return;
-            }
-
-            throw new BLEStateException("doWriteCharacteristic: AppTime_0x80_State : " + (in[1] & 0xff) + "==" + 0x80);
-        }
-    }
-
-    class REQ_Disconnection_0x82_0x02_State extends BLEWriteCharacteristicState {
-        public REQ_Disconnection_0x82_0x02_State(AutoHRM3200 bluetoothLE) {
-            super(bluetoothLE);
-        }
-
-        @Override
-        public void action(BluetoothGattCharacteristic btGattCharacteristic,
-                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
-
-            // Condition: This should be called in doWriteCharacteristic
-            //            and something in the following:
-
-            byte in[] = btGattCharacteristic.getValue();
-            if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
-                // nothing to do
-                return;
-            }
-
-            throw new BLEStateException("doWriteCharacteristic: REQ_Disconnection_0x82_0x02_State : "
-                    + (in[1] & 0xff) + "==" + 0x82 + ", "
-                    + (in[3] & 0xff) + "==" + 0x02);
-        }
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -438,14 +237,4 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 + (index() < path.size()) );
     }
 
-    class DisconnectByApp extends BLEDisconnectState {
-        public DisconnectByApp(BluetoothLE bluetoothLE, int succ_or_fail, int state) {
-            super(bluetoothLE, succ_or_fail, state);
-        }
-
-        @Override
-        public void setupAction() {
-            Log.v("HRM3200-Emul", "DisconnectByApp : Press the Disconnect button ...");
-        }
-    }
 }
