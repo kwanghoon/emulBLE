@@ -1,12 +1,20 @@
 package com.h3.hrm3200.emul.scenario;
 
-import android.graphics.Path;
-
 import com.h3.hrm3200.emul.model.AppTime_0x80_State;
 import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
+import com.h3.hrm3200.emul.model.DisconnectByApp;
+import com.h3.hrm3200.emul.model.InitializeData;
 import com.h3.hrm3200.emul.model.OK_0x11_State;
+import com.h3.hrm3200.emul.model.OK_0x15_State;
+import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03;
+import com.h3.hrm3200.emul.model.REQ_SessionInfo;
 import com.h3.hrm3200.emul.model.RealtimeDataReply;
+import com.h3.hrm3200.emul.model.SendEndOfSession;
+import com.h3.hrm3200.emul.model.SendSessionCount;
+import com.h3.hrm3200.emul.model.SendSessionInfo;
 import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.model.SharedSessionInfo;
+import com.h3.hrm3200.emul.model.StoredDataReply;
 
 import java.util.ArrayList;
 
@@ -27,7 +35,7 @@ import mocking.android.bluetooth.BluetoothProfile;
 public class Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice extends Scenario {
     private BluetoothLE bluetoothLE;
 
-    public Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(ArrayList<BLEState> path, BluetoothLE bluetoothLE) {
+    public Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(BluetoothLE bluetoothLE, ArrayList<BLEState> path) {
         super(path);
         this.bluetoothLE = bluetoothLE;
         this.buildPath();
@@ -61,26 +69,63 @@ public class Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevi
         // 0x00, 0x00
         path().add(appTime_0x80_state);
 
-        // State5:
-        for (int i = 0; i<10; i++) {
-            RealtimeDataReply realtimeDataReply = new RealtimeDataReply(bluetoothLE);
-            path().add(realtimeDataReply);
+        // State6:
+        REQ_DownloadStoredData_0x82_0x03 req_downloadStoredData_0x82_0x03 =
+                new REQ_DownloadStoredData_0x82_0x03(bluetoothLE);
+        path().add(req_downloadStoredData_0x82_0x03);
+
+        // Session count
+        int session_count = 2;
+
+        // State7:
+        SendSessionCount sendSessionCount = new SendSessionCount(bluetoothLE, session_count);
+        path().add(sendSessionCount);
+
+        // Shared information among states
+        SharedSessionInfo sharedSessionInfo = new SharedSessionInfo();
+
+        for(int i=0; i<session_count; i++) {
+            // Initialize session in REQ_SessionInfo
+            REQ_SessionInfo req_sessionInfo = new REQ_SessionInfo(bluetoothLE, sharedSessionInfo);
+            path().add(req_sessionInfo);
+
+            sharedSessionInfo.dataTotalCount = 15; // a simple setting for the number of data per session
+
+            // State10
+            SendSessionInfo sendSessionInfo = new SendSessionInfo(bluetoothLE, sharedSessionInfo);
+            path().add(sendSessionInfo);
+
+            // State11
+            OK_0x15_State ok_0x15_state = new OK_0x15_State(bluetoothLE);
+            path().add(ok_0x15_state);
+
+            InitializeData initializeData =
+                    new InitializeData(bluetoothLE, sharedSessionInfo);
+            path().add(initializeData);
+
+            for (int j = 0; j < sharedSessionInfo.dataTotalCount; j++) {
+                StoredDataReply storedDataReply = new StoredDataReply(bluetoothLE, sharedSessionInfo);
+                path().add(storedDataReply);
+            }
+
+            SendEndOfSession sendEndOfSession = new SendEndOfSession(bluetoothLE, sharedSessionInfo);
+            path().add(sendEndOfSession);
         }
 
 //        // A final state disconnected by App
 //
 //        // User presses the stop button.
 //        REQ_Disconnection_0x82_0x02_State req_disconnection_0x82_0x02_state = new REQ_Disconnection_0x82_0x02_State(this);
-//        path.add(req_disconnection_0x82_0x02_state);
+//        path().add(req_disconnection_0x82_0x02_state);
 //
-//        // Disconnection by App
-//        DisconnectByApp disconnectByApp = new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
-//        path.add(disconnectByApp);
+        // Disconnection by App
+        DisconnectByApp disconnectByApp = new DisconnectByApp(bluetoothLE, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+        path().add(disconnectByApp);
 
         // Another final state disconnected by Device
 
-        BLEDisconnectState bleDisconnectState =
-                new BLEDisconnectState(bluetoothLE, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
-        path().add(bleDisconnectState);
+        //BLEDisconnectState bleDisconnectState =
+        //        new BLEDisconnectState(bluetoothLE, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+        //path().add(bleDisconnectState);
     }
 }

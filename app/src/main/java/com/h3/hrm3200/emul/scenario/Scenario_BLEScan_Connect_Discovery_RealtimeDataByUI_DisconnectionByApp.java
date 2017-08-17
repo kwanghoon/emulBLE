@@ -65,11 +65,11 @@ public class Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionBy
         REQ_RealtimeData_0x82_0x01 req_realtimeData_0x82_0x01 = new REQ_RealtimeData_0x82_0x01(bluetoothLE);
         path().add(req_realtimeData_0x82_0x01);
 
-        // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state_next = new AppTime_0x80_State(bluetoothLE, 0x01, 0x01);
-        // 0x10, 0x00
-        // 0x00, 0x00
-        path().add(appTime_0x80_state_next);
+//        // State1-2: App Time (0x80)
+//        AppTime_0x80_State appTime_0x80_state_next = new AppTime_0x80_State(bluetoothLE, 0x01, 0x01);
+//        // 0x10, 0x00
+//        // 0x00, 0x00
+//        path().add(appTime_0x80_state_next);
 
         // State5:
         for (int i = 0; i<10; i++) {

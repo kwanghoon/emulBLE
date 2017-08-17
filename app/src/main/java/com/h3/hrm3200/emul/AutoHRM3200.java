@@ -3,13 +3,22 @@ package com.h3.hrm3200.emul;
 import com.h3.hrm3200.emul.model.AppTime_0x80_State;
 import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
 import com.h3.hrm3200.emul.model.DisconnectByApp;
+import com.h3.hrm3200.emul.model.InitializeData;
 import com.h3.hrm3200.emul.model.OK_0x11_State;
+import com.h3.hrm3200.emul.model.OK_0x15_State;
 import com.h3.hrm3200.emul.model.REQ_Disconnection_0x82_0x02_State;
 import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03;
 import com.h3.hrm3200.emul.model.REQ_RealtimeData_0x82_0x01;
+import com.h3.hrm3200.emul.model.REQ_SessionInfo;
 import com.h3.hrm3200.emul.model.RealtimeDataReply;
+import com.h3.hrm3200.emul.model.SendEndOfSession;
+import com.h3.hrm3200.emul.model.SendSessionCount;
+import com.h3.hrm3200.emul.model.SendSessionInfo;
 import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.model.StoredDataReply;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice;
 import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice;
 import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp;
 import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice;
 
@@ -43,7 +52,9 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
         new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
-        //new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
+        // BUG : new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
+        // Bug : new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice(this, path);
+        // new Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(this, path);
 
         // Initialize a path for testing
         this.setPath(path);
@@ -93,17 +104,14 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         if (path != null && index() < path.size()) {
             BLEState state = path.get(index());
 
-            if (state instanceof DeviceTimeReplyState) {
-                state.action(ibleChangeCharacteristic);
-
-                incIndex();
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
-                return;
-            }
-            else if (state instanceof RealtimeDataReply) {
+            if (state instanceof DeviceTimeReplyState
+                    || state instanceof RealtimeDataReply
+                    || state instanceof SendSessionInfo
+                    || state instanceof SendSessionCount
+                    || state instanceof InitializeData
+                    || state instanceof StoredDataReply
+                    || state instanceof SendEndOfSession)
+            {
                 state.action(ibleChangeCharacteristic);
 
                 incIndex();
@@ -134,9 +142,15 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         if (path != null && index() < path.size()) {
             BLEState state = path.get(index());
 
-            if (state instanceof OK_0x11_State) {
-                OK_0x11_State ok_0x11_state = (OK_0x11_State) state;
-                ok_0x11_state.action(btGattCharacteristic, ibleChangeCharacteristic);
+            if (state instanceof OK_0x11_State
+                    || state instanceof AppTime_0x80_State
+                    || state instanceof REQ_RealtimeData_0x82_0x01
+                    || state instanceof REQ_DownloadStoredData_0x82_0x03
+                    || state instanceof OK_0x15_State
+                    || state instanceof REQ_SessionInfo
+                    || state instanceof REQ_Disconnection_0x82_0x02_State)
+            {
+                state.action(btGattCharacteristic, ibleChangeCharacteristic);
 
                 incIndex();
 
@@ -146,56 +160,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 return;
             }
 
-            else if (state instanceof AppTime_0x80_State) {
-                AppTime_0x80_State appTime_0x80_state = (AppTime_0x80_State) state;
-                appTime_0x80_state.action(btGattCharacteristic, ibleChangeCharacteristic);
-
-                incIndex();
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
-                return;
-            }
-
-            else if (state instanceof REQ_RealtimeData_0x82_0x01) {
-                REQ_RealtimeData_0x82_0x01 req_realtimeData_0x82_0x01 = (REQ_RealtimeData_0x82_0x01)state;
-                req_realtimeData_0x82_0x01.action(btGattCharacteristic, ibleChangeCharacteristic);
-
-                incIndex();
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
-                return;
-            }
-
-            else if (state instanceof REQ_DownloadStoredData_0x82_0x03) {
-                REQ_DownloadStoredData_0x82_0x03 req_downloadStoredData_0x82_0x03 = (REQ_DownloadStoredData_0x82_0x03)state;
-                req_downloadStoredData_0x82_0x03.action(btGattCharacteristic, ibleChangeCharacteristic);
-
-                incIndex();
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
-                return;
-            }
-
-            else if (state instanceof REQ_Disconnection_0x82_0x02_State) {
-                REQ_Disconnection_0x82_0x02_State disconnectByApp = (REQ_Disconnection_0x82_0x02_State) state;
-
-                disconnectByApp.action(btGattCharacteristic, ibleChangeCharacteristic);
-
-                incIndex();
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
-                return;
-            }
-
-            throw new BLEStateException("doWriteCharacteristic: " + state.getClass());
+            throw new BLEStateException("doWriteCharacteristic: " + state.getClass().getCanonicalName());
         }
 
         throw new BLEStateException("doWriteCharacteristic: path fails "
@@ -214,22 +179,17 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         if (path != null && index() < path.size()) {
             BLEState state = path.get(index());
 
-            if (state instanceof BLEDisconnectState) {
+            if (state instanceof BLEDisconnectState
+                    || state instanceof DisconnectByApp)
+            {
                 // We arrive at the final state!!
                 state.action(ibleDisconnect);
 
                 // No incIndex();
                 return;
             }
-            else if (state instanceof DisconnectByApp) {
-                // We arrive at the final state!!
-                state.action(ibleDisconnect);
 
-                // No incIndex();
-                return;
-            }
-
-            throw new BLEStateException("doDisconnect: " + state.getClass());
+            throw new BLEStateException("doDisconnect: " + state.getClass().getCanonicalName());
         }
 
         throw new BLEStateException("doDisconnect: path fails "
