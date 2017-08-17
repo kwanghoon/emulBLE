@@ -28,6 +28,8 @@ public abstract class BLEState {
     public void action(IBLEDiscoverService ibleDiscoverService) { }     // for BLEServiceDiscoverState
     public void action(IBLEDisconnect ibleDisconnect) { }   // for BLEDisconnectState
     public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {}    // for BLENotificationState
+    public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                       IBLEChangeCharacteristic ibleChangeCharacteristic) {}      // for LBEWriteCharacteristicState
     public void action(IBLEChangeCharacteristic ibleChangeCharacgerisitc,       // for LBEWriteCharacteristicState
                        BluetoothGattCharacteristic btGattCharacteristic,
                        UUID serviceUuid,

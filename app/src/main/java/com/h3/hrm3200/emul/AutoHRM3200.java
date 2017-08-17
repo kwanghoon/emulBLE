@@ -87,6 +87,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         this.setIndex(0);
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    //  Service Discovery
+    //    - doDiscoverService
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
     @Override
     public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
         if (path != null && index() < path.size()) {
@@ -118,9 +123,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         @Override
         public void action(IBLEDiscoverService ibleDiscoverService) {
-            // Condtion: This method should be called in doDiscoverService()
+            // Condition: This method should be called in doDiscoverService()
+            //           Except this, no extra requirement.
 
-            // Return succ_or_fail and bleServiceList
+            // Do the default action : Return succ_or_fail and bleServiceList
             super.action(ibleDiscoverService);
         }
     }
@@ -161,6 +167,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
     // HRM3200 Service UUID and characteristic UUID
     private UUID serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
     private UUID characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Notification (Change Characterisitcs)
+    //    - doNotification
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
@@ -205,9 +217,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
             // Condition: This should be called in doNotification
+            //            Except this, no extra requirement.
 
-            // Return nothing, but notify something through ibleChangeCharacteritic.
-            Log.v("HRM3200-Emul", "DeviceTimeReplyState...");
+            // Action:
+            Log.v("HRM3200-Emul", "DeviceTimeReplyState");
 
             ibleChangeCharacteristic.setResult(
                     serviceUuid, characteristicUuid,
@@ -225,12 +238,22 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            Log.v("HRM3200", "RealtimeDataReply");
+            // Condition: This should be called in doNotification
+            //            Except this, no extra requirement.
+
+            // Action:
+            Log.v("HRM3200-Emul", "RealtimeDataReply");
             ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
                     new byte[]{(byte) 0x80, (byte) 0x1A, (byte) 0x07, (byte) 0xFF, (byte) 0x50,
                             (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
         }
     }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Write Characterisitcs  (Commands by Apps)
+    //    - doWriteCharacteristic
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic,
@@ -240,50 +263,39 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
             if (state instanceof OK_0x11_State) {
                 OK_0x11_State ok_0x11_state = (OK_0x11_State) state;
+                ok_0x11_state.action(btGattCharacteristic, ibleChangeCharacteristic);
 
-                byte in[] = btGattCharacteristic.getValue();
-                if ((in[1] & 0xff) == 0x11) {
-                    ok_0x11_state.action(ibleChangeCharacteristic);
+                incIndex();
 
-                    incIndex();
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
 
-                    BLEState nextstate = path.get(index());
-                    nextstate.setupAction();
-
-                    return;
-                }
+                return;
             }
 
             else if (state instanceof AppTime_0x80_State) {
                 AppTime_0x80_State appTime_0x80_state = (AppTime_0x80_State) state;
+                appTime_0x80_state.action(btGattCharacteristic, ibleChangeCharacteristic);
 
-                byte in[] = btGattCharacteristic.getValue();
-                if ((in[1] & 0xff) == 0x80) {
-                    appTime_0x80_state.action(ibleChangeCharacteristic);
+                incIndex();
 
-                    incIndex();
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
 
-                    BLEState nextstate = path.get(index());
-                    nextstate.setupAction();
-
-                    return;
-                }
+                return;
             }
 
             else if (state instanceof REQ_Disconnection_0x82_0x02_State) {
                 REQ_Disconnection_0x82_0x02_State disconnectByApp = (REQ_Disconnection_0x82_0x02_State) state;
 
-                byte in[] = btGattCharacteristic.getValue();
-                if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
-                    disconnectByApp.action(ibleChangeCharacteristic);
+                disconnectByApp.action(btGattCharacteristic, ibleChangeCharacteristic);
 
-                    incIndex();
+                incIndex();
 
-                    BLEState nextstate = path.get(index());
-                    nextstate.setupAction();
+                BLEState nextstate = path.get(index());
+                nextstate.setupAction();
 
-                    return;
-                }
+                return;
             }
 
             throw new BLEStateException("doWriteCharacteristic: " + state.getClass());
@@ -300,9 +312,20 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
 
         @Override
-        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // do nothing
-            // 바로 다음에 0x80이 온다.
+        public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
+            // Condition: This should be called in doWriteCharacteristic
+            //            and something in the following:
+
+            byte in[] = btGattCharacteristic.getValue();
+            if ((in[1] & 0xff) == 0x11) {
+                // do nothing
+                // 바로 다음에 0x80이 온다.
+
+                return;
+            }
+
+            throw new BLEStateException("doWriteCharacteristic: OK_0x11_State : " + (in[1] & 0xff) + "==" + 0x11);
         }
     }
 
@@ -320,26 +343,40 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
 
         @Override
-        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // out[3] 0x01: 저장 데이터 없음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
-            if (storeddata == 0x01 && downloadable == 0x01   ) {
-                ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF});
+        public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+            // Condition: This should be called in doWriteCharacteristic
+            //            and something in the following:
+
+            byte in[] = btGattCharacteristic.getValue();
+            if ((in[1] & 0xff) == 0x80) {
+
+                // out[3] 0x01: 저장 데이터 없음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
+                if (storeddata == 0x01 && downloadable == 0x01) {
+                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
+                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF});
+                }
+                // out[3] 0x00: 저장 데이터 있음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
+                else if (storeddata == 0x00 && downloadable == 0x01) {
+                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
+                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF});
+                }
+                // out[4] : 0x00 : 다운로드 가능 상태, 이 메시지 전송후 0x82 메시지 기다려야 함
+                // out[3] 0x00: 저장 데이터 있음 && out[4] 0x00 : 다운로드 가능 상태
+                else if (storeddata == 0x00 && downloadable == 0x00) {
+                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
+                            new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
+                } else {
+                    throw new BLEStateException("doWriteCharacteristic: AppTime_0x80_State : "
+                            + "storeddata = " + storeddata + ", "
+                            + "downloadable = " + downloadable);
+                }
+
+                return;
             }
-            // out[3] 0x00: 저장 데이터 있음 && out[4] 0x01 : 다운로드 불가 상태(측정중)
-            else if (storeddata == 0x00 && downloadable == 0x01) {
-                ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF});
-            }
-            // out[4] : 0x00 : 다운로드 가능 상태, 이 메시지 전송후 0x82 메시지 기다려야 함
-            // out[3] 0x00: 저장 데이터 있음 && out[4] 0x00 : 다운로드 가능 상태
-            else if ( storeddata == 0x00 && downloadable == 0x00 ) {
-                ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,
-                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
-            }
-            else {
-                // Exceptions ...
-            }
+
+            throw new BLEStateException("doWriteCharacteristic: AppTime_0x80_State : " + (in[1] & 0xff) + "==" + 0x80);
         }
     }
 
@@ -349,10 +386,29 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
 
         @Override
-        public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // Shoud we return anything?
+        public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                           IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+            // Condition: This should be called in doWriteCharacteristic
+            //            and something in the following:
+
+            byte in[] = btGattCharacteristic.getValue();
+            if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
+                // nothing to do
+                return;
+            }
+
+            throw new BLEStateException("doWriteCharacteristic: REQ_Disconnection_0x82_0x02_State : "
+                    + (in[1] & 0xff) + "==" + 0x82 + ", "
+                    + (in[3] & 0xff) + "==" + 0x02);
         }
     }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Disconnection
+    //    - doDisconnect
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void doDisconnect(IBLEDisconnect ibleDisconnect) {
