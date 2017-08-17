@@ -66,14 +66,21 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             path.add(realtimeDataReply);
         }
 
-        // No corresponding state in the state diagram
-//        DisconnectByApp disconnectByApp = new DisconnectByApp(this);
-//        path.add(disconnectByApp);
+        // A final state disconnected by App
 
-        // The final state:
-        BLEDisconnectState bleDisconnectState =
-                new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
-        path.add(bleDisconnectState);
+        // User presses the stop button.
+        REQ_Disconnection_0x82_0x02_State req_disconnection_0x82_0x02_state = new REQ_Disconnection_0x82_0x02_State(this);
+        path.add(req_disconnection_0x82_0x02_state);
+
+        // Disconnection by App
+        DisconnectByApp disconnectByApp = new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+        path.add(disconnectByApp);
+
+        // Another final state disconnected by Device
+
+//        BLEDisconnectState bleDisconnectState =
+//                new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+//        path.add(bleDisconnectState);
 
         // Initialize a path for testing
         this.setPath(path);
@@ -263,8 +270,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 }
             }
 
-            else if (state instanceof DisconnectByApp) {
-                DisconnectByApp disconnectByApp = (DisconnectByApp) state;
+            else if (state instanceof REQ_Disconnection_0x82_0x02_State) {
+                REQ_Disconnection_0x82_0x02_State disconnectByApp = (REQ_Disconnection_0x82_0x02_State) state;
 
                 byte in[] = btGattCharacteristic.getValue();
                 if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x02) {
@@ -336,14 +343,14 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
     }
 
-    class DisconnectByApp extends BLEWriteCharacteristicState {
-        public DisconnectByApp(AutoHRM3200 bluetoothLE) {
+    class REQ_Disconnection_0x82_0x02_State extends BLEWriteCharacteristicState {
+        public REQ_Disconnection_0x82_0x02_State(AutoHRM3200 bluetoothLE) {
             super(bluetoothLE);
         }
 
         @Override
         public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
-            // Nothing to do by itself???
+            // Shoud we return anything?
         }
     }
 
@@ -359,6 +366,13 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                 // No incIndex();
                 return;
             }
+            else if (state instanceof DisconnectByApp) {
+                // We arrive at the final state!!
+                state.action(ibleDisconnect);
+
+                // No incIndex();
+                return;
+            }
 
             throw new BLEStateException("doDisconnect: " + state.getClass());
         }
@@ -366,5 +380,16 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         throw new BLEStateException("doDisconnect: path fails "
                 + (path != null) + " "
                 + (index() < path.size()) );
+    }
+
+    class DisconnectByApp extends BLEDisconnectState {
+        public DisconnectByApp(BluetoothLE bluetoothLE, int succ_or_fail, int state) {
+            super(bluetoothLE, succ_or_fail, state);
+        }
+
+        @Override
+        public void setupAction() {
+            Log.v("HRM3200-Emul", "DisconnectByApp : Press the Disconnect button ...");
+        }
     }
 }

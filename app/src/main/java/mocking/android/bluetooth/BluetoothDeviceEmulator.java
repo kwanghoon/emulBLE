@@ -209,6 +209,7 @@ public class BluetoothDeviceEmulator extends Thread {
                 }
                 catch(BLEStateException e) {
                     Log.v("BluetoothDeviceEmulator", e.getMessage());
+                    Log.v("BluetoothDeviceEmulator", e.getStackTrace().toString());
                     throw e;
                 }
             }
