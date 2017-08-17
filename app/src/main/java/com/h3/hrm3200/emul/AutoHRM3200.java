@@ -123,7 +123,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         @Override
         public void action(IBLEDiscoverService ibleDiscoverService) {
-            // Condtion: This method should be called in doDiscoverService()
+            // Condition: This method should be called in doDiscoverService()
             //           Except this, no extra requirement.
 
             // Do the default action : Return succ_or_fail and bleServiceList
