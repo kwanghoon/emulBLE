@@ -87,6 +87,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         this.setIndex(0);
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    //  Service Discovery
+    //    - doDiscoverService
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
     @Override
     public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
         if (path != null && index() < path.size()) {
@@ -162,6 +167,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
     private UUID serviceUuid = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb");
     private UUID characteristicUuid = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
 
+    //////////////////////////////////////////////////////////////////////////
+    //  Notification (Change Characterisitcs)
+    //    - doNotification
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
+
     @Override
     public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
         if (path != null && index() < path.size()) {
@@ -231,6 +242,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
                             (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
         }
     }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Write Characterisitcs  (Commands by Apps)
+    //    - doWriteCharacteristic
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic,
@@ -353,6 +370,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
             // Shoud we return anything?
         }
     }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Disconnection
+    //    - doDisconnect
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
 
     @Override
     public void doDisconnect(IBLEDisconnect ibleDisconnect) {
