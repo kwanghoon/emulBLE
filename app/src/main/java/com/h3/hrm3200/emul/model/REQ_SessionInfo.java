@@ -11,10 +11,12 @@ import mocking.android.bluetooth.IBLEChangeCharacteristic;
 /**
  * Created by khChoi on 2017-08-17.
  */
-public class REQ_DownloadStoredData_0x82_0x03 extends BLEWriteCharacteristicState {
 
-    public REQ_DownloadStoredData_0x82_0x03(BluetoothLE bluetoothLE) {
+public class REQ_SessionInfo extends BLEWriteCharacteristicState {
+    private SharedSessionInfo sharedSessionInfo;
+    public REQ_SessionInfo(BluetoothLE bluetoothLE, SharedSessionInfo sharedSessionInfo) {
         super(bluetoothLE);
+        this.sharedSessionInfo = sharedSessionInfo;
     }
 
     @Override
@@ -24,15 +26,15 @@ public class REQ_DownloadStoredData_0x82_0x03 extends BLEWriteCharacteristicStat
         //            and something in the following:
 
         byte in[] = btGattCharacteristic.getValue();
-        if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x03) {
+        if ((in[1] & 0xff) == 0x84) {
+            sharedSessionInfo.sessionNumber = in[3] & 0xff;
+
             ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,
-                    new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF});
+                    new byte[] { (byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF });    // OK
 
             return;
         }
 
-        throw new BLEStateException("doWriteCharacteristic: REQ_DownloadStoredData_0x82_0x03 : " + (in[1] & 0xff) + "==" + 0x82 + ", "
-                            + (in[3] & 0xff) + "==" + 0x03);
-
+        throw new BLEStateException("doWriteCharacteristic: REQ_SessionInfo : " + (in[1] & 0xff) + "==" + 0x84);
     }
 }
