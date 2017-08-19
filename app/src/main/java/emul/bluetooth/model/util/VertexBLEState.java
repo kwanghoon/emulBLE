@@ -1,7 +1,6 @@
 package emul.bluetooth.model.util;
 
 import emul.bluetooth.model.BLEState;
-import emul.bluetooth.model.util.Vertex;
 
 /**
  * Created by khChoi on 2017-08-18.
@@ -10,7 +9,11 @@ import emul.bluetooth.model.util.Vertex;
 public class VertexBLEState extends Vertex {
     private BLEState bleState;
     public VertexBLEState(String stateNumber, BLEState bleState) {
-        super(stateNumber);
+        this(stateNumber, Vertex.INTERMEDIATE_STATE, bleState);
+    }
+
+    public VertexBLEState(String stateNumber, int kind, BLEState bleState) {
+        super(stateNumber, kind);
         this.bleState = bleState;
     }
 }

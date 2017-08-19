@@ -11,6 +11,15 @@ public class BasicPathGen {
 
     private static ArrayList<Vertex> vertices;
 
+    public static Vertex findInitialState(ArrayList<Vertex> vertices) {
+        for ( Vertex v : vertices ) {
+            if ( v.isInitial() )
+                return v;
+        }
+
+        return null;  // This should never happen!!
+    }
+
     private static Vertex findState(String state, ArrayList<Vertex> vertices) {
 
         for ( Vertex v : vertices ) {
@@ -22,23 +31,25 @@ public class BasicPathGen {
         return w;
     }
 
-    private static void print(ArrayList<Vertex> vertices) {
+    public static void print(ArrayList<Vertex> vertices) {
         for ( Vertex v : vertices ) {
             System.out.print("[ " + v.getStateNumber() + " ] " );
             for ( Vertex w : v.getAdjacencyList() ) {
-                System.out.print(w.getStateNumber() + " ");
+                System.out.print(w.getStateNumber() + "; ");
             }
             System.out.println();
         }
     }
 
-    private static void DFS(Vertex v, Path p, int bound, BasicPaths basicPaths) {
+    public static void DFS(Vertex v, Path p, int bound, BasicPaths basicPaths) {
 
         if ( p.length() <= bound  && p.isBasicPath(v) ) {
             p.add(v);
 
             if ( v.isFinal() ) {
                 basicPaths.add(p);
+
+                p.print();
 
             } else {
                 for (Vertex n : v.getAdjacencyList()) {
@@ -48,6 +59,20 @@ public class BasicPathGen {
 
             p.remove();
         }
+    }
+
+    public static int numOfEdges(ArrayList<Vertex> vertices) {
+        int n = 0;
+
+        for (Vertex v : vertices) {
+            ArrayList<Vertex> neighbors = v.getAdjacencyList();
+
+            for (Vertex w : neighbors) {
+                n++;
+            }
+        }
+
+        return n;
     }
 
     public static void main(String[] args) throws IOException {
@@ -76,7 +101,7 @@ public class BasicPathGen {
         }
 
         print(vertices);
-        Vertex start = findState(BasicPathGen.toString(0), vertices);
+        Vertex start = findInitialState(vertices);
         Path path = new Path();
         BasicPaths basicPaths = new BasicPaths();
 

@@ -34,6 +34,10 @@ import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
 import emul.bluetooth.model.BLEStateException;
+import emul.bluetooth.model.util.BasicPathGen;
+import emul.bluetooth.model.util.BasicPaths;
+import emul.bluetooth.model.util.Path;
+import emul.bluetooth.model.util.Vertex;
 import emul.bluetooth.model.util.VertexBLEState;
 import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.BluetoothGatt;
@@ -49,12 +53,14 @@ import mocking.android.bluetooth.IBLEDiscoverService;
 
 public class AutoHRM3200 extends AutoBluetoothLE {
     ArrayList<BLEState> path;
+    ArrayList<Vertex> vertices;
+    int numberOfEdges;
 
     public AutoHRM3200() {
-        path = new ArrayList<BLEState>();
+        // path = new ArrayList<BLEState>();
 
         // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
-        new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
+        // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
 
         // BUG : 디바이스에 저장된 데이터를 다운받지 않는 선택을 할 때 sessionData 객체를 초기화하지 않아 NullReferenceException 발생
         // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
@@ -67,42 +73,68 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         // new Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(this, path);
 
         // Initialize a path for testing
-        this.setPath(path);
-        this.setIndex(0);
+        // this.setPath(path);
+        // this.setIndex(0);
+
+        buildGraph();
+
+        BasicPathGen.print(vertices);
+        Vertex start = BasicPathGen.findInitialState(vertices);
+        Path path = new Path();
+        BasicPaths basicPaths = new BasicPaths();
+
+        int bound = BasicPathGen.numOfEdges(vertices);
+
+        BasicPathGen.DFS(start, path, bound, basicPaths );
+
+        basicPaths.print();
     }
 
     private void buildGraph() {
+        vertices = new ArrayList<Vertex>();
+
         // VERTEX:
         VertexBLEState vtx_BLEScan =
-                new VertexBLEState("State0 BLEScan", new BLEScanState("00:11:22:AA:BB:CC", "HRM3200"));
+                new VertexBLEState("BLEScan", Vertex.INITIAL_STATE, new BLEScanState("00:11:22:AA:BB:CC", "HRM3200"));
+
+        vertices.add(vtx_BLEScan);
 
         // VERTEX:
         VertexBLEState vtx_ConnectSuccess =
-                new VertexBLEState("State0 BLEConnect", new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
+                new VertexBLEState("BLEConnect Success", new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
         VertexBLEState vtx_ConnectFail =
-                new VertexBLEState("State0 BLEConnect", new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
+                new VertexBLEState("BLEConnect Failure", Vertex.FINAL_STATE, new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
+
+        vertices.add(vtx_ConnectSuccess);
+        vertices.add(vtx_ConnectFail);
 
         // EDGE: vtx_BLEScan ---> vtx_Connect
         vtx_BLEScan.getAdjacencyList().add(vtx_ConnectSuccess);
         vtx_BLEScan.getAdjacencyList().add(vtx_ConnectFail);
 
-        // TODO: vtx_ConnectFail ---> Any final state?????
+        // TODO: vtx_ConnectFail is a final state?
 
         // VERTEX:
-        VertexBLEState vtx_DisoverService =
-                new VertexBLEState("State0 ServiceDiscovery", new ServiceDiscoverFollowedByDeviceTimeReply());
+        VertexBLEState vtx_DiscoverService =
+                new VertexBLEState("ServiceDiscovery", new ServiceDiscoverFollowedByDeviceTimeReply());
+
+        vertices.add(vtx_DiscoverService);
 
         // EDGE: vtx_Connect ---> vtx_DiscoverService
-        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DisoverService);
+        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverService);
 
         // VERTEX:
         VertexBLEState vtx_State0 = new VertexBLEState("State0", new DeviceTimeReplyState(this));
 
+        vertices.add(vtx_State0);
+
         // EDGE: vtx_DiscoverService ---> vtx_State0
-        vtx_DisoverService.getAdjacencyList().add(vtx_State0);
+        vtx_DiscoverService.getAdjacencyList().add(vtx_State0);
 
         // VERTEX:
         VertexBLEState vtx_State1_0x11 = new VertexBLEState("State1 0x11", new OK_0x11_State(this));
+
+        vertices.add(vtx_State1_0x11);
 
         // EDGE: vtx_State0 ---> vtx_State1_0x11
         vtx_State0.getAdjacencyList().add(vtx_State1_0x11);
@@ -114,6 +146,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         VertexBLEState vtx_State1_0x80_0x81_0x01_0x01 = new VertexBLEState("State1 0x80 0x01_0x01", new AppTime_0x80_0x81_State(this, 0x01, 0x01));
         VertexBLEState vtx_State1_0x80_0x81_0x00_0x01 = new VertexBLEState("State1 0x80 0x00_0x01", new AppTime_0x80_0x81_State(this, 0x00, 0x01));
         VertexBLEState vtx_State1_0x80_0x81_0x00_0x00 = new VertexBLEState("State1 0x80 0x00_0x00", new AppTime_0x80_0x81_State(this, 0x00, 0x00));
+
+        vertices.add(vtx_State1_0x80_0x81_0x01_0x01);
+        vertices.add(vtx_State1_0x80_0x81_0x00_0x01);
+        vertices.add(vtx_State1_0x80_0x81_0x00_0x00);
 
         // EDGE: vtx_State1_0x11 ---> vtxState1_0x80_0x01_0x01   (Measure data in realtime)
         // EDGE: vtx_State1_0x11 ---> vtxState1_0x80_0x00_0x01   (
@@ -127,11 +163,16 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         // VERTEX:
         VertexBLEState vtx_State5_0x1A_1 = new VertexBLEState("State5 1", new RealtimeDataReply(this));
-
         VertexBLEState vtx_State5_0x1A_2 = new VertexBLEState("State5 2", new RealtimeDataReply(this));
         VertexBLEState vtx_State5_0x1A_3 = new VertexBLEState("State5 3", new RealtimeDataReply(this));
         VertexBLEState vtx_State5_0x1A_4 = new VertexBLEState("State5 4", new RealtimeDataReply(this));
         VertexBLEState vtx_State5_0x1A_5 = new VertexBLEState("State5 5", new RealtimeDataReply(this));
+
+        vertices.add(vtx_State5_0x1A_1);
+        vertices.add(vtx_State5_0x1A_2);
+        vertices.add(vtx_State5_0x1A_3);
+        vertices.add(vtx_State5_0x1A_4);
+        vertices.add(vtx_State5_0x1A_5);
 
         // EDGE :
         vtx_State1_0x80_0x81_0x01_0x01.getAdjacencyList().add(vtx_State5_0x1A_1);  // 1st data after 0x81 0x01 0x01
@@ -146,6 +187,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         VertexBLEState vtx_State6_REQ_0x82_0x03_0x83 = new VertexBLEState("State6 REQ_0x82_0x03_0x83",
                 new REQ_DownloadStoredData_0x82_0x03_0x83(this));
 
+        vertices.add(vtx_State6_REQ_0x82_0x03_0x83);
+
         // EDGE : vtx_State1_0x80_0x81_0x00_0x00 ---> vtx_State6_REQ_0x82_0x03_0x83
         vtx_State1_0x80_0x81_0x00_0x00.getAdjacencyList().add(vtx_State6_REQ_0x82_0x03_0x83);
 
@@ -156,6 +199,8 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         VertexBLEState vtx_State7_SendSessionCount = new VertexBLEState("State7 Session Count",
                 new SendSessionCount(this, session_count));
 
+        vertices.add(vtx_State7_SendSessionCount);
+
         // EDGE : vtx_State6_REQ_0x82_0x03_0x83 ---> vtx_State7_SendSessionCount
         vtx_State6_REQ_0x82_0x03_0x83.getAdjacencyList().add(vtx_State7_SendSessionCount);
 
@@ -164,8 +209,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         // 1st Session //////////////////////////////////////////////////////////////////////////
 
         // VERTEX :
-        VertexBLEState vtx_ReqSessionInfo_1 = new VertexBLEState("State8 Req Session Info",
+        VertexBLEState vtx_ReqSessionInfo_1 = new VertexBLEState("State8 Req Session Info 1",
                 new REQ_SessionInfo_0x84_0x85(this, sharedSessionInfo));
+
+        vertices.add(vtx_ReqSessionInfo_1);
 
         // EDGE : vtx_State7_SendSessionCount ---> vtx_ReqSessionInfo_1
         vtx_State7_SendSessionCount.getAdjacencyList().add(vtx_ReqSessionInfo_1);
@@ -173,43 +220,60 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         sharedSessionInfo.dataTotalCount = 10;
 
         // VERTEX
-        VertexBLEState vtx_SendSessionInfo_1 = new VertexBLEState("State10 Send Session Info",
+        VertexBLEState vtx_SendSessionInfo_1 = new VertexBLEState("State10 Send Session Info 1",
                 new SendSessionInfo(this, sharedSessionInfo));
+
+        vertices.add(vtx_SendSessionInfo_1);
 
         // EDGE : vtx_ReqSessionInfo_1 ---> vtx_SendSessionInfo_1
         vtx_ReqSessionInfo_1.getAdjacencyList().add(vtx_SendSessionInfo_1);
 
         // VERTEX :
-        VertexBLEState vtx_OK_0x15_State_1 = new VertexBLEState("State11 OK 0x15",
+        VertexBLEState vtx_OK_0x15_State_1 = new VertexBLEState("State11 OK 0x15 1",
                 new OK_0x15_State(this));
+
+        vertices.add(vtx_OK_0x15_State_1);
 
         // EDGE : vtx_SendSessionInfo_1 ---> vtx_OK_0x15_State_1
         vtx_SendSessionInfo_1.getAdjacencyList().add(vtx_OK_0x15_State_1);
 
         // VERTICES as many as dataTotalCount
-        VertexBLEState vtx_StoredDataReply_1_1 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_1 = new VertexBLEState("State12 Stored Data Reply 1 1",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_2 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_2 = new VertexBLEState("State12 Stored Data Reply 1 2",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_3 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_3 = new VertexBLEState("State12 Stored Data Reply 1 3",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_4 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_4 = new VertexBLEState("State12 Stored Data Reply 1 4",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_5 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_5 = new VertexBLEState("State12 Stored Data Reply 1 5",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_6 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_6 = new VertexBLEState("State12 Stored Data Reply 1 6",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_7 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_7 = new VertexBLEState("State12 Stored Data Reply 1 7",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_8 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_8 = new VertexBLEState("State12 Stored Data Reply 1 8",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_9 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_9 = new VertexBLEState("State12 Stored Data Reply 1 9",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_1_10 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_1_10 = new VertexBLEState("State12 Stored Data Reply 1 10",
                 new StoredDataReply(this, sharedSessionInfo));
 
-        VertexBLEState vtx_SendEndofSession_1 = new VertexBLEState("State Send End of Session",
+        VertexBLEState vtx_SendEndofSession_1 = new VertexBLEState("Send End of Session 1",
                 new SendEndOfSession(this, sharedSessionInfo));
+
+        vertices.add(vtx_StoredDataReply_1_1);
+        vertices.add(vtx_StoredDataReply_1_2);
+        vertices.add(vtx_StoredDataReply_1_3);
+        vertices.add(vtx_StoredDataReply_1_4);
+        vertices.add(vtx_StoredDataReply_1_5);
+        vertices.add(vtx_StoredDataReply_1_6);
+        vertices.add(vtx_StoredDataReply_1_7);
+        vertices.add(vtx_StoredDataReply_1_8);
+        vertices.add(vtx_StoredDataReply_1_9);
+        vertices.add(vtx_StoredDataReply_1_10);
+
+        vertices.add(vtx_SendEndofSession_1);
 
         // EDGES :
         vtx_OK_0x15_State_1.getAdjacencyList().add(vtx_StoredDataReply_1_1);
@@ -229,8 +293,10 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         // 2nd Session //////////////////////////////////////////////////////////////////////////
 
         // VERTEX :
-        VertexBLEState vtx_ReqSessionInfo_2 = new VertexBLEState("State8 Req Session Info",
+        VertexBLEState vtx_ReqSessionInfo_2 = new VertexBLEState("State8 Req Session Info 2",
                 new REQ_SessionInfo_0x84_0x85(this, sharedSessionInfo));
+
+        vertices.add(vtx_ReqSessionInfo_2);
 
         // EDGE : vtx_SendEndofSession_1 ---> vtx_ReqSessionInfo_2
         vtx_SendEndofSession_1.getAdjacencyList().add(vtx_ReqSessionInfo_2);
@@ -238,37 +304,51 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         sharedSessionInfo.dataTotalCount = 7;
 
         // VERTEX
-        VertexBLEState vtx_SendSessionInfo_2 = new VertexBLEState("State10 Send Session Info",
+        VertexBLEState vtx_SendSessionInfo_2 = new VertexBLEState("State10 Send Session Info 2",
                 new SendSessionInfo(this, sharedSessionInfo));
+
+        vertices.add(vtx_SendSessionInfo_2);
 
         // EDGE : vtx_ReqSessionInfo_2 ---> vtx_SendSessionInfo_2
         vtx_ReqSessionInfo_2.getAdjacencyList().add(vtx_SendSessionInfo_2);
 
         // VERTEX :
-        VertexBLEState vtx_OK_0x15_State_2 = new VertexBLEState("State11 OK 0x15",
+        VertexBLEState vtx_OK_0x15_State_2 = new VertexBLEState("State11 OK 0x15 2",
                 new OK_0x15_State(this));
+
+        vertices.add(vtx_OK_0x15_State_2);
 
         // EDGE : vtx_SendSessionInfo_2 ---> vtx_OK_0x15_State_2
         vtx_SendSessionInfo_2.getAdjacencyList().add(vtx_OK_0x15_State_2);
 
         // VERTICES as many as dataTotalCount
-        VertexBLEState vtx_StoredDataReply_2_1 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_1 = new VertexBLEState("State12 Stored Data Reply 2 1",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_2 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_2 = new VertexBLEState("State12 Stored Data Reply 2 2",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_3 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_3 = new VertexBLEState("State12 Stored Data Reply 2 3",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_4 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_4 = new VertexBLEState("State12 Stored Data Reply 2 4",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_5 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_5 = new VertexBLEState("State12 Stored Data Reply 2 5",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_6 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_6 = new VertexBLEState("State12 Stored Data Reply 2 6",
                 new StoredDataReply(this, sharedSessionInfo));
-        VertexBLEState vtx_StoredDataReply_2_7 = new VertexBLEState("State12 Stored Data Reply",
+        VertexBLEState vtx_StoredDataReply_2_7 = new VertexBLEState("State12 Stored Data Reply 2 7",
                 new StoredDataReply(this, sharedSessionInfo));
 
-        VertexBLEState vtx_SendEndofSession_2 = new VertexBLEState("State Send End of Session",
+        VertexBLEState vtx_SendEndofSession_2 = new VertexBLEState("Send End of Session 2",
                 new SendEndOfSession(this, sharedSessionInfo));
+
+        vertices.add(vtx_StoredDataReply_2_1);
+        vertices.add(vtx_StoredDataReply_2_2);
+        vertices.add(vtx_StoredDataReply_2_3);
+        vertices.add(vtx_StoredDataReply_2_4);
+        vertices.add(vtx_StoredDataReply_2_5);
+        vertices.add(vtx_StoredDataReply_2_6);
+        vertices.add(vtx_StoredDataReply_2_7);
+
+        vertices.add(vtx_SendEndofSession_2);
 
         // EDGES :
         vtx_OK_0x15_State_2.getAdjacencyList().add(vtx_StoredDataReply_2_1);
@@ -290,34 +370,48 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         VertexBLEState vtx_State4_CANCEL_0x82_0x01_0x83 = new VertexBLEState("State4 CANCEL_0x82_0x01_0x83",
                 new CANCEL_DownloadStoredData_0x82_0x01_0x83(this));
 
+        vertices.add(vtx_State4_CANCEL_0x82_0x01_0x83);
+
+        // EDGE : vtx_State1_0x80_0x81_0x00_0x00 ---> vtx_State6_REQ_0x82_0x03_0x83
+        vtx_State1_0x80_0x81_0x00_0x00.getAdjacencyList().add(vtx_State4_CANCEL_0x82_0x01_0x83);
+
         // EDGE : vtx_State4_CANCEL_0x82_0x01_0x83 ---> vtx_State5_0x1A
         vtx_State4_CANCEL_0x82_0x01_0x83.getAdjacencyList().add(vtx_State5_0x1A_1);
 
         // Disconnection
         //     by App
-        VertexBLEState vtx_StateReqDisconnect_0x82_0x02 = new VertexBLEState("State REQ_Disconnection",
+        VertexBLEState vtx_StateReqDisconnect_0x82_0x02 = new VertexBLEState("REQ_Disconnection 0x82 0x02",
                 new REQ_Disconnection_0x82_0x02_State(this));
-        VertexBLEState vtx_StateDisconnectByApp = new VertexBLEState("State Disconnection by App",
+        VertexBLEState vtx_StateDisconnectByApp = new VertexBLEState("Disconnection by App", Vertex.FINAL_STATE,
                 new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED));
+
+        vertices.add(vtx_StateReqDisconnect_0x82_0x02);
+        vertices.add(vtx_StateDisconnectByApp);
 
         // EDGE : 1) Disconnection by App after measuring data in realtime
         //           vtx_State5_0x1A_5 ---> vtx_StateReqDisconnect_0x82_0x02
         //           vtx_StateReqDisconnect_0x82_0x02 ---> vtx_StateDisconnectByApp
 
-        //        2) Discoonection by App after downloading stored data
-        //           vtx_SendEndofSession_2 ---> vtx_StateDisconnectByApp
-
         vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);
         vtx_StateReqDisconnect_0x82_0x02.getAdjacencyList().add(vtx_StateDisconnectByApp);
 
-        vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByApp);
 
         //     by Device
-        VertexBLEState vtx_StateDisconnectByDevice = new VertexBLEState("State Disconnection by Device",
+        VertexBLEState vtx_StateDisconnectByDevice = new VertexBLEState("Disconnection by Device", Vertex.FINAL_STATE,
                 new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED));
 
-        // EDGE : vtx_State5_0x1A_5 ---> vtx_StateDiconnectByDevice
+        vertices.add(vtx_StateDisconnectByDevice);
+
+        // EDGE : 1) Disconnection by Device after measuring data in realtime
+        //            vtx_State5_0x1A_5 ---> vtx_StateDiconnectByDevice
+
+        //        2) Discoonection by Device after downloading stored data
+        //           vtx_SendEndofSession_2 ---> vtx_StateDisconnectByApp
+
         vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByApp);
+
 
     }
 

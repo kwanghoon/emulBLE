@@ -35,7 +35,7 @@ public class Path {
 
     public void print() {
         for ( Vertex v : path ) {
-            System.out.print(v.getStateNumber() + " ");
+            System.out.print(v.getStateNumber() + "; ");
         }
         System.out.println();
     }
