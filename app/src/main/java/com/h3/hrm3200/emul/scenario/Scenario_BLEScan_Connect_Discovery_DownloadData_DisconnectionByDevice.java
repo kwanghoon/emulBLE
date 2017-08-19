@@ -1,13 +1,13 @@
 package com.h3.hrm3200.emul.scenario;
 
-import com.h3.hrm3200.emul.model.AppTime_0x80_State;
+import com.h3.hrm3200.emul.model.AppTime_0x80_0x81_State;
 import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
 import com.h3.hrm3200.emul.model.DisconnectByApp;
 import com.h3.hrm3200.emul.model.InitializeData;
 import com.h3.hrm3200.emul.model.OK_0x11_State;
 import com.h3.hrm3200.emul.model.OK_0x15_State;
-import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03;
-import com.h3.hrm3200.emul.model.REQ_SessionInfo;
+import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03_0x83;
+import com.h3.hrm3200.emul.model.REQ_SessionInfo_0x84_0x85;
 import com.h3.hrm3200.emul.model.RealtimeDataReply;
 import com.h3.hrm3200.emul.model.SendEndOfSession;
 import com.h3.hrm3200.emul.model.SendSessionCount;
@@ -64,15 +64,15 @@ public class Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevi
         path().add(ok_0x11_state);
 
         // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(bluetoothLE, 0x00, 0x00);
+        AppTime_0x80_0x81_State appTime_0x80_0x81_state = new AppTime_0x80_0x81_State(bluetoothLE, 0x00, 0x00);
         // 0x10, 0x00
         // 0x00, 0x00
-        path().add(appTime_0x80_state);
+        path().add(appTime_0x80_0x81_state);
 
         // State6:
-        REQ_DownloadStoredData_0x82_0x03 req_downloadStoredData_0x82_0x03 =
-                new REQ_DownloadStoredData_0x82_0x03(bluetoothLE);
-        path().add(req_downloadStoredData_0x82_0x03);
+        REQ_DownloadStoredData_0x82_0x03_0x83 req_downloadStoredData_0x82_0x03_0x83 =
+                new REQ_DownloadStoredData_0x82_0x03_0x83(bluetoothLE);
+        path().add(req_downloadStoredData_0x82_0x03_0x83);
 
         // Session count
         int session_count = 2;
@@ -86,8 +86,8 @@ public class Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevi
 
         for(int i=0; i<session_count; i++) {
             // Initialize session in REQ_SessionInfo
-            REQ_SessionInfo req_sessionInfo = new REQ_SessionInfo(bluetoothLE, sharedSessionInfo);
-            path().add(req_sessionInfo);
+            REQ_SessionInfo_0x84_0x85 req_sessionInfo_0x84_0x85 = new REQ_SessionInfo_0x84_0x85(bluetoothLE, sharedSessionInfo);
+            path().add(req_sessionInfo_0x84_0x85);
 
             sharedSessionInfo.dataTotalCount = 15; // a simple setting for the number of data per session
 

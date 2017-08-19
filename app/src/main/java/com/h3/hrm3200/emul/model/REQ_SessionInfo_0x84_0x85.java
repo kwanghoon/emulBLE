@@ -12,9 +12,9 @@ import mocking.android.bluetooth.IBLEChangeCharacteristic;
  * Created by khChoi on 2017-08-17.
  */
 
-public class REQ_SessionInfo extends BLEWriteCharacteristicState {
+public class REQ_SessionInfo_0x84_0x85 extends BLEWriteCharacteristicState {
     private SharedSessionInfo sharedSessionInfo;
-    public REQ_SessionInfo(BluetoothLE bluetoothLE, SharedSessionInfo sharedSessionInfo) {
+    public REQ_SessionInfo_0x84_0x85(BluetoothLE bluetoothLE, SharedSessionInfo sharedSessionInfo) {
         super(bluetoothLE);
         this.sharedSessionInfo = sharedSessionInfo;
     }

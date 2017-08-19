@@ -1,6 +1,6 @@
 package com.h3.hrm3200.emul.scenario;
 
-import com.h3.hrm3200.emul.model.AppTime_0x80_State;
+import com.h3.hrm3200.emul.model.AppTime_0x80_0x81_State;
 import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
 import com.h3.hrm3200.emul.model.DisconnectByApp;
 import com.h3.hrm3200.emul.model.OK_0x11_State;
@@ -56,10 +56,10 @@ public class Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionBy
         path().add(ok_0x11_state);
 
         // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(bluetoothLE, 0x00, 0x00);
+        AppTime_0x80_0x81_State appTime_0x80_0x81_state = new AppTime_0x80_0x81_State(bluetoothLE, 0x00, 0x00);
         // 0x10, 0x00
         // 0x00, 0x00
-        path().add(appTime_0x80_state);
+        path().add(appTime_0x80_0x81_state);
 
         // State3 : Request to measure realtime data by UI
         REQ_RealtimeData_0x82_0x01 req_realtimeData_0x82_0x01 = new REQ_RealtimeData_0x82_0x01(bluetoothLE);
