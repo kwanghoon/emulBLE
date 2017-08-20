@@ -12,7 +12,7 @@ import com.h3.hrm3200.emul.model.RealtimeDataReply;
 import com.h3.hrm3200.emul.model.SendEndOfSession;
 import com.h3.hrm3200.emul.model.SendSessionCount;
 import com.h3.hrm3200.emul.model.SendSessionInfo;
-import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.model.ServiceDiscoveryHRM3200;
 import com.h3.hrm3200.emul.model.SharedSessionInfo;
 import com.h3.hrm3200.emul.model.StoredDataReply;
 
@@ -25,6 +25,7 @@ import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
 import emul.bluetooth.model.Scenario;
+import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.BluetoothGatt;
 import mocking.android.bluetooth.BluetoothProfile;
 
@@ -52,7 +53,8 @@ public class Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevi
         path().add(bleConnectState);
 
         // Service Discovery
-        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoverFollowedByDeviceTimeReply();
+        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,
+                new ArrayList<BLEService>());
         path().add(bleServiceDiscoverState);
 
         // State0: Notification of Device Time

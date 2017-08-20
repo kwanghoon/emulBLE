@@ -15,7 +15,7 @@ import com.h3.hrm3200.emul.model.RealtimeDataReply;
 import com.h3.hrm3200.emul.model.SendEndOfSession;
 import com.h3.hrm3200.emul.model.SendSessionCount;
 import com.h3.hrm3200.emul.model.SendSessionInfo;
-import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.model.ServiceDiscoveryHRM3200;
 import com.h3.hrm3200.emul.model.SharedSessionInfo;
 import com.h3.hrm3200.emul.model.StoredDataReply;
 import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice;
@@ -49,6 +49,11 @@ import mocking.android.bluetooth.IBLEDiscoverService;
 
 /**
  * Created by khChoi on 2017-08-07.
+ *
+ * [요구사항]
+ *  - 상태 다이어그램은 정상적인 상황만을 기술한다.
+ *  - 앱에서 디바이스로 잘못된 명령어를 내리는 경우는 100% 버그이고 수정해야 함
+ *  - 디바이스에서 앱으로 잘못된 명령어를 올리거나 특히 비정상 연결해제되면 앱은 적절히 대응해야 함
  */
 
 public class AutoHRM3200 extends AutoBluetoothLE {
@@ -57,25 +62,32 @@ public class AutoHRM3200 extends AutoBluetoothLE {
     int numberOfEdges;
 
     public AutoHRM3200() {
-        // path = new ArrayList<BLEState>();
+        if(false) {
+            path = new ArrayList<BLEState>();
 
-        // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
-        // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
+            new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
 
-        // BUG : 디바이스에 저장된 데이터를 다운받지 않는 선택을 할 때 sessionData 객체를 초기화하지 않아 NullReferenceException 발생
-        // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
+            // BUG : 디바이스에 저장된 데이터를 다운받지 않는 선택을 할 때 sessionData 객체를 초기화하지 않아 NullReferenceException 발생
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
 
-        // BUG : 디바이스에 저장된 데이터를 다운받지 않는 선택을 할 때 sessionData 객체를 초기화하지 않아 NullReferenceException 발생
-        // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice(this, path);
+            // BUG : 디바이스에 저장된 데이터를 다운받지 않는 선택을 할 때 sessionData 객체를 초기화하지 않아 NullReferenceException 발생
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice(this, path);
 
-        // BUG??? : 디바이스에 저장된 데이터를 모두 다운받은 다음 앱에서 Disconnect 명령을 내리면
-        //          디바이스에서 Disconnect 완료 신호를 받지 않고 종료
-        // new Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(this, path);
+            // BUG??? : 디바이스에 저장된 데이터를 모두 다운받은 다음 앱에서 Disconnect 명령을 내리면
+            //          디바이스에서 Disconnect 완료 신호를 받지 않고 종료
+            // new Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(this, path);
 
-        // Initialize a path for testing
-        // this.setPath(path);
-        // this.setIndex(0);
+            // Initialize a path for testing
+            this.setPath(path);
+            this.setIndex(0);
+        }
+        else {
+            _AutoHRM3200("");
+        }
+    }
 
+    public void _AutoHRM3200(String str) {
         buildGraph();
 
         BasicPathGen.print(vertices);
@@ -101,9 +113,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         // VERTEX:
         VertexBLEState vtx_ConnectSuccess =
-                new VertexBLEState("BLEConnect Success", new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
+                new VertexBLEState("BLEConnect Success",
+                        new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
         VertexBLEState vtx_ConnectFail =
-                new VertexBLEState("BLEConnect Failure", Vertex.FINAL_STATE, new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
+                new VertexBLEState("BLEConnect Failure", Vertex.FINAL_STATE,
+                        new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
 
         vertices.add(vtx_ConnectSuccess);
         vertices.add(vtx_ConnectFail);
@@ -114,14 +128,32 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         // TODO: vtx_ConnectFail is a final state?
 
-        // VERTEX:
-        VertexBLEState vtx_DiscoverService =
-                new VertexBLEState("ServiceDiscovery", new ServiceDiscoverFollowedByDeviceTimeReply());
+        // Service Discovery
+        //  1. GATT_SUCCESS,  HRM3200 Service List
+        //  2. GATT_FAILURE,  Empty Service List
+        //  3. and many more ...
 
-        vertices.add(vtx_DiscoverService);
+        // VERTEX:
+        VertexBLEState vtx_DiscoverServiceSuccess =
+                new VertexBLEState("ServiceDiscovery Success",
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_SUCCESS,
+                                ServiceDiscoveryHRM3200.bleServiceList()));
+
+        vertices.add(vtx_DiscoverServiceSuccess);
 
         // EDGE: vtx_Connect ---> vtx_DiscoverService
-        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverService);
+        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverServiceSuccess);
+
+        // VERTEX :
+        VertexBLEState vtx_DiscoverServiceFailure =
+                new VertexBLEState("ServiceDiscovery Failure",
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,
+                                new ArrayList<BLEService>()));
+
+        vertices.add(vtx_DiscoverServiceFailure);
+
+        // EDGE :  vtx_ConnectSuccess ---> vtx_DiscoverServiceFailure
+        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverServiceFailure);
 
         // VERTEX:
         VertexBLEState vtx_State0 = new VertexBLEState("State0", new DeviceTimeReplyState(this));
@@ -129,7 +161,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         vertices.add(vtx_State0);
 
         // EDGE: vtx_DiscoverService ---> vtx_State0
-        vtx_DiscoverService.getAdjacencyList().add(vtx_State0);
+        vtx_DiscoverServiceSuccess.getAdjacencyList().add(vtx_State0);
 
         // VERTEX:
         VertexBLEState vtx_State1_0x11 = new VertexBLEState("State1 0x11", new OK_0x11_State(this));
@@ -395,6 +427,11 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);
         vtx_StateReqDisconnect_0x82_0x02.getAdjacencyList().add(vtx_StateDisconnectByApp);
 
+        //         2) Disconnection by App after failure in service discovery
+        //           vtx_DiscoverServiceFailure ---> vtx_StateReqDisconnect_0x82_0x02
+
+        vtx_DiscoverServiceFailure.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);
+
 
         //     by Device
         VertexBLEState vtx_StateDisconnectByDevice = new VertexBLEState("Disconnection by Device", Vertex.FINAL_STATE,
@@ -424,7 +461,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
     public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
         if (path != null && index() < path.size()) {
             BLEState state = path.get(index());
-            if (state instanceof ServiceDiscoverFollowedByDeviceTimeReply) {
+            if (state instanceof ServiceDiscoveryHRM3200) {
                 state.action(ibleDiscoverService);
 
                 incIndex();
