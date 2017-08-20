@@ -11,13 +11,13 @@ import mocking.android.bluetooth.IBLEChangeCharacteristic;
 /**
  * Created by khChoi on 2017-08-17.
  */
-public class AppTime_0x80_State extends BLEWriteCharacteristicState {
+public class AppTime_0x80_0x81_State extends BLEWriteCharacteristicState {
     // storeddata : 0x01 ==> no stored data, 0x00 ==> stored data available
     // downloadable : 0x01 ==> not downloadable, 0x00 ==> ddownloadable
     private int storeddata;
     private int downloadable;
 
-    public AppTime_0x80_State(BluetoothLE bluetoothLE, int storeddata, int downloadable) {
+    public AppTime_0x80_0x81_State(BluetoothLE bluetoothLE, int storeddata, int downloadable) {
         super(bluetoothLE);
 
         this.storeddata = storeddata;

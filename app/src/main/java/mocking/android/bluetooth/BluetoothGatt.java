@@ -12,6 +12,7 @@ import java.util.UUID;
  */
 public class BluetoothGatt {
     public final static int GATT_SUCCESS = 0;
+    public final static int GATT_FAILURE = 257;
     private List<BluetoothGattService> services;
 
     private BluetoothDevice bluetoothDevice;

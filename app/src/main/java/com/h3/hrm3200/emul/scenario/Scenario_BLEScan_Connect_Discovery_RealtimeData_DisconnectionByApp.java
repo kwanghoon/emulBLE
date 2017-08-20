@@ -1,12 +1,12 @@
 package com.h3.hrm3200.emul.scenario;
 
-import com.h3.hrm3200.emul.model.AppTime_0x80_State;
+import com.h3.hrm3200.emul.model.AppTime_0x80_0x81_State;
 import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
 import com.h3.hrm3200.emul.model.DisconnectByApp;
 import com.h3.hrm3200.emul.model.OK_0x11_State;
 import com.h3.hrm3200.emul.model.REQ_Disconnection_0x82_0x02_State;
 import com.h3.hrm3200.emul.model.RealtimeDataReply;
-import com.h3.hrm3200.emul.model.ServiceDiscoverFollowedByDeviceTimeReply;
+import com.h3.hrm3200.emul.model.ServiceDiscoveryHRM3200;
 
 import java.util.ArrayList;
 
@@ -16,6 +16,7 @@ import emul.bluetooth.model.BLEScanState;
 import emul.bluetooth.model.BLEServiceDiscoverState;
 import emul.bluetooth.model.BLEState;
 import emul.bluetooth.model.Scenario;
+import mocking.android.bluetooth.BLEService;
 import mocking.android.bluetooth.BluetoothGatt;
 import mocking.android.bluetooth.BluetoothProfile;
 
@@ -43,7 +44,8 @@ public class Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp 
         path().add(bleConnectState);
 
         // Service Discovery
-        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoverFollowedByDeviceTimeReply();
+        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,
+                new ArrayList<BLEService>());
         path().add(bleServiceDiscoverState);
 
         // State0: Notification of Device Time
@@ -55,7 +57,7 @@ public class Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp 
         path().add(ok_0x11_state);
 
         // State1-2: App Time (0x80)
-        AppTime_0x80_State appTime_0x80_state = new AppTime_0x80_State(bluetoothLE, 0x01, 0x01);
+        AppTime_0x80_0x81_State appTime_0x80_state = new AppTime_0x80_0x81_State(bluetoothLE, 0x01, 0x01);
         // 0x10, 0x00
         // 0x00, 0x00
         path().add(appTime_0x80_state);

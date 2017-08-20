@@ -12,12 +12,12 @@ import mocking.android.bluetooth.IBLEDiscoverService;
 /**
  * Created by khChoi on 2017-08-17.
  */ // For BLEServiceDiscoverState
-public class ServiceDiscoverFollowedByDeviceTimeReply extends BLEServiceDiscoverState {
-    public ServiceDiscoverFollowedByDeviceTimeReply() {
-        super(BluetoothGatt.GATT_SUCCESS, bleServiceList());
+public class ServiceDiscoveryHRM3200 extends BLEServiceDiscoverState {
+    public ServiceDiscoveryHRM3200(int gat_result, ArrayList<BLEService> bleServiceList) {
+        super(gat_result, bleServiceList);
     }
 
-    static ArrayList<BLEService> bleServiceList() {
+    public static ArrayList<BLEService> bleServiceList() {
         ArrayList<BLEService> bleServiceList = new ArrayList<BLEService>();
 
         bleServiceList.add(new BLEService(UUID.fromString("00001800-0000-1000-8000-00805f9b34fb")));

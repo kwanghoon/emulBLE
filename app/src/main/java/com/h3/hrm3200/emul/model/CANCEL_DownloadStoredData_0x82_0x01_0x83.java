@@ -9,11 +9,11 @@ import mocking.android.bluetooth.BluetoothGattCharacteristic;
 import mocking.android.bluetooth.IBLEChangeCharacteristic;
 
 /**
- * Created by khChoi on 2017-08-17.
+ * Created by khChoi on 2017-08-19.
  */
-public class REQ_DownloadStoredData_0x82_0x03 extends BLEWriteCharacteristicState {
 
-    public REQ_DownloadStoredData_0x82_0x03(BluetoothLE bluetoothLE) {
+public class CANCEL_DownloadStoredData_0x82_0x01_0x83 extends BLEWriteCharacteristicState {
+    public CANCEL_DownloadStoredData_0x82_0x01_0x83(BluetoothLE bluetoothLE) {
         super(bluetoothLE);
     }
 
@@ -24,15 +24,15 @@ public class REQ_DownloadStoredData_0x82_0x03 extends BLEWriteCharacteristicStat
         //            and something in the following:
 
         byte in[] = btGattCharacteristic.getValue();
-        if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x03) {
+        if ((in[1] & 0xff) == 0x82 && (in[3] & 0xff) == 0x01) {
             ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,
                     new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF});
 
             return;
         }
 
-        throw new BLEStateException("doWriteCharacteristic: REQ_DownloadStoredData_0x82_0x03 : " + (in[1] & 0xff) + "==" + 0x82 + ", "
-                            + (in[3] & 0xff) + "==" + 0x03);
+        throw new BLEStateException("doWriteCharacteristic: CANCEL_DownloadStoredData_0x82_0x01_0x83 : " + (in[1] & 0xff) + "==" + 0x82 + ", "
+                + (in[3] & 0xff) + "==" + 0x01);
 
     }
 }
