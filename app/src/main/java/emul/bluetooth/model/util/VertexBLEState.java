@@ -16,4 +16,8 @@ public class VertexBLEState extends Vertex {
         super(stateNumber, kind);
         this.bleState = bleState;
     }
+
+    public BLEState get() {
+        return bleState;
+    }
 }

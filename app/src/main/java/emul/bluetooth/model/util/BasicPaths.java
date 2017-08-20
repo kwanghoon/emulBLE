@@ -39,6 +39,10 @@ public class BasicPaths {
         return false;
     }
 
+    public Path get(int index) {
+        return basicPaths.get(index);
+    }
+
     public void print() {
         System.out.println("Basic Path 수: " + basicPaths.size());
         for ( Path p : basicPaths ) {

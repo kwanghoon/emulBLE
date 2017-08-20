@@ -54,12 +54,21 @@ import mocking.android.bluetooth.IBLEDiscoverService;
  *  - 상태 다이어그램은 정상적인 상황만을 기술한다.
  *  - 앱에서 디바이스로 잘못된 명령어를 내리는 경우는 100% 버그이고 수정해야 함
  *  - 디바이스에서 앱으로 잘못된 명령어를 올리거나 특히 비정상 연결해제되면 앱은 적절히 대응해야 함
+ *
+ * [Discussion]
+ *  - vtx_State1_0x80_0x81_Abnormal_0x01_0x00는 디바이스가 데이터를 잘못 올려준 경우
+ *    완성된 디바이스의 경우 이런 상황이 발생하지 않겠지만 개발 중이거나 디바이스 펌웨어 업그레이를
+ *    하는 경우 프로토콜 미스매치가 발생할 수 있다.
+ *
+ *    실제 디바이스를 가지고 테스트하기 어려우며 에뮬레이터를 통해서 쉽케 테스트할 수 있었다.
  */
 
 public class AutoHRM3200 extends AutoBluetoothLE {
     ArrayList<BLEState> path;
     ArrayList<Vertex> vertices;
-    int numberOfEdges;
+
+    int indexOfBasicPath;
+    BasicPaths basicPaths;
 
     public AutoHRM3200() {
         if(false) {
@@ -84,6 +93,20 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         }
         else {
             _AutoHRM3200("");
+
+            // Do test by changing the following index from 0 to (No of basic paths-1)
+            indexOfBasicPath = 0;
+
+            // Build a path from the indexed basic path
+            path = new ArrayList<BLEState>();
+            for(Vertex v : basicPaths.get(indexOfBasicPath).get()) {
+                VertexBLEState vtx = (VertexBLEState)v;
+                path.add(vtx.get());
+            }
+
+            // Initialize a path for testing
+            this.setPath(path);
+            this.setIndex(0);
         }
     }
 
@@ -93,7 +116,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         BasicPathGen.print(vertices);
         Vertex start = BasicPathGen.findInitialState(vertices);
         Path path = new Path();
-        BasicPaths basicPaths = new BasicPaths();
+        basicPaths = new BasicPaths();
 
         int bound = BasicPathGen.numOfEdges(vertices);
 
@@ -175,20 +198,32 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         // 1) 0x01, 0x01
         // 2) 0x00, 0x01
         // 3) 0x00, 0x00
-        VertexBLEState vtx_State1_0x80_0x81_0x01_0x01 = new VertexBLEState("State1 0x80 0x01_0x01", new AppTime_0x80_0x81_State(this, 0x01, 0x01));
-        VertexBLEState vtx_State1_0x80_0x81_0x00_0x01 = new VertexBLEState("State1 0x80 0x00_0x01", new AppTime_0x80_0x81_State(this, 0x00, 0x01));
-        VertexBLEState vtx_State1_0x80_0x81_0x00_0x00 = new VertexBLEState("State1 0x80 0x00_0x00", new AppTime_0x80_0x81_State(this, 0x00, 0x00));
+        // 4) Abnormal 0x10, 0x00
+        VertexBLEState vtx_State1_0x80_0x81_0x01_0x01 =
+                new VertexBLEState("State1 0x80 0x01_0x01", new AppTime_0x80_0x81_State(this, 0x01, 0x01));
+        VertexBLEState vtx_State1_0x80_0x81_0x00_0x01 =
+                new VertexBLEState("State1 0x80 0x00_0x01", new AppTime_0x80_0x81_State(this, 0x00, 0x01));
+        VertexBLEState vtx_State1_0x80_0x81_0x00_0x00 =
+                new VertexBLEState("State1 0x80 0x00_0x00", new AppTime_0x80_0x81_State(this, 0x00, 0x00));
+
+        VertexBLEState vtx_State1_0x80_0x81_Abnormal_0x01_0x00 =
+                new VertexBLEState("State1 0x80 0x00_0x00", new AppTime_0x80_0x81_State(this, 0x01, 0x00));
 
         vertices.add(vtx_State1_0x80_0x81_0x01_0x01);
         vertices.add(vtx_State1_0x80_0x81_0x00_0x01);
         vertices.add(vtx_State1_0x80_0x81_0x00_0x00);
 
+        vertices.add(vtx_State1_0x80_0x81_Abnormal_0x01_0x00);
+
         // EDGE: vtx_State1_0x11 ---> vtxState1_0x80_0x01_0x01   (Measure data in realtime)
         // EDGE: vtx_State1_0x11 ---> vtxState1_0x80_0x00_0x01   (
         // EDGE: vtx_State1_0x11 ---> vtxState1_0x80_0x00_0x00
+        // EDGE: vtx_State1_0x11 ---> vtx_State1_0x80_0x81_Abnormal_0x01_0x00
         vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x01_0x01);
         vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x00_0x01);
         vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x00_0x00);
+
+        vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_Abnormal_0x01_0x00);
 
         // 1. Realtime Data Reply
         // TODO: SetNotification 명령어를 확인하는 상태 추가 필요
@@ -429,8 +464,12 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         //         2) Disconnection by App after failure in service discovery
         //           vtx_DiscoverServiceFailure ---> vtx_StateReqDisconnect_0x82_0x02
+        //
+        //         3) Disconnection by App after abnoraml data 0x81 0x01 0x00 in State2
 
         vtx_DiscoverServiceFailure.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);
+
+        vtx_State1_0x80_0x81_Abnormal_0x01_0x00.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);
 
 
         //     by Device
@@ -441,15 +480,41 @@ public class AutoHRM3200 extends AutoBluetoothLE {
 
         // EDGE : 1) Disconnection by Device after measuring data in realtime
         //            vtx_State5_0x1A_5 ---> vtx_StateDiconnectByDevice
-
+        //
         //        2) Discoonection by Device after downloading stored data
         //           vtx_SendEndofSession_2 ---> vtx_StateDisconnectByApp
+        //
+        //        3) Abnormal disconnection by Device after successful service discovery
+        //
+        //        4) Abnormal disconnection by Device after REQ Download Stored Data (0x82 03) and OK (0x83) in State 7
+        //
+        //        5) Abnormal disconnection by Device after Req Session Info (0x84) and OK (0x85) in State 10
+        //
+        //        6-1) Abnormal disconnection by Device after sending 7th stored data in the 1st session in State 12
+        //
+        //        7-1) Abnormal disconnection by Device after finishing sending all stored data of the 1st session in State 12
+        //
+        //        6-2) Abnormal disconnection by Device after sending 3rd stored data in the 2nd session in State 12
+        //
+        //        7-2) Abnormal disconnection by Device after finishing sending all stored data of the 2nd session in State 12
 
         vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateDisconnectByDevice);
 
         vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByApp);
 
+        vtx_DiscoverServiceSuccess.getAdjacencyList().add(vtx_StateDisconnectByDevice);
 
+        vtx_State6_REQ_0x82_0x03_0x83.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_ReqSessionInfo_1.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_StoredDataReply_1_7.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_SendEndofSession_1.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_StoredDataReply_2_3.getAdjacencyList().add(vtx_StateDisconnectByDevice);
+
+        vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByDevice);
     }
 
     //////////////////////////////////////////////////////////////////////////

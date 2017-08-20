@@ -85,4 +85,8 @@ public class Path {
         }
         return false;
     }
+
+    public ArrayList<Vertex> get() {
+        return path;
+    }
 }
