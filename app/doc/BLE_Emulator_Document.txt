@@ -1,0 +1,270 @@
+
+
+[ 디렉토리 구조 ]
+
+ - com.h3.hrm3200
+
+     emul
+       AutoHRM3200  : AutoBluetoothLE를 상속받아 작성
+                      HRM3200  상태 다이어그램 그래프를 기반으로 다양한 정상/비정상 시나리오 조합
+
+       HRM3200      : BluetoothLE를 상속받아 작성.
+                      HRM3200 3가지 정상 시나리오 구현
+
+     model  (BLE 모델을 확장하여 만든 HRM3200 모델)
+       AppTime_0x80_0x81_State : 상태 다이어그램의 노드에 해당 (이벤트를 받아 액션을 수행하는 단위 구조)
+       CANCEL_DownloadStoredData_0x82_0x01_0x83 : ...
+
+     scenario
+       Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice :
+                      수작업으로 만든 시나리오
+                      AutoBluetoothLE를 기반으로 실행
+
+       ......
+
+ 
+ (참고)
+     테스트를 하기 위해서 model에 새로운 노드(상태)를 추가할 수 있음
+
+ - emul.bluetooth
+
+     model (BLE 모델)
+
+       BLEConnectState
+       BLEDisconnectState
+       BLENotificationState
+       BLEScanState
+       BLEState  (기반 클래스)
+       BLEStateException (시나리오에 어긋나는 경우 발생되는 예외)
+       BLEWriteCharacteristicState
+       Scenario (BLEState 리스트를 갖고 있음)
+
+     model/util  (주어진 상태다이어그램 그래프에서 Basic Path들을 자동으로 찾기)
+
+       BasicPathGen
+       BasicPaths
+       Path
+       Vertex
+       VertexBLEState (Vertex 클래스의 자식 클래스. BLEState를 멤버변수로 포함)
+
+ - mocking.android
+      bluetooth  (BLE 에뮬레이션 모듈)
+
+
+[ 상태다이어그램 ]
+
+ - 예) AutoHRM3200.java
+
+
+ - 상태다이어그램 만들기 예제 : AutoHRM3200.buildGraph() 
+
+
+   1) Vertex 만들기
+
+        E.g.,
+
+          VertexBLEState vtx_BLEScan =
+                new VertexBLEState("BLEScan", Vertex.INITIAL_STATE, new BLEScanState("00:11:22:AA:BB:CC", "HRM3200"));
+
+          vertices.add(vtx_BLEScan);
+
+
+     a. VertexBLEState 생성자의 인자
+
+          Vertex 식별자 : e.g., "BLEScan"
+          Initial / Intermediate / Final 구분 (옵션) : e.g. Vertex.INITIAL_STATE, Vertex.FINAL_STATE
+          BLEState 객체 :  e.g., new BLEScanState("00:11:22:AA:BB:CC", "HRM3200")
+
+     b. (주의) 새로운 Vertex를 만들면 반드시 Vertex 리스트에 추가해야 함 (나중에 Basic path 구할 때 이 리스트를 참조)
+
+          E.g., vertices.add(vtx_BLEScan);
+
+
+   2) Edge 만들기 
+
+       E.g., BLEScan Vertex와 ConnectSuccess와 ConnectFail Vertex들을 각각 연결하는 에지 만들기
+
+
+        vtx_BLEScan.getAdjacencyList().add(vtx_ConnectSuccess);
+        vtx_BLEScan.getAdjacencyList().add(vtx_ConnectFail);
+
+
+ - HRM3200에 특화된 BLEState
+
+   BLEScanState
+
+
+   BLEConnectState
+
+     a. class BLEConnectState extends BLEState
+
+        BLEConnectState는 BLE 모델에서 제공하는 일반적인 BLEState
+        HRM3200을 위해 따로 정의할 필요가 없음.
+       
+
+     b. 동일한 BLEConnectState를 사용하지만 인자를 GATT_SUCCESS, GATT_FAILURE를 주고
+        식별자도 "BLEConnect Success"와 "BLEConnect Failure"를 지정하여 
+        두 개의 다른 Vertex들을 만들 수 있다.
+
+        VertexBLEState vtx_ConnectSuccess =
+                new VertexBLEState("BLEConnect Success",
+                        new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
+        VertexBLEState vtx_ConnectFail =
+                new VertexBLEState("BLEConnect Failure", Vertex.FINAL_STATE,
+                        new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
+
+
+
+
+   ServiceDiscoveryHRM3200
+
+     a. class ServiceDiscoveryHRM3200 extends BLEServiceDiscoverState
+
+     b. 위의 BLEConnectState와 유사하게 식별자와 인자를 다르게 주고 두 개의 다른 Vertex들을 만들 수 있다.
+        BLEConnectState와 다른 점은 ServiceDiscoveryHRM3200는 HRM3200 모델에서 새로 정의한 BLEState이다.
+
+        VertexBLEState vtx_DiscoverServiceSuccess =
+                new VertexBLEState("ServiceDiscovery Success",
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_SUCCESS,
+                                ServiceDiscoveryHRM3200.bleServiceList()));
+
+        VertexBLEState vtx_DiscoverServiceFailure =
+                new VertexBLEState("ServiceDiscovery Failure",
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,
+                                new ArrayList<BLEService>()));
+
+
+   BLEWriteCharacteristicState
+
+     a. 앱에서 디바이스에 명령을 내리는 경우에 관련된 BLEState
+
+     b. E.g.,
+
+        class REQ_Disconnection_0x82_0x02_State extends BLEWriteCharacteristicState
+
+
+   BLENotificationState
+
+     a. 디바이스에서 앱으로 데이터를 올리는 경우에 관련된 BLEState
+
+     b. E.g., 
+
+        class DeviceTimeReplyState extends BLENotificationState 
+
+
+[ 테스트 방법 ]
+
+ - (참고)
+    
+     App에서 AutoHRM3200을 참조하도록 수정된 상태
+
+ - 블루투스 서비스를 앱에서 실행할 때 AutoHRM3200 객체가 만들어지고
+   이 클래스의 생성자가 호출된다.
+
+
+ - AutoHRM3200 생성자에서 하는 작업
+
+
+   a. _AutoHRM3200("")를 호출하여 
+
+       a-1. 상태 다이어그램 그래프를 그리고
+       a-2. Basic path들을 만든다.
+
+   b. indexOfBasicPath 변수에 설정된 인덱스의 basic path를 선택하여 에뮬레이션을 진행
+
+
+ - 테스트할 때 요령
+
+   a. indexOfBasicPath = 0; 을 0에서 부터 (# of Basic Path-1)까지 변경해서 
+      반복 실행하면 모든 Basic path를 실행한다.
+
+   b. 앱을 실행하고 장치 버튼을 누르면 Android Logcat에 시나리오 목록을 출력한다.
+      각 Basic path 시나리오를 실행하기 전에 
+      이 시나리오를 미리 살펴보고 어느 시점에 어느 버튼을 누를지 미리 파악해야 한다.
+
+
+
+ - 상태 다이어그램 출력 예시
+
+[ BLEScan ] BLEConnect Success; BLEConnect Failure; 
+[ BLEConnect Success ] ServiceDiscovery Success; ServiceDiscovery Failure; 
+[ BLEConnect Failure ] 
+[ ServiceDiscovery Success ] State0; Disconnection by Device; 
+[ ServiceDiscovery Failure ] REQ_Disconnection 0x82 0x02; 
+[ State0 ] State1 0x11; 
+[ State1 0x11 ] State1 0x80 0x01_0x01; State1 0x80 0x00_0x01; State1 0x80 0x00_0x00; State1 0x80 0x00_0x00; 
+[ State1 0x80 0x01_0x01 ] State5 1; 
+[ State1 0x80 0x00_0x01 ] State5 1; 
+[ State1 0x80 0x00_0x00 ] State6 REQ_0x82_0x03_0x83; State4 CANCEL_0x82_0x01_0x83; 
+[ State1 0x80 0x00_0x00 ] REQ_Disconnection 0x82 0x02; 
+[ State5 1 ] State5 2; 
+[ State5 2 ] State5 3; 
+[ State5 3 ] State5 4; 
+[ State5 4 ] State5 5; 
+[ State5 5 ] REQ_Disconnection 0x82 0x02; Disconnection by Device; 
+[ State6 REQ_0x82_0x03_0x83 ] State7 Session Count; Disconnection by Device; 
+[ State7 Session Count ] State8 Req Session Info 1; 
+[ State8 Req Session Info 1 ] State10 Send Session Info 1; Disconnection by Device; 
+[ State10 Send Session Info 1 ] State11 OK 0x15 1; 
+[ State11 OK 0x15 1 ] State12 Stored Data Reply 1 1; 
+[ State12 Stored Data Reply 1 1 ] State12 Stored Data Reply 1 2; 
+[ State12 Stored Data Reply 1 2 ] State12 Stored Data Reply 1 3; 
+[ State12 Stored Data Reply 1 3 ] State12 Stored Data Reply 1 4; 
+[ State12 Stored Data Reply 1 4 ] State12 Stored Data Reply 1 5; 
+[ State12 Stored Data Reply 1 5 ] State12 Stored Data Reply 1 6; 
+[ State12 Stored Data Reply 1 6 ] State12 Stored Data Reply 1 7; 
+[ State12 Stored Data Reply 1 7 ] State12 Stored Data Reply 1 8; Disconnection by Device; 
+[ State12 Stored Data Reply 1 8 ] State12 Stored Data Reply 1 9; 
+[ State12 Stored Data Reply 1 9 ] State12 Stored Data Reply 1 10; 
+[ State12 Stored Data Reply 1 10 ] Send End of Session 1; 
+[ Send End of Session 1 ] State8 Req Session Info 2; Disconnection by Device; 
+[ State8 Req Session Info 2 ] State10 Send Session Info 2; 
+[ State10 Send Session Info 2 ] State11 OK 0x15 2; 
+[ State11 OK 0x15 2 ] State12 Stored Data Reply 2 1; 
+[ State12 Stored Data Reply 2 1 ] State12 Stored Data Reply 2 2; 
+[ State12 Stored Data Reply 2 2 ] State12 Stored Data Reply 2 3; 
+[ State12 Stored Data Reply 2 3 ] State12 Stored Data Reply 2 4; Disconnection by Device; 
+[ State12 Stored Data Reply 2 4 ] State12 Stored Data Reply 2 5; 
+[ State12 Stored Data Reply 2 5 ] State12 Stored Data Reply 2 6; 
+[ State12 Stored Data Reply 2 6 ] State12 Stored Data Reply 2 7; 
+[ State12 Stored Data Reply 2 7 ] Send End of Session 2; 
+[ Send End of Session 2 ] Disconnection by App; Disconnection by Device; 
+[ State4 CANCEL_0x82_0x01_0x83 ] State5 1; 
+[ REQ_Disconnection 0x82 0x02 ] Disconnection by App; 
+[ Disconnection by App ] 
+[ Disconnection by Device ] 
+
+
+ - Basic Path 출력 예시
+
+
+Basic Path 수: 15
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x01_0x01; State5 1; State5 2; State5 3; State5 4; State5 5; REQ_Disconnection 0x82 0x02; Disconnection by App; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x01_0x01; State5 1; State5 2; State5 3; State5 4; State5 5; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x01; State5 1; State5 2; State5 3; State5 4; State5 5; REQ_Disconnection 0x82 0x02; Disconnection by App; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; State10 Send Session Info 1; State11 OK 0x15 1; State12 Stored Data Reply 1 1; State12 Stored Data Reply 1 2; State12 Stored Data Reply 1 3; State12 Stored Data Reply 1 4; State12 Stored Data Reply 1 5; State12 Stored Data Reply 1 6; State12 Stored Data Reply 1 7; State12 Stored Data Reply 1 8; State12 Stored Data Reply 1 9; State12 Stored Data Reply 1 10; Send End of Session 1; State8 Req Session Info 2; State10 Send Session Info 2; State11 OK 0x15 2; State12 Stored Data Reply 2 1; State12 Stored Data Reply 2 2; State12 Stored Data Reply 2 3; State12 Stored Data Reply 2 4; State12 Stored Data Reply 2 5; State12 Stored Data Reply 2 6; State12 Stored Data Reply 2 7; Send End of Session 2; Disconnection by App; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; State10 Send Session Info 1; State11 OK 0x15 1; State12 Stored Data Reply 1 1; State12 Stored Data Reply 1 2; State12 Stored Data Reply 1 3; State12 Stored Data Reply 1 4; State12 Stored Data Reply 1 5; State12 Stored Data Reply 1 6; State12 Stored Data Reply 1 7; State12 Stored Data Reply 1 8; State12 Stored Data Reply 1 9; State12 Stored Data Reply 1 10; Send End of Session 1; State8 Req Session Info 2; State10 Send Session Info 2; State11 OK 0x15 2; State12 Stored Data Reply 2 1; State12 Stored Data Reply 2 2; State12 Stored Data Reply 2 3; State12 Stored Data Reply 2 4; State12 Stored Data Reply 2 5; State12 Stored Data Reply 2 6; State12 Stored Data Reply 2 7; Send End of Session 2; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; State10 Send Session Info 1; State11 OK 0x15 1; State12 Stored Data Reply 1 1; State12 Stored Data Reply 1 2; State12 Stored Data Reply 1 3; State12 Stored Data Reply 1 4; State12 Stored Data Reply 1 5; State12 Stored Data Reply 1 6; State12 Stored Data Reply 1 7; State12 Stored Data Reply 1 8; State12 Stored Data Reply 1 9; State12 Stored Data Reply 1 10; Send End of Session 1; State8 Req Session Info 2; State10 Send Session Info 2; State11 OK 0x15 2; State12 Stored Data Reply 2 1; State12 Stored Data Reply 2 2; State12 Stored Data Reply 2 3; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; State10 Send Session Info 1; State11 OK 0x15 1; State12 Stored Data Reply 1 1; State12 Stored Data Reply 1 2; State12 Stored Data Reply 1 3; State12 Stored Data Reply 1 4; State12 Stored Data Reply 1 5; State12 Stored Data Reply 1 6; State12 Stored Data Reply 1 7; State12 Stored Data Reply 1 8; State12 Stored Data Reply 1 9; State12 Stored Data Reply 1 10; Send End of Session 1; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; State10 Send Session Info 1; State11 OK 0x15 1; State12 Stored Data Reply 1 1; State12 Stored Data Reply 1 2; State12 Stored Data Reply 1 3; State12 Stored Data Reply 1 4; State12 Stored Data Reply 1 5; State12 Stored Data Reply 1 6; State12 Stored Data Reply 1 7; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; State7 Session Count; State8 Req Session Info 1; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State6 REQ_0x82_0x03_0x83; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; State4 CANCEL_0x82_0x01_0x83; State5 1; State5 2; State5 3; State5 4; State5 5; REQ_Disconnection 0x82 0x02; Disconnection by App; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; State0; State1 0x11; State1 0x80 0x00_0x00; REQ_Disconnection 0x82 0x02; Disconnection by App; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Success; Disconnection by Device; 
+
+BLEScan; BLEConnect Success; ServiceDiscovery Failure; REQ_Disconnection 0x82 0x02; Disconnection by App; 
+
+BLEScan; BLEConnect Failure; 
