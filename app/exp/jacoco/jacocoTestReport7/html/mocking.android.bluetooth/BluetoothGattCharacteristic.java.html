@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothGattCharacteristic.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BluetoothGattCharacteristic.java</span></div><h1>BluetoothGattCharacteristic.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 22..
+ */
+public class BluetoothGattCharacteristic {
+    public final static int FORMAT_UINT8 = 0x00000011;
+    public final static int FORMAT_UINT16 = 0x00000012;
+
+    public static final int PROPERTY_NOTIFY = 0x00000010;              // MHEALTH_MEASUREMENT_READ
+    public static final int PROPERTY_WRITE_NO_RESPONSE = 0x00000004;   // MHEALTH_MEASUREMENT_WRITE
+    public final static int PROPERTY_READ = 0x00000002;
+
+    public final static int PERMISSION_WRITE = 0x00000010;
+
+    private UUID uuid;
+    private byte[] value;
+    private int properties;
+    private int permissions;
+    protected List&lt;BluetoothGattDescriptor&gt; descriptors;
+
+<span class="fc" id="L26">    BluetoothGattCharacteristic(UUID uuid, int properties, int permissions) {</span>
+<span class="fc" id="L27">        this.uuid = uuid;</span>
+<span class="fc" id="L28">        this.properties = properties;</span>
+<span class="fc" id="L29">        this.permissions = permissions;</span>
+<span class="fc" id="L30">        descriptors = new ArrayList&lt;BluetoothGattDescriptor&gt;();</span>
+<span class="fc" id="L31">    }</span>
+    public UUID getUuid() {
+<span class="fc" id="L33">        return uuid;</span>
+    }
+
+    public BluetoothGattDescriptor getDescriptor(UUID uuid) {
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">        for (BluetoothGattDescriptor descriptor : descriptors) {</span>
+<span class="pc bpc" id="L38" title="1 of 2 branches missed.">            if (descriptor.getUuid().equals(uuid)) {</span>
+<span class="fc" id="L39">                return descriptor;</span>
+            }
+<span class="nc" id="L41">        }</span>
+<span class="nc" id="L42">        return null;</span>
+    }
+    public int getProperties(){
+<span class="fc" id="L45">        return properties;</span>
+    }
+    public Integer getIntValue(int formatType, int offset) {
+<span class="nc" id="L48">        int val = value[offset] &amp; 0xff;</span>
+<span class="nc" id="L49">        return val;</span>
+    }
+    public byte[] getValue() {
+<span class="fc" id="L52">        return value;</span>
+    }
+    public boolean setValue(byte[] value) {
+<span class="fc" id="L55">        this.value = value;</span>
+<span class="fc" id="L56">        return true;</span>
+    }
+    boolean addDescriptor(BluetoothGattDescriptor descriptor) {
+<span class="nc" id="L59">        descriptors.add(descriptor);</span>
+<span class="nc" id="L60">        return true;</span>
+    }
+
+    boolean addDescriptor(UUID descriptorUuid) {
+<span class="fc" id="L64">        descriptors.add(new BluetoothGattDescriptor(descriptorUuid));</span>
+<span class="fc" id="L65">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

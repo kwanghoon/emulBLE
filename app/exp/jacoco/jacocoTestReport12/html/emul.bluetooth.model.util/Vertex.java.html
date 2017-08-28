@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Vertex.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth.model.util</a> &gt; <span class="el_source">Vertex.java</span></div><h1>Vertex.java</h1><pre class="source lang-java linenums">package emul.bluetooth.model.util;
+
+import java.util.ArrayList;
+
+/**
+ * Created by moonh on 2017-07-17.
+ */
+public class Vertex {
+
+<span class="fc" id="L10">    public static int INITIAL_STATE = 1;</span>
+<span class="fc" id="L11">    public static int INTERMEDIATE_STATE = 2;</span>
+<span class="fc" id="L12">    public static int FINAL_STATE = 3;</span>
+
+    private String stateNumber;
+    private ArrayList&lt;Vertex&gt; adjacencyList;
+    private int kind;
+
+    public Vertex(String stateNumber) {
+<span class="nc" id="L19">        this(stateNumber, INTERMEDIATE_STATE);</span>
+<span class="nc" id="L20">    }</span>
+
+<span class="fc" id="L22">    public Vertex(String stateNumber, int kind) {</span>
+<span class="fc" id="L23">        this.stateNumber = stateNumber;</span>
+<span class="fc" id="L24">        this.adjacencyList = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L25">        this.kind = kind;</span>
+<span class="fc" id="L26">    }</span>
+
+    public String getStateNumber() {
+<span class="fc" id="L29">        return stateNumber;</span>
+    }
+
+    public ArrayList&lt;Vertex&gt; getAdjacencyList() {
+<span class="fc" id="L33">        return adjacencyList;</span>
+    }
+
+    public boolean isFinal() {
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        return kind==FINAL_STATE;</span>
+    }
+
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">    public boolean isInitial() { return kind==INITIAL_STATE; }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

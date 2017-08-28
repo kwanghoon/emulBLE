@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>GoogleFitSync.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">GoogleFitSync.java</span></div><h1>GoogleFitSync.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.IntentSender;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.Scopes;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.fitness.Fitness;
+import com.google.android.gms.fitness.data.Session;
+
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
+
+import com.google.android.gms.fitness.FitnessActivities;
+import com.google.android.gms.fitness.data.DataSet;
+import com.google.android.gms.fitness.data.DataSource;
+import com.google.android.gms.fitness.data.DataPoint;
+import com.google.android.gms.fitness.data.DataType;
+import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.request.SessionInsertRequest;
+
+
+/**
+ * Created by moonhyeonah on 2015. 5. 5..
+ */
+public class GoogleFitSync extends AsyncTask&lt;Void,Void,Void&gt; {
+    private Context context;
+    private GoogleApiClient mClient;
+    private ArrayList&lt;Integer&gt; sessionIds;
+    private Boolean canDeleteFlag;      // 李몄“�삎 蹂��닔�씠誘�濡� Boolean
+
+    // db
+    private HeartRateDBHelper dbHelper;
+    private SQLiteDatabase db;
+
+<span class="nc" id="L48">    private static String SESSION_NAME = &quot;HRM3200&quot;;</span>
+
+<span class="nc" id="L50">    private static String TAG = &quot;GoogleFitSync&quot;;</span>
+    private static final String DATE_FORMAT = &quot;yyyy.MM.dd HH:mm:ss&quot;;
+
+
+<span class="nc" id="L54">    public GoogleFitSync (Context context, GoogleApiClient mClient, ArrayList&lt;Integer&gt; sessionIds, Boolean canDeleteFlag) {</span>
+<span class="nc" id="L55">        this.context = context;</span>
+<span class="nc" id="L56">        this.mClient = mClient;</span>
+<span class="nc" id="L57">        this.sessionIds = sessionIds;</span>
+<span class="nc" id="L58">        this.canDeleteFlag = canDeleteFlag;</span>
+
+<span class="nc" id="L60">        dbHelper = new HeartRateDBHelper(context, null, 1);</span>
+<span class="nc" id="L61">        db = dbHelper.getWritableDatabase();</span>
+
+        // check 踰꾪듉�쓣 蹂�寃쏀븷 �닔 �뾾�룄濡� flag �꽕�젙
+<span class="nc" id="L64">    }</span>
+
+    @Override
+    protected void onPreExecute() {
+<span class="nc" id="L68">        super.onPreExecute();</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (sessionIds.size() &gt; 0) {</span>
+<span class="nc" id="L70">            Toast.makeText(context, &quot;Google Fit: Uploading Started.&quot;, Toast.LENGTH_SHORT).show();</span>
+        }
+<span class="nc" id="L72">    }</span>
+
+<span class="nc" id="L74">    private int DEBUG_INTERVAL = 1; // default = 1</span>
+
+    @Override
+    protected Void doInBackground(Void... params) {
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (sessionIds.size() &gt; 0) {</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">            for (int sessionId : sessionIds) {</span>
+
+<span class="nc" id="L82">                Cursor cursorSession = db.rawQuery(&quot;SELECT * &quot;</span>
+                        + &quot; FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION
+                        + &quot; WHERE  &quot; + HeartRateDBHelper.COL_ID + &quot; = &quot; + sessionId, null);
+
+<span class="nc" id="L86">                cursorSession.moveToFirst();</span>
+
+                // �떆�옉 �떆媛�
+<span class="nc" id="L89">                int year = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_YEAR));</span>
+<span class="nc" id="L90">                int month = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_MONTH));</span>
+<span class="nc" id="L91">                int day = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_DAY));</span>
+<span class="nc" id="L92">                int hour = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_HOUR));</span>
+<span class="nc" id="L93">                int min = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_MIN));</span>
+<span class="nc" id="L94">                int sec = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_SEC));</span>
+<span class="nc" id="L95">                int period = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_PERIOD));</span>
+<span class="nc" id="L96">                int calories = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_CALORIES));</span>
+<span class="nc" id="L97">                double distance = cursorSession.getDouble(cursorSession.getColumnIndex(HeartRateDBHelper.COL_DISTANCE));</span>
+
+<span class="nc" id="L99">                Calendar calendar = Calendar.getInstance();</span>
+<span class="nc" id="L100">                calendar.set(year, month-1, day, hour, min, sec); // Calendar�쓽 month�뒗 0遺��꽣 �떆�옉�븯誘�濡� month - 1</span>
+<span class="nc" id="L101">                long startTime = calendar.getTimeInMillis();</span>
+
+                // �걹 �떆媛꾩뿉 ���븳 �젙蹂�
+<span class="nc" id="L104">                int duration = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_DURATION));</span>
+<span class="nc" id="L105">                long endTime = startTime + duration * 1000 * DEBUG_INTERVAL;</span>
+
+//                Log.i(TAG, &quot;startTime: &quot; + startTime);
+//                Log.i(TAG, &quot;endTime: &quot; + (startTime + duration * 1000 * DEBUG_INTERVAL));
+
+//                Calendar endCalendar = Calendar.getInstance();
+//                endCalendar.setTimeInMillis(startTime + duration * 1000 * DEBUG_INTERVAL);
+//                Log.i(TAG, &quot;endTime: &quot; + endCalendar.get(Calendar.YEAR) + &quot;/&quot; +
+//                    endCalendar.get(Calendar.MONTH) + &quot;/&quot; +
+//                    endCalendar.get(Calendar.DAY_OF_MONTH) + &quot;/&quot; +
+//                    endCalendar.get(Calendar.HOUR_OF_DAY) + &quot;/&quot; +
+//                    endCalendar.get(Calendar.MINUTE) + &quot;/&quot; +
+//                    endCalendar.get(Calendar.SECOND));
+
+<span class="nc" id="L119">                SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);</span>
+<span class="nc" id="L120">                Log.i(TAG, &quot;startTime: &quot; + dateFormat.format(startTime) );</span>
+<span class="nc" id="L121">                Log.i(TAG, &quot;endTime: &quot; + dateFormat.format(endTime) );</span>
+
+                // �꽭�뀡 �궡 �뜲�씠�꽣 �쟾泥� 媛쒖닔
+//                int count = cursorSession.getInt(cursorSession.getColumnIndex(HeartRateDBHelper.COL_COUNT));
+
+<span class="nc" id="L126">                cursorSession.close();</span>
+
+
+                // 3) Heart Rate �젙蹂�
+<span class="nc" id="L130">                DataSource heartRateDataSource = new DataSource.Builder()</span>
+<span class="nc" id="L131">                        .setAppPackageName(context.getPackageName())</span>
+<span class="nc" id="L132">                        .setDataType(DataType.TYPE_HEART_RATE_BPM)</span>
+<span class="nc" id="L133">                        .setName(SESSION_NAME + &quot; Heart Rate &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L134">                        .setType(DataSource.TYPE_RAW)</span>
+<span class="nc" id="L135">                        .build();</span>
+
+<span class="nc" id="L137">                DataSet heartRateDataSet = DataSet.create(heartRateDataSource);</span>
+
+
+<span class="nc" id="L140">                Cursor cursorData = db.rawQuery(&quot;SELECT * &quot;</span>
+                        + &quot; FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR
+                        + &quot; WHERE &quot; + HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + sessionId
+                        + &quot; ORDER BY &quot; + HeartRateDBHelper.COL_HR_INDEX + &quot; ASC &quot;, null);
+
+
+<span class="nc" id="L146">                int i = cursorData.getCount();</span>
+
+<span class="nc" id="L148">                int steps = 0;</span>
+
+<span class="nc" id="L150">                cursorData.moveToFirst();</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                while (i &gt; 0) {</span>
+
+<span class="nc" id="L153">                    int bpm = cursorData.getInt(cursorData.getColumnIndex(HeartRateDBHelper.COL_HEARTRATE));</span>
+<span class="nc" id="L154">                    int index = cursorData.getInt(cursorData.getColumnIndex(HeartRateDBHelper.COL_HR_INDEX));</span>
+<span class="nc" id="L155">                    steps = cursorData.getInt(cursorData.getColumnIndex(HeartRateDBHelper.COL_STEP));</span>
+
+<span class="nc bnc" id="L157" title="All 2 branches missed.">                    if (( (index * period * DEBUG_INTERVAL) % 60) == 0) {         // 1遺꾨쭏�떎 �븳踰덉뵫 DataPoint�깮�꽦�븯湲� �쐞�빐</span>
+                        ///
+<span class="nc" id="L159">                        long s = startTime + index * period * 1000 * DEBUG_INTERVAL;</span>
+//                    long s = startTime + index * duration * 1000 / count;
+//                        long s = startTime + index * duration * 1000 * DEBUG_INTERVAL / count;
+//                    long e = s + duration * 1000 * DEBUG_INTERVAL / count;
+
+<span class="nc" id="L164">                        DataPoint heartRateDP = heartRateDataSet.createDataPoint()</span>
+<span class="nc" id="L165">                                .setTimestamp(s, TimeUnit.MILLISECONDS);</span>
+//                            .setTimeInterval(s, e, TimeUnit.MILLISECONDS);
+<span class="nc" id="L167">                        heartRateDP.getValue(Field.FIELD_BPM).setFloat(bpm);</span>
+<span class="nc" id="L168">                        heartRateDataSet.add(heartRateDP);</span>
+
+<span class="nc" id="L170">                        Log.i(TAG, &quot;s: &quot; + dateFormat.format(heartRateDP.getTimestamp(TimeUnit.MILLISECONDS)) + &quot; bpm: &quot; + bpm);</span>
+                    }
+                        ///
+<span class="nc" id="L173">                        cursorData.moveToNext();</span>
+<span class="nc" id="L174">                        i--;</span>
+
+<span class="nc" id="L176">                }</span>
+<span class="nc" id="L177">                Log.i(TAG, &quot;Steps: &quot; + steps);</span>
+
+<span class="nc" id="L179">                cursorData.close();</span>
+
+                // 1) 嫄몄쓬 �닔
+
+//                DataSource stepDataSource = new DataSource.Builder()
+//                        .setAppPackageName(context.getPackageName())
+//                        .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
+//                        .setName(SESSION_NAME + &quot; Steps &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)
+//                        .setType(DataSource.TYPE_RAW)
+//                        .build();
+//
+//                DataSet stepDataSet = DataSet.create(stepDataSource);
+//
+//                DataPoint stepDataPoint = stepDataSet.createDataPoint()
+//                        .setTimeInterval(startTime, startTime + duration * 1000 * DEBUG_INTERVAL, TimeUnit.MILLISECONDS);
+//
+//                stepDataPoint.getValue(Field.FIELD_STEPS).setInt(steps);
+//
+//                stepDataSet.add(stepDataPoint);
+
+<span class="nc" id="L199">                DataSource stepDataSource = new DataSource.Builder()</span>
+<span class="nc" id="L200">                        .setAppPackageName(context.getPackageName())</span>
+<span class="nc" id="L201">                        .setDataType(DataType.AGGREGATE_STEP_COUNT_DELTA)</span>
+<span class="nc" id="L202">                        .setName(SESSION_NAME + &quot; Steps &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L203">                        .setType(DataSource.TYPE_RAW)</span>
+<span class="nc" id="L204">                        .build();</span>
+
+<span class="nc" id="L206">                DataSet stepDataSet = DataSet.create(stepDataSource);</span>
+
+<span class="nc" id="L208">                DataPoint stepDataPoint = stepDataSet.createDataPoint()</span>
+<span class="nc" id="L209">                        .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);</span>
+
+<span class="nc" id="L211">                stepDataPoint.getValue(Field.FIELD_STEPS).setInt(steps);</span>
+
+<span class="nc" id="L213">                stepDataSet.add(stepDataPoint);</span>
+
+                // 2) distance
+<span class="nc" id="L216">                DataSource distanceDataSource = new DataSource.Builder()</span>
+<span class="nc" id="L217">                        .setAppPackageName(context.getPackageName())</span>
+<span class="nc" id="L218">                        .setDataType(DataType.AGGREGATE_DISTANCE_DELTA)</span>
+<span class="nc" id="L219">                        .setName(SESSION_NAME + &quot; Distance &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L220">                        .setType(DataSource.TYPE_RAW)</span>
+<span class="nc" id="L221">                        .build();</span>
+
+<span class="nc" id="L223">                DataSet distanceDataSet = DataSet.create(distanceDataSource);</span>
+
+<span class="nc" id="L225">                DataPoint distanceDataPoint = distanceDataSet.createDataPoint()</span>
+<span class="nc" id="L226">                        .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);</span>
+
+<span class="nc" id="L228">                distanceDataPoint.getValue(Field.FIELD_DISTANCE).setFloat((float)(distance*1000));</span>
+
+<span class="nc" id="L230">                distanceDataSet.add(distanceDataPoint);</span>
+
+
+                // 3) calories
+<span class="nc" id="L234">                DataSource caloriesDataSource = new DataSource.Builder()</span>
+<span class="nc" id="L235">                        .setAppPackageName(context.getPackageName())</span>
+<span class="nc" id="L236">                        .setDataType(DataType.AGGREGATE_CALORIES_EXPENDED)</span>
+<span class="nc" id="L237">                        .setName(SESSION_NAME + &quot; Calories &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L238">                        .setType(DataSource.TYPE_RAW)</span>
+<span class="nc" id="L239">                        .build();</span>
+
+<span class="nc" id="L241">                DataSet caloriesDataSet = DataSet.create(caloriesDataSource);</span>
+
+<span class="nc" id="L243">                DataPoint caloriesDataPoint = caloriesDataSet.createDataPoint()</span>
+<span class="nc" id="L244">                        .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);</span>
+
+<span class="nc" id="L246">                caloriesDataPoint.getValue(Field.FIELD_CALORIES).setFloat(calories);</span>
+
+<span class="nc" id="L248">                caloriesDataSet.add(caloriesDataPoint);</span>
+
+
+                // 4) �븸�떚鍮꾪떚
+
+<span class="nc" id="L253">                DataSource activityDataSource = new DataSource.Builder()</span>
+<span class="nc" id="L254">                        .setAppPackageName(context.getPackageName())</span>
+<span class="nc" id="L255">                        .setDataType(DataType.TYPE_ACTIVITY_SEGMENT)</span>
+<span class="nc" id="L256">                        .setName(SESSION_NAME + &quot; Activity &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L257">                        .setType(DataSource.TYPE_RAW)</span>
+<span class="nc" id="L258">                        .build();</span>
+
+<span class="nc" id="L260">                DataSet activityDataSet = DataSet.create(activityDataSource);</span>
+
+<span class="nc" id="L262">                DataPoint activityDataPoint = activityDataSet.createDataPoint()</span>
+<span class="nc" id="L263">                        .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);</span>
+
+<span class="nc" id="L265">                activityDataPoint.getValue(Field.FIELD_ACTIVITY).setActivity(FitnessActivities.WALKING);</span>
+<span class="nc" id="L266">                activityDataSet.add(activityDataPoint);</span>
+
+
+<span class="nc" id="L269">                Session googleFitSession = new Session.Builder()</span>
+<span class="nc" id="L270">                        .setName(SESSION_NAME + &quot; &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec)</span>
+<span class="nc" id="L271">                        .setDescription(&quot;HRM3200 Session&quot;)</span>
+<span class="nc" id="L272">                        .setIdentifier(&quot;HRM3200 - H3 System&quot;)</span>
+//                        .setActivity(FitnessActivities.WALKING)
+<span class="nc" id="L274">                        .setStartTime(startTime, TimeUnit.MILLISECONDS)</span>
+<span class="nc" id="L275">                        .setEndTime(endTime, TimeUnit.MILLISECONDS)</span>
+<span class="nc" id="L276">                        .build();</span>
+
+<span class="nc" id="L278">                SessionInsertRequest insertRequest = new SessionInsertRequest.Builder()</span>
+<span class="nc" id="L279">                        .setSession(googleFitSession)</span>
+<span class="nc" id="L280">                        .addDataSet(stepDataSet)</span>
+<span class="nc" id="L281">                        .addDataSet(distanceDataSet)</span>
+<span class="nc" id="L282">                        .addDataSet(caloriesDataSet)</span>
+<span class="nc" id="L283">                        .addDataSet(activityDataSet)</span>
+<span class="nc" id="L284">                        .addDataSet(heartRateDataSet)</span>
+<span class="nc" id="L285">                        .build();</span>
+
+<span class="nc" id="L287">                com.google.android.gms.common.api.Status insertStatus =</span>
+<span class="nc" id="L288">                        Fitness.SessionsApi.insertSession(mClient, insertRequest)</span>
+<span class="nc" id="L289">                                .await(1, TimeUnit.MINUTES);</span>
+
+<span class="nc bnc" id="L291" title="All 2 branches missed.">                if (!insertStatus.isSuccess()) {</span>
+<span class="nc" id="L292">                    Toast.makeText(context, &quot;There was a problem inserting the session: &quot; +</span>
+<span class="nc" id="L293">                            insertStatus.getStatusMessage(), Toast.LENGTH_SHORT).show();</span>
+                }
+                else {
+<span class="nc" id="L296">                    Log.i(TAG, &quot;insertStatus is susccessful...&quot;);</span>
+                }
+
+<span class="nc" id="L299">            }</span>
+        }
+
+<span class="nc" id="L302">        mClient.disconnect();</span>
+
+<span class="nc" id="L304">        dbHelper.close();</span>
+<span class="nc" id="L305">        db.close();</span>
+<span class="nc" id="L306">        return null;</span>
+    }
+
+    @Override
+    protected void onPostExecute(Void aVoid) {
+<span class="nc" id="L311">        super.onPostExecute(aVoid);</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        if (sessionIds.size() &gt; 0) {</span>
+<span class="nc" id="L313">            Toast.makeText(context, &quot;Google Fit: Upload completed.&quot;, Toast.LENGTH_SHORT).show();</span>
+        }
+        /// delete�븷 �닔 �엳�룄濡� flag �꽕�젙
+<span class="nc" id="L316">        canDeleteFlag = true;</span>
+<span class="nc" id="L317">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

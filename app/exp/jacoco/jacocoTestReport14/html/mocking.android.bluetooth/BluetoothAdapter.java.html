@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothAdapter.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BluetoothAdapter.java</span></div><h1>BluetoothAdapter.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+import android.os.Handler;
+import android.os.Message;
+
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import emul.bluetooth.BluetoothLE;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 22..
+ */
+public class BluetoothAdapter {
+    public final static String ACTION_REQUEST_ENABLE = &quot;android.bluetooth.adapter.action.REQUEST_ENABLE&quot;;
+
+    // ??
+<span class="fc" id="L20">    private static List&lt;BluetoothDevice&gt; bondedDevices = new ArrayList&lt;BluetoothDevice&gt;();</span>
+
+    private boolean blutooth_enabled;
+
+    private PortingLayer portingLayer;
+
+    private BluetoothLE bluetoothLE;
+
+<span class="fc" id="L28">    public BluetoothAdapter(BluetoothLE bluetoothLE) {</span>
+<span class="fc" id="L29">        blutooth_enabled = true;</span>
+<span class="fc" id="L30">        portingLayer = null;</span>
+<span class="fc" id="L31">        this.bluetoothLE = bluetoothLE;</span>
+<span class="fc" id="L32">    }</span>
+
+    public interface LeScanCallback {
+        public void onLeScan (BluetoothDevice device, int rssi, byte[] scanRecord);
+    }
+
+    public interface BondedDeviceAddCallback {
+        public void addBondedDevice(BluetoothDevice btdev);
+    }
+
+    public boolean isEnabled() {
+<span class="fc" id="L43">        return blutooth_enabled;</span>
+    }
+
+    public boolean startLeScan (BluetoothAdapter.LeScanCallback callback) {
+<span class="fc" id="L47">        portingLayer = new PortingLayer();</span>
+
+        // 1. create a BluetoothDeviceEmulator
+<span class="fc" id="L50">        portingLayer.createBTDevEmulator(bluetoothLE);</span>
+
+        // 2. send BluetootDeviceEmulator a message to do startLeScan
+<span class="fc" id="L53">        portingLayer.setBondedDeviceAddCallback(new BondedDeviceAddCallback() {</span>
+            @Override
+            public void addBondedDevice(BluetoothDevice btdev) {
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">                if (btdev != null) {</span>
+<span class="fc" id="L57">                    bondedDevices.add(btdev);</span>
+                }
+<span class="fc" id="L59">            }</span>
+        });
+<span class="fc" id="L61">        portingLayer.requestLeScan(callback);</span>
+
+<span class="fc" id="L63">        return true;</span>
+    }
+
+    public void stopLeScan(BluetoothAdapter.LeScanCallback callback) {
+<span class="fc" id="L67">    }</span>
+
+    public BluetoothDevice getRemoteDevice(String address) {
+<span class="fc" id="L70">        Log.w(&quot;Mocking&quot;, &quot;getRemoteDevice : &quot; + address);</span>
+
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">        if (portingLayer == null) { // When BluetoothAdapter.getRemoteDevice() is invoked</span>
+                                    // without any scanning operation
+<span class="fc" id="L74">            portingLayer = new PortingLayer();</span>
+
+            // 1. create a BluetoothDeviceEmulator
+<span class="fc" id="L77">            portingLayer.createBTDevEmulator(bluetoothLE);</span>
+
+            // 2. get bluetooh device directly without scanning
+<span class="fc" id="L80">            BluetoothDevice btdev = portingLayer.getRemoteDevice();</span>
+<span class="fc" id="L81">            btdev.setPortingLayer(portingLayer);  // CAUTION!! Must set the portingLayer.</span>
+<span class="fc" id="L82">            bondedDevices.add(btdev);</span>
+        }
+
+
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        for (BluetoothDevice btdev : bondedDevices) {</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">            if (btdev.getAddress().equals(address))</span>
+<span class="fc" id="L88">                return btdev;</span>
+<span class="nc" id="L89">        }</span>
+<span class="nc" id="L90">        return null;</span>
+
+    }
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

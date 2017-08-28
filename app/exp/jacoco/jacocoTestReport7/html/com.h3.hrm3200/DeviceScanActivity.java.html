@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DeviceScanActivity.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">DeviceScanActivity.java</span></div><h1>DeviceScanActivity.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import mocking.android.bluetooth.BluetoothAdapter;
+import mocking.android.bluetooth.BluetoothManager;
+import mocking.android.bluetooth.BluetoothDevice;
+//import android.bluetooth.BluetoothAdapter;
+//import android.bluetooth.BluetoothManager;
+//import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.database.DataSetObservable;
+import android.database.DataSetObserver;
+import android.os.Handler;
+import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.h3.hrm3200.emul.AutoHRM3200;
+import com.h3.hrm3200.emul.HRM3200;
+
+import java.util.ArrayList;
+
+
+<span class="fc" id="L40">public class DeviceScanActivity extends Activity {</span>
+    private LeDeviceListAdapter mLeDeviceListAdapterForScannedDevices;
+    private LeDeviceListAdapter mLeDeviceListAdapterForRegisteredDevices;
+    private BluetoothAdapter mBluetoothAdapter;
+    private boolean mScanning;
+    private Handler mHandler;
+
+<span class="fc" id="L47">    private final int REQUEST_ENABLE_BT = 1;</span>
+
+    public final static String DEVICE_NAME = &quot;device name&quot;;
+    public final static String DEVICE_ADDRESS = &quot;device address&quot;;
+
+    public final static String AutoScanningAction = &quot;android.intent.action.AUTO_SCANNING&quot;;
+
+    public final static String prefName = &quot;DeviceScanActivityPref&quot;;
+
+
+    public final static String TAG = &quot;DeviceScanActivity&quot;;
+
+    private ListView listViewScannedDevices;
+    private ListView listViewRegisteredDevices;
+
+    private ImageButton cancelButton;
+    private ImageButton rescanButton;
+
+<span class="fc" id="L65">    private boolean pressToConnect = false;</span>
+<span class="fc" id="L66">    private boolean autoStart = false;</span>
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L70">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L71">        setContentView(R.layout.activity_device_scan);</span>
+
+<span class="fc" id="L73">        getActionBar().setHomeButtonEnabled(true);</span>
+<span class="fc" id="L74">        getActionBar().setDisplayShowTitleEnabled(false);</span>
+
+<span class="fc" id="L76">        listViewScannedDevices = (ListView) findViewById(R.id.listView);</span>
+<span class="fc" id="L77">        listViewRegisteredDevices = (ListView) findViewById(R.id.listView2);</span>
+<span class="fc" id="L78">        cancelButton = (ImageButton) findViewById(R.id.imageButton9);</span>
+<span class="fc" id="L79">        rescanButton = (ImageButton) findViewById(R.id.imageButton10);</span>
+
+<span class="fc" id="L81">        mHandler = new Handler();</span>
+
+        // For Mocking:
+//        // Initialize BluetoothAdapter
+//        final BluetoothManager btmngr =
+//                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+<span class="fc" id="L87">        final BluetoothManager btmngr =</span>
+                (BluetoothManager) new BluetoothManager(new AutoHRM3200());
+<span class="fc" id="L89">        mBluetoothAdapter = btmngr.getAdapter();</span>
+
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if (mBluetoothAdapter == null) {</span>
+<span class="nc" id="L92">            Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L93">            finish();</span>
+        }
+
+        // mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+<span class="fc" id="L98">        listViewScannedDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {</span>
+
+            @Override
+            public void onItemClick(AdapterView&lt;?&gt; parent, View view, int position, long id) {
+                // Connecting a BLE device
+<span class="fc" id="L103">                mDeviceName = mLeDeviceListAdapterForScannedDevices.getDeviceName(position);</span>
+<span class="fc" id="L104">                mDeviceAddress = mLeDeviceListAdapterForScannedDevices.getDeviceAddress(position);</span>
+
+//                Intent gattServiceIntent = new Intent(DeviceScanActivity.this, BluetoothLeService.class);
+//                gattServiceIntent.putExtra(DEVICE_NAME, mDeviceName);
+//                gattServiceIntent.putExtra(DEVICE_ADDRESS, mDeviceAddress);
+
+<span class="fc" id="L110">                SharedPreferences pref = getSharedPreferences(MainActivity.prefName, 0);</span>
+<span class="fc" id="L111">                int connectionStatus = pref.getInt(MainActivity.connFlag, StartButtonView.NO_DEVICE);</span>
+
+                // If not press a button to connect just before and not connected yet
+<span class="pc bpc" id="L114" title="2 of 4 branches missed.">                if (pressToConnect == false &amp;&amp; (connectionStatus == StartButtonView.NO_DEVICE)) {</span>
+//                    mServiceConnection = new MyServiceConnection();
+//                    bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+
+<span class="fc" id="L118">                    Intent intent = new Intent(DeviceScanActivity.this, BluetoothLeService.class);</span>
+<span class="fc" id="L119">                    intent.setAction(BluetoothLeService.ACTION_CONNECT);</span>
+<span class="fc" id="L120">                    intent.putExtra(BluetoothLeService.CONNECT_ADDRESS_KEY, mDeviceAddress);</span>
+//                    intent.putExtra(BluetoothLeService.STORED_DATA_REQUEST_KEY, false);
+<span class="fc" id="L122">                    startService(intent);</span>
+
+<span class="fc" id="L124">                    pressToConnect = true;</span>
+
+<span class="fc" id="L126">                    DeviceScanActivity.this.finish();</span>
+
+<span class="fc" id="L128">                    Log.i(TAG, &quot;A bluetooth device is selected to connect...&quot;);</span>
+                }
+//                } else {
+//                    if(statusBLEService) { // TODO: Need to be clarified!!
+//                        unbindService(mServiceConnection);
+//                        pressToConnect = false;
+//                    }
+//
+//                    Log.i(TAG, &quot;A bluetooth device is selected to disconnect...&quot;);
+//
+//                }
+
+<span class="fc" id="L140">            }</span>
+        });
+
+
+<span class="fc" id="L144">        listViewRegisteredDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {</span>
+
+            @Override
+            public void onItemClick(AdapterView&lt;?&gt; parent, View view, int position, long id) {
+                // Connecting a BLE device
+<span class="nc" id="L149">                mDeviceName = mLeDeviceListAdapterForRegisteredDevices.getDeviceName(position);</span>
+<span class="nc" id="L150">                mDeviceAddress = mLeDeviceListAdapterForRegisteredDevices.getDeviceAddress(position);</span>
+
+//                Intent gattServiceIntent = new Intent(DeviceScanActivity.this, BluetoothLeService.class);
+//                gattServiceIntent.putExtra(DEVICE_NAME, mDeviceName);
+//                gattServiceIntent.putExtra(DEVICE_ADDRESS, mDeviceAddress);
+
+<span class="nc" id="L156">                SharedPreferences pref = getSharedPreferences(MainActivity.prefName, 0);</span>
+<span class="nc" id="L157">                int connectionStatus = pref.getInt(MainActivity.connFlag, StartButtonView.NO_DEVICE);</span>
+
+                // If we have no connection now
+<span class="nc bnc" id="L160" title="All 4 branches missed.">                if (pressToConnect==false &amp;&amp; connectionStatus == StartButtonView.NO_DEVICE) {</span>
+//                    mServiceConnection = new MyServiceConnection();
+//                    bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+
+<span class="nc" id="L164">                    Intent intent = new Intent(DeviceScanActivity.this, BluetoothLeService.class);</span>
+<span class="nc" id="L165">                    intent.setAction(BluetoothLeService.ACTION_CONNECT);</span>
+<span class="nc" id="L166">                    intent.putExtra(BluetoothLeService.CONNECT_ADDRESS_KEY, mDeviceAddress);</span>
+//                    intent.putExtra(BluetoothLeService.STORED_DATA_REQUEST_KEY, false);
+<span class="nc" id="L168">                    startService(intent);</span>
+
+<span class="nc" id="L170">                    DeviceScanActivity.this.finish();</span>
+
+<span class="nc" id="L172">                    Log.i(TAG, &quot;A bluetooth device is selected to connect (from registered list)...&quot;);</span>
+                }
+
+<span class="nc" id="L175">            }</span>
+        });
+
+<span class="fc" id="L178">        listViewRegisteredDevices.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {</span>
+            @Override
+            public boolean onItemLongClick(AdapterView&lt;?&gt; parent, View view, int position, long id) {
+
+
+<span class="nc" id="L183">                final long index = id;</span>
+<span class="nc" id="L184">                AlertDialog.Builder builder = new AlertDialog.Builder(DeviceScanActivity.this);</span>
+<span class="nc" id="L185">                builder.setTitle(&quot;Device unregistration&quot;)</span>
+<span class="nc" id="L186">                       .setMessage(&quot;Do you want to delete this device?&quot;)</span>
+<span class="nc" id="L187">                       .setPositiveButton(&quot;OK&quot;, new DialogInterface.OnClickListener() {</span>
+                           @Override
+                           public void onClick(DialogInterface dialog, int which) {
+
+<span class="nc" id="L191">                               SharedPreferences pref = getSharedPreferences(DeviceScanActivity.prefName, 0);</span>
+
+<span class="nc" id="L193">                               ArrayList&lt;MyDevice&gt; list = new ArrayList&lt;MyDevice&gt;();</span>
+
+<span class="nc" id="L195">                               SharedPreferences.Editor editor = pref.edit();</span>
+<span class="nc" id="L196">                               editor.clear();</span>
+
+<span class="nc bnc" id="L198" title="All 2 branches missed.">                               for (int i = 0; i &lt; mLeDeviceListAdapterForRegisteredDevices.getCount(); i++) {</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">                                   if (i != (int) index) {</span>
+<span class="nc" id="L200">                                       list.add(mLeDeviceListAdapterForRegisteredDevices.getDevice(i));</span>
+                                   }
+                               }
+
+<span class="nc" id="L204">                               mLeDeviceListAdapterForRegisteredDevices.clear();</span>
+
+<span class="nc" id="L206">                               int i = 0;</span>
+<span class="nc bnc" id="L207" title="All 2 branches missed.">                               for (MyDevice device : list) {</span>
+<span class="nc" id="L208">                                   editor.putString(device.getAddress(), device.getName());</span>
+<span class="nc" id="L209">                                   editor.putString(Integer.toString(i), device.getAddress());</span>
+
+<span class="nc" id="L211">                                   mLeDeviceListAdapterForRegisteredDevices.addDevice(device);</span>
+<span class="nc" id="L212">                                   i = i + 1;</span>
+<span class="nc" id="L213">                               }</span>
+
+<span class="nc" id="L215">                               editor.commit();</span>
+<span class="nc" id="L216">                               mLeDeviceListAdapterForRegisteredDevices.notifyDataSetChanged();</span>
+
+<span class="nc" id="L218">                               Log.i(TAG, &quot;Request to delete this device&quot;);</span>
+<span class="nc" id="L219">                           }</span>
+                       })
+<span class="nc" id="L221">                       .setNegativeButton(&quot;Cancel&quot;, new DialogInterface.OnClickListener() {</span>
+                           @Override
+                           public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L224">                               dialog.dismiss();</span>
+<span class="nc" id="L225">                           }</span>
+                       })
+<span class="nc" id="L227">                       .setCancelable(false)</span>
+<span class="nc" id="L228">                       .show();</span>
+
+
+//                SharedPreferences pref = getSharedPreferences(DeviceScanActivity.prefName, 0);
+//
+//                ArrayList&lt;MyDevice&gt; list = new ArrayList&lt;MyDevice&gt;();
+//
+//                SharedPreferences.Editor editor = pref.edit();
+//                editor.clear();
+//
+//                for (int i = 0; i &lt; mLeDeviceListAdapterForRegisteredDevices.getCount(); i++) {
+//                    if (i != (int) id) {
+//                        list.add(mLeDeviceListAdapterForRegisteredDevices.getDevice(i));
+//                    }
+//                }
+//
+//                mLeDeviceListAdapterForRegisteredDevices.clear();
+//
+//                int i = 0;
+//                for (MyDevice device : list) {
+//                    editor.putString(device.getAddress(), device.getName());
+//                    editor.putString(Integer.toString(i), device.getAddress());
+//
+//                    mLeDeviceListAdapterForRegisteredDevices.addDevice(device);
+//                    i = i + 1;
+//                }
+//
+//                editor.commit();
+//                mLeDeviceListAdapterForRegisteredDevices.notifyDataSetChanged();
+
+<span class="nc" id="L258">                return true;</span>
+            }
+        });
+
+<span class="fc" id="L262">        Intent intent = getIntent();</span>
+
+<span class="pc bpc" id="L264" title="2 of 4 branches missed.">        if (intent != null &amp;&amp; AutoScanningAction.equals(intent.getAction())) {</span>
+<span class="nc" id="L265">            autoStart = true;</span>
+<span class="nc" id="L266">            scanLeDevice(true);</span>
+        }
+<span class="fc" id="L268">    }</span>
+
+    public void onClick(View view) {
+<span class="pc bpc" id="L271" title="1 of 2 branches missed.">        if (view == rescanButton) {</span>
+<span class="fc" id="L272">            scanLeDevice(true);</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        } else if (view==cancelButton) {</span>
+<span class="nc" id="L274">            finish();</span>
+        } else {
+
+        }
+<span class="fc" id="L278">    }</span>
+
+    @Override
+    protected void onResume() {
+<span class="fc" id="L282">        super.onResume();</span>
+
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">        if (!mBluetoothAdapter.isEnabled()) {</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">            if (!mBluetoothAdapter.isEnabled()) {</span>
+<span class="nc" id="L286">                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);</span>
+<span class="nc" id="L287">                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);</span>
+            }
+        }
+
+        // Initializes list view adapter.
+        // For Scanned Devices (Empty)
+<span class="fc" id="L293">        mLeDeviceListAdapterForScannedDevices = new LeDeviceListAdapter();</span>
+<span class="fc" id="L294">        listViewScannedDevices.setAdapter(mLeDeviceListAdapterForScannedDevices);</span>
+
+
+        // For Registered Devices
+<span class="fc" id="L298">        setRegisteredDevicesFromPreference();</span>
+<span class="fc" id="L299">        listViewRegisteredDevices.setAdapter(mLeDeviceListAdapterForRegisteredDevices);</span>
+
+<span class="fc" id="L301">        IntentFilter intentFilter = new IntentFilter();</span>
+
+//        intentFilter.addAction(MainActivity.ACTION_PRESS_START_BUTTON);
+
+<span class="fc" id="L305">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);</span>
+<span class="fc" id="L306">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);</span>
+<span class="fc" id="L307">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);</span>
+
+<span class="fc" id="L309">        registerReceiver(deviceScanActivityReceiver, intentFilter);</span>
+
+<span class="pc bpc" id="L311" title="1 of 2 branches missed.">        if(autoStart) {</span>
+<span class="nc" id="L312">            scanLeDevice(true);</span>
+        }
+<span class="fc" id="L314">    }</span>
+
+    @Override
+    protected void onPause() {
+<span class="fc" id="L318">        super.onPause();</span>
+
+<span class="fc" id="L320">        unregisterReceiver(deviceScanActivityReceiver);</span>
+<span class="fc" id="L321">    }</span>
+
+    @Override
+    protected void onDestroy() {
+<span class="fc" id="L325">        super.onDestroy();</span>
+
+//        if (statusBLEService)
+//            (mServiceConnection);
+//
+//        mBluetoothLeService = null;
+<span class="fc" id="L331">    }</span>
+
+    private static final long SCAN_PERIOD = 5000;
+
+    private void scanLeDevice(final boolean enable) {
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">        if (enable) {</span>
+<span class="fc" id="L337">            mHandler.postDelayed(new Runnable() {</span>
+
+                @Override
+                public void run() {
+<span class="fc" id="L341">                    mScanning = false;</span>
+<span class="fc" id="L342">                    mBluetoothAdapter.stopLeScan(mLeScanCallback);</span>
+                    //mBluetoothLeScanner.stopScan(mScanCallback);
+<span class="fc" id="L344">                    Toast.makeText(DeviceScanActivity.this, &quot;Scan completed&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L345">                    Log.i(&quot;DeviceScanActivity&quot;, &quot;Scanning ends...&quot;);</span>
+<span class="fc" id="L346">                }</span>
+            }, SCAN_PERIOD);
+
+<span class="fc" id="L349">            mScanning = true;</span>
+<span class="fc" id="L350">            mBluetoothAdapter.startLeScan(mLeScanCallback);</span>
+            //mBluetoothLeScanner.startScan(mScanCallback);
+<span class="fc" id="L352">            Toast.makeText(DeviceScanActivity.this, &quot;Scanning...&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="fc" id="L353">            Log.i(&quot;DeviceScanActivity&quot;, &quot;Scanning starts...&quot;);</span>
+
+
+        } else {
+<span class="nc" id="L357">            mScanning = false;</span>
+<span class="nc" id="L358">            mBluetoothAdapter.stopLeScan(mLeScanCallback);</span>
+            //mBluetoothLeScanner.stopScan(mScanCallback);
+<span class="nc" id="L360">            Toast.makeText(DeviceScanActivity.this, &quot;Scan completed&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L361">            Log.i(&quot;DeviceScanActivity&quot;, &quot;Scanning ends...&quot;);</span>
+        }
+<span class="fc" id="L363">    }</span>
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+<span class="fc" id="L369">        getMenuInflater().inflate(R.menu.menu_device_scan, menu);</span>
+<span class="fc" id="L370">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+<span class="nc" id="L378">        int id = item.getItemId();</span>
+
+        //noinspection SimplifiableIfStatement
+<span class="nc bnc" id="L381" title="All 2 branches missed.">        if (id == R.id.action_settings) {</span>
+<span class="nc" id="L382">            return true;</span>
+        }
+<span class="nc bnc" id="L384" title="All 2 branches missed.">        else if (id == android.R.id.home)</span>
+        {
+<span class="nc" id="L386">            Intent intent = new Intent(this, MainActivity.class);</span>
+<span class="nc" id="L387">            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);</span>
+<span class="nc" id="L388">            startActivity(intent);</span>
+<span class="nc" id="L389">            return true;</span>
+        }
+
+<span class="nc" id="L392">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    public static class MyDevice {
+        private String address;
+        private String name;
+
+<span class="fc" id="L399">        public MyDevice(String address, String name) {</span>
+<span class="fc" id="L400">            this.address = address;</span>
+<span class="fc" id="L401">            this.name = name;</span>
+<span class="fc" id="L402">        }</span>
+
+        public String getAddress() {
+<span class="fc" id="L405">            return address;</span>
+        }
+
+        public String getName() {
+<span class="fc" id="L409">            return name;</span>
+        }
+    }
+
+
+
+    private class LeDeviceListAdapter extends BaseAdapter {
+        private ArrayList&lt;MyDevice&gt; mLeDevices;
+        private LayoutInflater mInflator;
+
+
+<span class="fc" id="L420">        private DataSetObservable dataSetObservable = new DataSetObservable();</span>
+
+        private DataSetObservable getDataSetObservable() {
+<span class="fc" id="L423">            return dataSetObservable;</span>
+        }
+
+        public void notifyDataSetChanged() {
+<span class="fc" id="L427">            this.getDataSetObservable().notifyChanged();</span>
+<span class="fc" id="L428">        }</span>
+        public void notifyDataSetInvalidated() {
+<span class="nc" id="L430">            this.getDataSetObservable().notifyInvalidated();</span>
+<span class="nc" id="L431">        }</span>
+
+        @Override
+        public void registerDataSetObserver(DataSetObserver observer) {
+<span class="fc" id="L435">            this.getDataSetObservable().registerObserver(observer);</span>
+
+<span class="fc" id="L437">        }</span>
+        @Override
+        public void unregisterDataSetObserver(DataSetObserver observer) {
+<span class="fc" id="L440">            this.getDataSetObservable().unregisterObserver(observer);</span>
+
+<span class="fc" id="L442">        }</span>
+
+
+<span class="fc" id="L445">        public LeDeviceListAdapter() {</span>
+<span class="fc" id="L446">            super();</span>
+<span class="fc" id="L447">            mLeDevices = new ArrayList&lt;MyDevice&gt;();</span>
+<span class="fc" id="L448">            mInflator = DeviceScanActivity.this.getLayoutInflater();</span>
+<span class="fc" id="L449">        }</span>
+
+        public void addDevice(MyDevice device) {
+<span class="fc" id="L452">            boolean flag = true;</span>
+
+<span class="fc bfc" id="L454" title="All 2 branches covered.">            for (MyDevice d : mLeDevices) {</span>
+<span class="pc bpc" id="L455" title="1 of 2 branches missed.">                if (d.getAddress().equals(device.getAddress())) {</span>
+<span class="fc" id="L456">                    flag = false;</span>
+                }
+<span class="fc" id="L458">            }</span>
+<span class="fc bfc" id="L459" title="All 2 branches covered.">            if (flag) {</span>
+<span class="fc" id="L460">                mLeDevices.add(device);</span>
+            }
+<span class="fc" id="L462">        }</span>
+
+        public MyDevice getDevice(int position) {
+<span class="nc" id="L465">            return mLeDevices.get(position);</span>
+        }
+
+        public String getDeviceName(int position) {
+<span class="fc" id="L469">            return mLeDevices.get(position).getName();</span>
+        }
+
+        public String getDeviceAddress(int position) {
+<span class="fc" id="L473">            return mLeDevices.get(position).getAddress();</span>
+        }
+
+
+        public void clear() {
+<span class="nc" id="L478">            mLeDevices.clear();</span>
+<span class="nc" id="L479">        }</span>
+
+        @Override
+        public int getCount() {
+<span class="fc" id="L483">            return mLeDevices.size();</span>
+        }
+
+        @Override
+        public Object getItem(int i) {
+<span class="nc" id="L488">            return mLeDevices.get(i);</span>
+        }
+
+        @Override
+        public long getItemId(int i) {
+<span class="fc" id="L493">            return i;</span>
+        }
+
+        @Override
+        public View getView(int i, View view, ViewGroup viewGroup) {
+            ViewHolder viewHolder;
+            // General ListView optimization code.
+<span class="pc bpc" id="L500" title="1 of 2 branches missed.">            if (view == null) {</span>
+<span class="fc" id="L501">                view = mInflator.inflate(R.layout.listitem_device, null);</span>
+<span class="fc" id="L502">                viewHolder = new ViewHolder();</span>
+<span class="fc" id="L503">                viewHolder.deviceAddress = (TextView) view.findViewById(R.id.device_address);</span>
+<span class="fc" id="L504">                viewHolder.deviceName = (TextView) view.findViewById(R.id.device_name);</span>
+<span class="fc" id="L505">                view.setTag(viewHolder);</span>
+            } else {
+<span class="nc" id="L507">                viewHolder = (ViewHolder) view.getTag();</span>
+            }
+
+<span class="fc" id="L510">            MyDevice device = mLeDevices.get(i);</span>
+<span class="fc" id="L511">            final String deviceName = device.getName();</span>
+<span class="pc bpc" id="L512" title="2 of 4 branches missed.">            if (deviceName != null &amp;&amp; deviceName.length() &gt; 0)</span>
+<span class="fc" id="L513">                viewHolder.deviceName.setText(deviceName);</span>
+            else
+<span class="nc" id="L515">                viewHolder.deviceName.setText(R.string.unknown_device);</span>
+<span class="fc" id="L516">            viewHolder.deviceAddress.setText(device.getAddress());</span>
+
+<span class="fc" id="L518">            return view;</span>
+        }
+
+    }
+
+
+<span class="fc" id="L524">    private BluetoothAdapter.LeScanCallback mLeScanCallback =</span>
+<span class="fc" id="L525">            new BluetoothAdapter.LeScanCallback() {</span>
+
+                @Override
+                public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+<span class="fc" id="L529">                    Log.i(&quot;DeviceScanActivity&quot;, &quot;onLeScan is called...&quot;);</span>
+<span class="fc" id="L530">                    runOnUiThread(new Runnable() {</span>
+                        @Override
+                        public void run() {
+<span class="fc" id="L533">                            mLeDeviceListAdapterForScannedDevices.addDevice(new MyDevice(device.getAddress(), device.getName()));</span>
+<span class="fc" id="L534">                            mLeDeviceListAdapterForScannedDevices.notifyDataSetChanged();</span>
+<span class="fc" id="L535">                        }</span>
+                    });
+<span class="fc" id="L537">                }</span>
+            };
+
+<span class="fc" id="L540">    static class ViewHolder {</span>
+        TextView deviceName;
+        TextView deviceAddress;
+    }
+
+
+    // Connection
+
+    private String mDeviceAddress;
+    private String mDeviceName;
+
+
+    // Receiver
+<span class="fc" id="L553">    DeviceScanActivityReceiver deviceScanActivityReceiver = new DeviceScanActivityReceiver();</span>
+
+<span class="fc" id="L555">    class DeviceScanActivityReceiver extends BroadcastReceiver {</span>
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+<span class="nc" id="L559">            Log.i(TAG, &quot;onReceive : &quot; + intent.getAction());</span>
+
+<span class="nc bnc" id="L561" title="All 2 branches missed.">            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(intent.getAction())) {</span>
+<span class="nc" id="L562">                Log.i(TAG, &quot;ACTION_GATT_CONNECTTED&quot;);</span>
+
+<span class="nc bnc" id="L564" title="All 2 branches missed.">                if (autoStart) {</span>
+                    // Finish with no UI job
+<span class="nc" id="L566">                    finish();</span>
+                }
+                else {
+                    // UI Job to update the registered device list
+<span class="nc" id="L570">                    mLeDeviceListAdapterForRegisteredDevices.clear();</span>
+<span class="nc" id="L571">                    setRegisteredDevicesFromPreference();</span>
+<span class="nc" id="L572">                    mLeDeviceListAdapterForRegisteredDevices.notifyDataSetChanged();</span>
+                }
+
+<span class="nc bnc" id="L575" title="All 2 branches missed.">            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(intent.getAction())) {</span>
+
+<span class="nc bnc" id="L577" title="All 2 branches missed.">            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(intent.getAction())) {</span>
+<span class="nc" id="L578">                pressToConnect = false;</span>
+
+            } else {
+<span class="nc" id="L581">                Log.i(TAG, &quot;DeviceScanActivityReceiver.onReceive : no action is matched.&quot;);</span>
+            }
+<span class="nc" id="L583">        }</span>
+
+    }
+
+    //
+    private void setRegisteredDevicesFromPreference() {
+<span class="fc" id="L589">        SharedPreferences pref = getSharedPreferences(DeviceScanActivity.prefName, 0);</span>
+<span class="fc" id="L590">        mLeDeviceListAdapterForRegisteredDevices = new LeDeviceListAdapter();</span>
+
+<span class="fc" id="L592">        int i = 0;</span>
+        while (true) {
+<span class="fc" id="L594">            String address = pref.getString(Integer.toString(i), &quot;&quot;);</span>
+<span class="fc" id="L595">            String name = pref.getString(address, &quot;&quot;);</span>
+<span class="pc bpc" id="L596" title="1 of 4 branches missed.">            if (address == null || address == &quot;&quot;) {</span>
+<span class="fc" id="L597">                break;</span>
+            } else {
+<span class="fc" id="L599">                mLeDeviceListAdapterForRegisteredDevices.addDevice(new MyDevice(address, name));</span>
+            }
+<span class="fc" id="L601">            i = i + 1;</span>
+<span class="fc" id="L602">        }</span>
+<span class="fc" id="L603">    }</span>
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L607" title="All 2 branches missed.">        if (event.getAction() == KeyEvent.ACTION_DOWN) {</span>
+<span class="nc bnc" id="L608" title="All 2 branches missed.">            switch (keyCode) {</span>
+                case KeyEvent.KEYCODE_BACK:
+<span class="nc" id="L610">                    new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)</span>
+<span class="nc" id="L611">                            .setTitle(&quot;Quit&quot;)</span>
+<span class="nc" id="L612">                            .setMessage(&quot;Do you want to quit?&quot;)</span>
+<span class="nc" id="L613">                            .setPositiveButton(&quot;Yes&quot;, new DialogInterface.OnClickListener() {</span>
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L616">                                    Intent intent = new Intent();</span>
+<span class="nc" id="L617">                                    intent.setAction(MainActivity.ACTION_FINISH_ACTIVITY);</span>
+<span class="nc" id="L618">                                    setResult(RESULT_OK, intent);</span>
+<span class="nc" id="L619">                                    finish();</span>
+//                                    finishAffinity();
+<span class="nc" id="L621">                                }</span>
+<span class="nc" id="L622">                            }).setNegativeButton( &quot;No&quot;, null ).show();</span>
+<span class="nc" id="L623">                    return true;</span>
+            }
+        }
+<span class="nc" id="L626">        return super.onKeyDown(keyCode, event);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

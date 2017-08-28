@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BLEServiceDiscoverState.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth.model</a> &gt; <span class="el_source">BLEServiceDiscoverState.java</span></div><h1>BLEServiceDiscoverState.java</h1><pre class="source lang-java linenums">package emul.bluetooth.model;
+
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
+import mocking.android.bluetooth.BLEService;
+import mocking.android.bluetooth.IBLEDiscoverService;
+
+/**
+ * Created by khChoi on 2017-08-05.
+ */
+
+public class BLEServiceDiscoverState extends BLEState {
+    private int succ_or_fail;
+    private ArrayList&lt;BLEService&gt; bleServiceList;
+
+    public BLEServiceDiscoverState(int succ_or_fail, ArrayList&lt;BLEService&gt; bleServiceList) {
+<span class="fc" id="L18">        this(null, succ_or_fail, bleServiceList);</span>
+<span class="fc" id="L19">    }</span>
+
+<span class="fc" id="L21">    public BLEServiceDiscoverState(ArrayList&lt;BLEState&gt; next, int succ_or_fail, ArrayList&lt;BLEService&gt; bleServiceList) {</span>
+<span class="fc" id="L22">        this.next = next;</span>
+<span class="fc" id="L23">        this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L24">        this.bleServiceList = bleServiceList;</span>
+<span class="fc" id="L25">    }</span>
+
+    @Override
+    public void setupAction() {
+<span class="fc" id="L29">    }</span>
+
+    @Override
+    public void action(IBLEDiscoverService ibleDiscoverService) {
+        // Condtion: This method should be called in doDiscoverService()
+
+        // Return succ_or_fail and bleServiceList
+<span class="fc" id="L36">        ibleDiscoverService.setResult(succ_or_fail, bleServiceList);</span>
+<span class="fc" id="L37">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

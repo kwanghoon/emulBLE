@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>PortingLayer.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">PortingLayer.java</span></div><h1>PortingLayer.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+import android.os.Handler;
+import android.os.Message;
+
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
+import java.util.UUID;
+
+import emul.bluetooth.BluetoothLE;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 24..
+ */
+<span class="fc" id="L16">public class PortingLayer {</span>
+    // Constants
+    //    for BluetoothAdapter
+    public static final int LESCANCALLBACK_ONLESCAN_REQUEST=1;
+    public static final int LESCANCALLBACK_ONLESCAN_REPLY=2;
+
+    //    for BluetoothDevice
+    public static final int CONNECT_GATT_REQUEST=10;
+    public static final int CONNECT_GATT_REPLY=11;
+
+    //    for BluetoothGatt
+    public static final int DISCOVER_SERVICES_REQUEST=20;
+    public static final int DISCOVER_SERVICES_REPLY=21;
+
+    public static final int CHANGE_CHARACTERISTIC_REPLY=25;
+
+    public static final int DEVICE_TIME_REQUEST=30;
+    public static final int DEVICE_TIME_REPLY=31;
+
+    public static final int WRITE_CHARACTERISTIC_REQUEST =40;
+    public static final int WRITE_CHARACTERISTIC_REPLY =41;
+
+    public static final int DISCONNECT_REQUEST=50;
+    public static final int DISCONNECT_REPLY=51;
+
+    public static final int QUIT=-1;
+
+    // Characteristic 援щ텇
+    public static final int HRM_READ=1000;
+    public static final int HRM_BATTERY=1001;
+
+    private BluetoothAdapter.LeScanCallback leScanCallback;
+    private BluetoothAdapter.BondedDeviceAddCallback bondedDeviceAddCallback;
+
+    private String deviceAddress;
+
+    public void setBondedDeviceAddCallback(
+            BluetoothAdapter.BondedDeviceAddCallback bondedDeviceAddCallback) {
+<span class="fc" id="L54">        this.bondedDeviceAddCallback = bondedDeviceAddCallback;</span>
+<span class="fc" id="L55">    }</span>
+
+    public void requestLeScan(BluetoothAdapter.LeScanCallback leScanCallback) {
+<span class="fc" id="L58">        this.leScanCallback = leScanCallback;</span>
+
+<span class="fc" id="L60">        Message msg = Message.obtain();</span>
+<span class="fc" id="L61">        msg.what = LESCANCALLBACK_ONLESCAN_REQUEST;</span>
+<span class="fc" id="L62">        emulHandler.sendMessage(msg);</span>
+<span class="fc" id="L63">    }</span>
+
+    private void invokeLeScan(Message msg) {
+        // Get device, rssi, and scanRecord out of the msg
+        // and invoke invoke_LeScanCallBack_onLeScan(...)
+<span class="fc" id="L68">        String arr[] = (String[])msg.obj; // String address, name</span>
+<span class="fc" id="L69">        BluetoothDevice btdev = new BluetoothDevice(arr[0], arr[1], this);</span>
+<span class="fc" id="L70">        bondedDeviceAddCallback.addBondedDevice(btdev);</span>
+<span class="fc" id="L71">        leScanCallback.onLeScan(btdev, 0, null); // TODO: scanRecord==null ?</span>
+
+<span class="fc" id="L73">        this.deviceAddress = arr[0];</span>
+<span class="fc" id="L74">    }</span>
+
+    public BluetoothDevice getRemoteDevice() {
+<span class="fc" id="L77">        return btdevemulator.getRemoteDevice();</span>
+    }
+
+    // BluetootDevice
+    private BluetoothGattCallback btGattCallback;
+    private BluetoothGatt gatt;
+
+    public void connectGatt(BluetoothGatt gatt, BluetoothGattCallback btGattCallback) {
+<span class="fc" id="L85">        this.gatt = gatt;</span>
+<span class="fc" id="L86">        this.btGattCallback = btGattCallback;</span>
+
+<span class="fc" id="L88">        Message msg = Message.obtain();</span>
+<span class="fc" id="L89">        msg.what = CONNECT_GATT_REQUEST;</span>
+<span class="fc" id="L90">        emulHandler.sendMessage(msg);</span>
+<span class="fc" id="L91">    }</span>
+
+    private void invokeConnectionStateChange(Message msg) {
+<span class="fc" id="L94">        int arr[] = (int[])msg.obj; // e.g., int BluetoothGatt.Success, BluetoothProfile.Connected</span>
+<span class="fc" id="L95">        btGattCallback.onConnectionStateChange(gatt, arr[0], arr[1]);</span>
+<span class="fc" id="L96">    }</span>
+
+    // BluetoothGatt
+    public void discoverServices() {
+<span class="fc" id="L100">        Log.v(&quot;PortingLayer&quot;, &quot;discoverServices&quot;);</span>
+<span class="fc" id="L101">        Message msg = Message.obtain();</span>
+<span class="fc" id="L102">        msg.what = DISCOVER_SERVICES_REQUEST;</span>
+<span class="fc" id="L103">        emulHandler.sendMessage(msg);</span>
+<span class="fc" id="L104">    }</span>
+
+    private void invokeServicesDiscovered(Message msg) {
+<span class="fc" id="L107">        int succ_or_fail = msg.arg1; // e.g., int BluetoothGatt.Success</span>
+<span class="fc" id="L108">        ArrayList&lt;BLEService&gt; bleServiceList = (ArrayList&lt;BLEService&gt;)msg.obj;</span>
+
+        UUID serviceUuid, characteristicUuid, descriptorUuid;
+
+
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        for (BLEService bleService : bleServiceList) {</span>
+<span class="pc bpc" id="L114" title="1 of 4 branches missed.">            switch ( bleService.kind() ) {</span>
+                case BLEService.SERVICE_UUID_ONLY:
+<span class="fc" id="L116">                    serviceUuid = bleService.serviceUuid();</span>
+<span class="fc" id="L117">                    gatt.addService(serviceUuid);</span>
+<span class="fc" id="L118">                    break;</span>
+
+                case BLEService.SERVICE_UUID_WITH_CHARACTERISTICS:
+<span class="fc" id="L121">                    serviceUuid = bleService.serviceUuid();</span>
+<span class="fc" id="L122">                    gatt.addService(serviceUuid);</span>
+<span class="fc" id="L123">                    characteristicUuid = bleService.characteristicUuid();</span>
+<span class="fc" id="L124">                    gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,</span>
+<span class="fc" id="L125">                            bleService.properties(), bleService.permission());</span>
+<span class="fc" id="L126">                    break;</span>
+
+                case BLEService.SERVICE_UUID_WITH_CHARACTERISTICS_AND_DESCRIPTOR:
+<span class="fc" id="L129">                    serviceUuid = bleService.serviceUuid();</span>
+<span class="fc" id="L130">                    gatt.addService(serviceUuid);</span>
+<span class="fc" id="L131">                    characteristicUuid = bleService.characteristicUuid();</span>
+<span class="fc" id="L132">                    gatt.getService(serviceUuid).addCharacteristic(characteristicUuid,</span>
+<span class="fc" id="L133">                            bleService.properties(), bleService.permission());</span>
+<span class="fc" id="L134">                    descriptorUuid = bleService.descriptorUuid();</span>
+<span class="fc" id="L135">                    gatt.getService(serviceUuid).getCharacteristic(characteristicUuid).addDescriptor(descriptorUuid);</span>
+<span class="fc" id="L136">                    break;</span>
+
+                default:
+                    // something wrong!!
+            }
+
+<span class="fc" id="L142">        }</span>
+
+<span class="fc" id="L144">        btGattCallback.onServicesDiscovered(gatt, succ_or_fail);</span>
+<span class="fc" id="L145">    }</span>
+
+    private void invokeCharacteristicChanged(Message msg) {
+<span class="fc" id="L148">        MessageChangeCharacteristic msgbody = (MessageChangeCharacteristic)msg.obj;</span>
+        byte data[];
+        UUID serviceUuid, characteristicUuid;
+
+<span class="fc" id="L152">        serviceUuid = msgbody.serviceUuid;</span>
+<span class="fc" id="L153">        characteristicUuid = msgbody.characteristicUuid;</span>
+<span class="fc" id="L154">        data = msgbody.bytes;</span>
+
+<span class="fc" id="L156">        BluetoothGattCharacteristic characteristic = gatt.getService(serviceUuid).getCharacteristic(characteristicUuid);</span>
+<span class="fc" id="L157">        characteristic.setValue(data);</span>
+<span class="fc" id="L158">        btGattCallback.onCharacteristicChanged(gatt, characteristic);</span>
+<span class="fc" id="L159">    }</span>
+
+
+    // Common
+    private BluetoothDeviceEmulator btdevemulator;
+    private Handler emulHandler;
+
+<span class="fc" id="L166">    Handler myHandler = new Handler() {</span>
+        @Override
+        // A method to receive a message from the BluetoothDeviceEmulator
+        public void handleMessage(Message msg) {
+<span class="pc bpc" id="L170" title="3 of 8 branches missed.">            switch(msg.what) {</span>
+                // BluetoothAdapter
+                case LESCANCALLBACK_ONLESCAN_REPLY:
+<span class="fc" id="L173">                    invokeLeScan(msg);</span>
+<span class="fc" id="L174">                    break;</span>
+
+                // BluetootDevice
+                case CONNECT_GATT_REPLY:
+<span class="fc" id="L178">                    invokeConnectionStateChange(msg);</span>
+<span class="fc" id="L179">                    break;</span>
+
+                // BluetootGatt
+                case DISCOVER_SERVICES_REPLY:
+<span class="fc" id="L183">                    invokeServicesDiscovered(msg);</span>
+<span class="fc" id="L184">                    break;</span>
+
+                //
+                case CHANGE_CHARACTERISTIC_REPLY:
+<span class="fc" id="L188">                    invokeCharacteristicChanged(msg);</span>
+<span class="fc" id="L189">                    break;</span>
+
+                //
+                case DEVICE_TIME_REPLY:
+<span class="nc" id="L193">                    invokeCharacteristicChanged(msg);</span>
+<span class="nc" id="L194">                    break;</span>
+
+                //
+                case WRITE_CHARACTERISTIC_REPLY:
+<span class="nc" id="L198">                    invokeCharacteristicChanged(msg);</span>
+<span class="nc" id="L199">                    break;</span>
+
+                //
+                case DISCONNECT_REPLY:
+<span class="fc" id="L203">                    invokeConnectionStateChange(msg);</span>
+
+                    // btdevemulator瑜� kill �떆�궓�떎.
+<span class="fc" id="L206">                    emulHandler.sendEmptyMessage(QUIT);</span>
+                    break;
+            }
+
+<span class="fc" id="L210">        }</span>
+    };
+
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+<span class="fc" id="L214">        Message msg = Message.obtain();</span>
+<span class="fc" id="L215">        msg.what = WRITE_CHARACTERISTIC_REQUEST;</span>
+<span class="fc" id="L216">        msg.obj = characteristic;</span>
+<span class="fc" id="L217">        emulHandler.sendMessage(msg);</span>
+<span class="fc" id="L218">    }</span>
+
+    public void createBTDevEmulator(BluetoothLE bluetoothLE) {
+<span class="fc" id="L221">        btdevemulator = BluetoothDeviceEmulator.create(myHandler, bluetoothLE);</span>
+<span class="fc" id="L222">        btdevemulator.start();</span>
+
+<span class="fc" id="L224">        emulHandler = btdevemulator.getHandler();</span>
+<span class="fc" id="L225">    }</span>
+
+    public void disconnect() {
+<span class="fc" id="L228">        Message msg = Message.obtain();</span>
+<span class="fc" id="L229">        msg.what = DISCONNECT_REQUEST;</span>
+<span class="fc" id="L230">        emulHandler.sendMessage(msg);</span>
+<span class="fc" id="L231">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

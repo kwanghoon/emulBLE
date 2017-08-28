@@ -1,0 +1,1567 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothLeService.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">BluetoothLeService.java</span></div><h1>BluetoothLeService.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Service;
+//import android.bluetooth.BluetoothAdapter;
+//import android.bluetooth.BluetoothDevice;
+//import android.bluetooth.BluetoothGatt;
+//import android.bluetooth.BluetoothGattCallback;
+//import android.bluetooth.BluetoothGattCharacteristic;
+//import android.bluetooth.BluetoothGattDescriptor;
+//import android.bluetooth.BluetoothGattService;
+//import android.bluetooth.BluetoothManager;
+//import android.bluetooth.BluetoothProfile;
+import mocking.android.bluetooth.BluetoothManager;
+import mocking.android.bluetooth.BluetoothAdapter;
+import mocking.android.bluetooth.BluetoothDevice;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothGattCallback;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.BluetoothGattDescriptor;
+import mocking.android.bluetooth.BluetoothGattService;
+import mocking.android.bluetooth.BluetoothProfile;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Binder;
+import android.os.Handler;
+import android.os.IBinder;
+//import android.util.Log;
+import android.widget.Toast;
+
+import com.h3.hrm3200.emul.AutoHRM3200;
+import com.h3.hrm3200.emul.HRM3200;
+
+import java.util.Calendar;
+import java.util.List;
+import java.util.UUID;
+
+public class BluetoothLeService extends Service {
+    private BluetoothManager mBluetoothManager;
+    private BluetoothAdapter mBluetoothAdapter;
+    private String mBluetoothDeviceAddress;
+    private BluetoothGatt mBluetoothGatt;
+<span class="fc" id="L43">    private int mConnectionState = STATE_DISCONNECTED;</span>
+
+    private static final int STATE_DISCONNECTED = 0;
+    private static final int STATE_CONNECTING = 1;
+    private static final int STATE_CONNECTED = 2;
+
+    public final static String ACTION_GATT_CONNECTING =
+            &quot;com.example.bluetooth.le.ACTION_GATT_CONNECTING&quot;;
+    public final static String ACTION_GATT_CONNECTED =
+            &quot;com.example.bluetooth.le.ACTION_GATT_CONNECTED&quot;;
+    public final static String ACTION_GATT_DISCONNECTED =
+            &quot;com.example.bluetooth.le.ACTION_GATT_DISCONNECTED&quot;;
+    public final static String ACTION_GATT_SERVICES_DISCOVERED =
+            &quot;com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED&quot;;
+    public final static String ACTION_DATA_AVAILABLE =
+            &quot;com.example.bluetooth.le.ACTION_DATA_AVAILABLE&quot;;
+
+    // �떎�떆媛� 痢≪젙 �뜲�씠���쓽 �닔�떊 醫낅즺(DB ���옣 �꽦怨�) �꽭�뀡�긽�꽭�솕硫댁쑝濡쒖쓽 �쟾�솚�쓣 �쐞�빐 異붽�
+    public final static String ACTION_DATA_STORE_AND_DISCONNECTED =
+            &quot;com.example.bluetooth.le.ACTION_DATA_STORE_AND_DISCONNECTED&quot;;
+
+    public final static String ACTION_GATT_ABNORMAL_TERMINATION =
+            &quot;com.example.bluetooth.le.ACTION_GATT_ABNORMAL_TERMINATION&quot;;
+
+    public final static String EXTRA_DATA =
+            &quot;com.example.bluetooth.le.EXTRA_DATA&quot;;
+
+    // UUID (Service &amp; Characteristic)
+    // Heart Rate
+<span class="fc" id="L72">    public final static UUID UUID_HEART_RATE_MEASUREMENT =</span>
+<span class="fc" id="L73">            UUID.fromString(GattAttributes.HEART_RATE_MEASUREMENT);</span>
+<span class="fc" id="L74">    public final static UUID UUID_HEART_RATE_SERVICE =</span>
+<span class="fc" id="L75">            UUID.fromString(GattAttributes.HEART_RATE_SERVICE);</span>
+
+    // Battery Level
+<span class="fc" id="L78">    public final static UUID UUID_BATTERY_SERVICE = UUID</span>
+<span class="fc" id="L79">            .fromString(GattAttributes.BATTERY_SERVICE);</span>
+<span class="fc" id="L80">    public final static UUID UUID_BATTERY_LEVEL = UUID</span>
+<span class="fc" id="L81">            .fromString(GattAttributes.BATTERY_LEVEL);</span>
+
+    // Health (defined by H3 System)
+<span class="fc" id="L84">    public final static UUID UUID_MHEALTH_MEASUREMENT_WRITE = UUID</span>
+<span class="fc" id="L85">            .fromString(GattAttributes.MHEALTH_MEASUREMENT_WRITE);</span>
+<span class="fc" id="L86">    public final static UUID UUID_MHEALTH_MEASUREMENT_READ = UUID</span>
+<span class="fc" id="L87">            .fromString(GattAttributes.MHEALTH_MEASUREMENT_READ);</span>
+<span class="fc" id="L88">    public final static UUID UUID_MHEALTH_SERVICE = UUID</span>
+<span class="fc" id="L89">            .fromString(GattAttributes.MHEALTH_SERVICE);</span>
+
+    private final static String TAG = &quot;BluetoothLeService&quot;;
+
+    // Menu : ble data 以� 泥섎━�븷 寃� 吏��젙
+<span class="fc" id="L94">    private boolean HEART_RATE_MENU = false; // standard Heart Rate 泥섎━ �븞�븿</span>
+<span class="fc" id="L95">    private boolean BATTERY_MENU    = true;</span>
+<span class="fc" id="L96">    private boolean MHEALTH_MENU    = true;</span>
+
+    // For Health (defined by H3 System) Characteristics
+    private BluetoothGattCharacteristic health_measurement_characteristic_write;
+    private BluetoothGattCharacteristic health_measurement_characteristic_read;
+
+    // For reading Battery Level Characteristics (after setting notification on it)
+    private BluetoothGattCharacteristic battery_level_characteristic;
+
+    public static final String ACTION_READ_BATTERY_LEVEL = &quot;android.intent.action.READ_BATTERY_LEVEL&quot;;
+    public static final String ACTION_UNBIND_SERVICE = &quot;android.intent.action.UNBIND_SERVICE&quot;;
+
+    public static final String ACTION_CONNECT = &quot;android.intent.action.CONNECT&quot;;
+    public static final String CONNECT_ADDRESS_KEY = &quot;address&quot;;
+//    public static final String STORED_DATA_REQUEST_KEY = &quot;stored data request&quot;;
+
+    public static final String ACTION_DISCONNECT = &quot;android.intent.action.DISCONNECT&quot;;
+
+
+    public static final String ACTION_REQUEST_TO_DOWNLOAD_STORED_DATA = &quot;android.intent.action.DOWNLOAD_STORED_DATA&quot;;
+    public static final String ACTION_REQUEST_REALTIME_DATA = &quot;android.intent.action.REALTIME_DATA&quot;;
+
+
+    // HRM3200 Protocol States
+    private int HRM3200_state;
+
+    private static final int HRM3200_STATE0 = 0; // 珥덇린 �긽�깭 (CONNECTED)
+    private static final int HRM3200_STATE1 = 1; // �옣鍮꾩떆媛�(0x10) �닔�떊
+    private static final int HRM3200_STATE2 = 2; // OK(0x11)怨� �쟾�슜�빋�떆媛�(0x80) �넚�떊
+    private static final int HRM3200_STATE3 = 3; // ���옣�뜲�씠�꽣 �쑀臾�/�떎�슫濡쒕뱶 媛��뒫 �뿬遺�/(0x81) �닔�떊
+    private static final int HRM3200_STATE4 = 4; // �떎�떆媛꾨뜲�씠�꽣 �슂泥�(0x82-01) �넚�떊
+    private static final int HRM3200_STATE5 = 5; // �떎�떆媛꾨뜲�씠�꽣 �슂泥� OK(0x83) �닔�떊
+    private static final int HRM3200_STATE6 = 6; // ���옣�뜲�씠�꽣 �슂泥�(0x82-03) �넚�떊
+    private static final int HRM3200_STATE7 = 7; // ���옣�뜲�씠�꽣 �슂泥� OK(0x83) �닔�떊
+    private static final int HRM3200_STATE8 = 8; // �쟾泥� �꽭�뀡 媛��닔 (0x12) �닔�떊
+    private static final int HRM3200_STATE9 = 9; // �꽭�뀡 踰덊샇 吏��젙 �뜲�씠�꽣 �슂泥� (0x84) �넚�떊
+    private static final int HRM3200_STATE10 = 10; // �꽭�뀡 �뜲�씠�꽣 �슂泥� OK(0x85) �닔�떊
+    private static final int HRM3200_STATE11 = 11; // �꽭�뀡 �젙蹂� (0x14) �닔�떊
+    private static final int HRM3200_STATE12 = 12; // OK9(0x15) �넚�떊
+
+    private static final int HRM3200_STATE100 = 100; // 醫낅즺 �긽�깭 (DISCONNECTED)
+
+    private static final int HRM3200_STATE_FAIL = -1; // �봽濡쒗넗肄� �닚�꽌�� �떎瑜� �긽�깭媛� �맖
+
+<span class="fc" id="L140">    private static boolean DEBUG_HRM3200_STATE = false; // true: �쁽�옱 state �긽愿��뾾�쓬 (�봽濡쒗넗肄� �닚�꽌 泥댄겕 �븞�븿)</span>
+
+    private boolean check(int state) {
+<span class="pc bpc" id="L143" title="1 of 4 branches missed.">        return DEBUG_HRM3200_STATE || HRM3200_state==state;</span>
+    }
+
+<span class="fc" id="L146">    private int HRM3200_state_prev = HRM3200_STATE100;</span>
+
+    private void set(int state) {
+<span class="fc" id="L149">        HRM3200_state_prev = HRM3200_state;</span>
+<span class="fc" id="L150">        HRM3200_state = state;</span>
+
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        Log.i(TAG, &quot;set: &quot; + HRM3200_state + &quot; &quot; +</span>
+                (state==HRM3200_STATE100 ? (&quot; &lt;- &quot; + HRM3200_state_prev) : &quot;&quot;));
+<span class="fc" id="L154">    }</span>
+    ////////////////////////////////////////////////////////
+
+<span class="fc" id="L157">    private Handler handler = new Handler();</span>
+
+    private SessionData sessionData;
+
+    // STORED_DATA_REQUEST
+<span class="fc" id="L162">    private boolean stored_data_request_flag = false; // false : �떎�떆媛� �뜲�씠�꽣 �슂泥�</span>
+
+    // MEASURING �긽�깭瑜� prefName�뿉 湲곕줉�븯�뒗 寃껋쓣 �븳踰덈쭔 �븯湲� �쐞�븳 �뵆�옒洹�
+<span class="fc" id="L165">    boolean doOnceFlag = true;</span>
+    private int userWeight;
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+
+        //2015.4.28
+<span class="fc" id="L172">        SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="fc" id="L173">        userWeight = userinfoPref.getInt(UserSettingActivity.keyWeight, 0);</span>
+
+<span class="pc bpc" id="L175" title="2 of 4 branches missed.">        if (intent==null || intent.getAction() == null) {</span>
+<span class="nc" id="L176">            return super.onStartCommand(intent, flags, startId);</span>
+        }
+
+<span class="fc" id="L179">        Log.i(TAG, &quot;onStartCommand: &quot; + intent.getAction());</span>
+
+<span class="fc bfc" id="L181" title="All 2 branches covered.">        if (ACTION_CONNECT.equals(intent.getAction())) {</span>
+
+            // Connect only when a disconnected state!
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">            if (mConnectionState==STATE_DISCONNECTED) {</span>
+
+<span class="fc" id="L186">                String address = intent.getStringExtra(CONNECT_ADDRESS_KEY);</span>
+//                stored_data_request_flag = intent.getBooleanExtra(STORED_DATA_REQUEST_KEY, false);
+
+<span class="pc bpc" id="L189" title="1 of 2 branches missed.">                if (address != null) {</span>
+<span class="fc" id="L190">                    boolean status = connect(address);</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">                    if (status == false) {</span>
+<span class="nc" id="L192">                        Log.i(TAG, &quot;Connection Failed: &quot;);</span>
+
+<span class="nc bnc" id="L194" title="All 2 branches missed.">                        if (mConnectionState==STATE_CONNECTING) {</span>
+<span class="nc" id="L195">                            Toast.makeText(this, &quot;Connection failed&quot;, Toast.LENGTH_SHORT).show();</span>
+                        }
+<span class="nc" id="L197">                        mConnectionState = STATE_DISCONNECTED;</span>
+<span class="nc" id="L198">                        broadcastUpdate(ACTION_GATT_ABNORMAL_TERMINATION);</span>
+
+<span class="nc" id="L200">                        setConnectionFlagInPreference(StartButtonView.NO_DEVICE);</span>
+<span class="nc" id="L201">                        setServiceDiscoveredFlagInPreference(false);</span>
+                    }
+                }
+
+<span class="fc" id="L205">            }</span>
+            else {
+<span class="nc" id="L207">                Toast.makeText(this, &quot;There exists a device connected or connecting!&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L208">                Log.i(TAG, &quot;There exists a device connected!&quot;);</span>
+            }
+
+        }
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        else if (ACTION_DISCONNECT.equals(intent.getAction())) {</span>
+//            int _mConnectionState = mConnectionState;
+
+            // 2015.04.15 痢≪젙醫낅즺 �슂泥� 異붽� 0x82 (02)
+<span class="fc" id="L216">            requestStopMeasuring();</span>
+<span class="fc" id="L217">            handler.postDelayed(new Runnable() {</span>
+                @Override
+                public void run() {
+<span class="fc" id="L220">                    disconnect();</span>
+<span class="fc" id="L221">                }</span>
+            }, 1000);
+
+
+        }
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        else if (ACTION_READ_BATTERY_LEVEL.equals(intent.getAction())) {</span>
+
+            // Request READ_BATTERY_LEVEL only when a connected state!
+<span class="nc bnc" id="L229" title="All 2 branches missed.">            if (mConnectionState==STATE_CONNECTED) {</span>
+
+<span class="nc bnc" id="L231" title="All 2 branches missed.">                if (battery_level_characteristic != null)</span>
+<span class="nc" id="L232">                    readCharacteristic(battery_level_characteristic);</span>
+            }
+            else {
+//                Toast.makeText(this, &quot;No connection available on this Battery Read Request!&quot;, Toast.LENGTH_SHORT).show();
+<span class="nc" id="L236">                Log.i(TAG, &quot;No connection available on this Battery Read Request!&quot;);</span>
+
+            }
+        }
+<span class="pc bpc" id="L240" title="1 of 2 branches missed.">        else if (ACTION_REQUEST_REALTIME_DATA.equals(intent.getAction())) {</span>
+<span class="nc" id="L241">            requestRealtime();</span>
+        }
+<span class="pc bpc" id="L243" title="1 of 2 branches missed.">        else if(ACTION_REQUEST_TO_DOWNLOAD_STORED_DATA.equals(intent.getAction())) {</span>
+<span class="fc" id="L244">            requestStoredData();</span>
+        }
+        else  {
+            //
+        }
+
+<span class="fc" id="L250">        return super.onStartCommand(intent, flags, startId);</span>
+    }
+
+    // 2015.04.15 痢≪젙醫낅즺 �슂泥� 異붽� 0x82 (02)
+    void requestStopMeasuring() {
+<span class="fc" id="L255">        byte[] response = new byte[5];</span>
+
+<span class="fc" id="L257">        response[0] = (byte) 0x80; // STX</span>
+<span class="fc" id="L258">        response[1] = (byte) 0x82; // CMD</span>
+<span class="fc" id="L259">        response[2] = (byte) 0x01; // Length</span>
+<span class="fc" id="L260">        response[3] = (byte) 0x02; // Stop Measuring</span>
+<span class="fc" id="L261">        response[4] = (byte) 0xEF; // EOF</span>
+
+<span class="pc bpc" id="L263" title="1 of 2 branches missed.">        if (health_measurement_characteristic_write != null) {</span>
+            boolean result;
+
+<span class="fc" id="L266">            health_measurement_characteristic_write.setValue(response);</span>
+
+<span class="fc" id="L268">            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L269">            Log.i(TAG, &quot;requestStopMeasuring - writeCharacteristic is called... : &quot; + result);</span>
+<span class="fc" id="L270">            printBytes(response);</span>
+
+<span class="fc" id="L272">        } else {</span>
+<span class="nc" id="L273">            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+        }
+
+<span class="fc" id="L276">    }</span>
+
+
+    @Override
+    public void onCreate() {
+<span class="fc" id="L281">        super.onCreate();</span>
+
+<span class="fc" id="L283">        Log.i(TAG, &quot;onCreate()&quot;);</span>
+
+<span class="fc" id="L285">        initialize();</span>
+<span class="fc" id="L286">    }</span>
+
+    @Override
+    public void onDestroy() {
+<span class="nc" id="L290">        super.onDestroy();</span>
+
+<span class="nc" id="L292">        Log.i(TAG, &quot;onDestroy()&quot;);</span>
+
+<span class="nc" id="L294">        disconnect();</span>
+<span class="nc" id="L295">        close();</span>
+<span class="nc" id="L296">    }</span>
+
+<span class="fc" id="L298">    public BluetoothLeService() {</span>
+<span class="fc" id="L299">    }</span>
+
+<span class="fc" id="L301">    public class LocalBinder extends Binder {</span>
+        BluetoothLeService getService() {
+<span class="nc" id="L303">            return BluetoothLeService.this;</span>
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+<span class="nc" id="L309">        Log.i(TAG, &quot;onBind is called&quot;);</span>
+<span class="nc" id="L310">        return mBinder;</span>
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+<span class="nc" id="L315">        Log.i(TAG, &quot;onUnbind is called&quot;);</span>
+<span class="nc" id="L316">        close();</span>
+<span class="nc" id="L317">        return super.onUnbind(intent);</span>
+    }
+
+<span class="fc" id="L320">    private final IBinder mBinder = new LocalBinder();</span>
+
+    /**
+     * Initializes a reference to the local Bluetooth adapter.
+     *
+     * @return Return true if the initialization is successful.
+     */
+    public boolean initialize() {
+        // For API level 18 and above, get a reference to BluetoothAdapter through
+        // BluetoothManager.
+<span class="pc bpc" id="L330" title="1 of 2 branches missed.">        if (mBluetoothManager == null) {</span>
+            // for Mocking
+            //mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+<span class="fc" id="L333">            mBluetoothManager = new BluetoothManager(new AutoHRM3200());</span>
+<span class="pc bpc" id="L334" title="1 of 2 branches missed.">            if (mBluetoothManager == null) {</span>
+<span class="nc" id="L335">                Log.e(TAG, &quot;Unable to initialize BluetoothManager.&quot;);</span>
+<span class="nc" id="L336">                return false;</span>
+            }
+        }
+
+<span class="fc" id="L340">        mBluetoothAdapter = mBluetoothManager.getAdapter();</span>
+<span class="pc bpc" id="L341" title="1 of 2 branches missed.">        if (mBluetoothAdapter == null) {</span>
+<span class="nc" id="L342">            Log.e(TAG, &quot;Unable to obtain a BluetoothAdapter.&quot;);</span>
+<span class="nc" id="L343">            return false;</span>
+        }
+
+<span class="fc" id="L346">        return true;</span>
+    }
+
+    /**
+     * Connects to the GATT server hosted on the Bluetooth LE device.
+     *
+     * @param address The device address of the destination device.
+     *
+     * @return Return true if the connection is initiated successfully. The connection result
+     *         is reported asynchronously through the
+     *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
+     *         callback.
+     */
+    public boolean connect(final String address) {
+<span class="pc bpc" id="L360" title="2 of 4 branches missed.">        if (mBluetoothAdapter == null || address == null) {</span>
+<span class="nc" id="L361">            Log.w(TAG, &quot;BluetoothAdapter not initialized or unspecified address.&quot;);</span>
+<span class="nc" id="L362">            return false;</span>
+        }
+
+        // Previously connected device.  Try to reconnect.
+<span class="pc bpc" id="L366" title="5 of 6 branches missed.">        if (mBluetoothDeviceAddress != null &amp;&amp; address.equals(mBluetoothDeviceAddress)</span>
+                &amp;&amp; mBluetoothGatt != null) {
+<span class="nc" id="L368">            Log.d(TAG, &quot;Trying to use an existing mBluetoothGatt for connection.&quot;);</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">            if (mBluetoothGatt.connect()) {</span>
+<span class="nc" id="L370">                mConnectionState = STATE_CONNECTING;</span>
+<span class="nc" id="L371">                setConnectionFlagInPreference(StartButtonView.CONNECTING);</span>
+<span class="nc" id="L372">                broadcastUpdate(ACTION_GATT_CONNECTING);</span>
+<span class="nc" id="L373">                return true;</span>
+            } else {
+<span class="nc" id="L375">                return false;</span>
+            }
+        }
+
+<span class="fc" id="L379">        final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);</span>
+<span class="pc bpc" id="L380" title="1 of 2 branches missed.">        if (device == null) {</span>
+<span class="nc" id="L381">            Log.w(TAG, &quot;Device not found.  Unable to connect.&quot;);</span>
+<span class="nc" id="L382">            return false;</span>
+        }
+        // We want to directly connect to the device, so we are setting the autoConnect
+        // parameter to false.
+<span class="fc" id="L386">        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);</span>
+<span class="fc" id="L387">        Log.d(TAG, &quot;Trying to create a new connection.&quot;);</span>
+<span class="fc" id="L388">        mBluetoothDeviceAddress = address;</span>
+<span class="fc" id="L389">        mConnectionState = STATE_CONNECTING;</span>
+<span class="fc" id="L390">        setConnectionFlagInPreference(StartButtonView.CONNECTING);</span>
+<span class="fc" id="L391">        broadcastUpdate(ACTION_GATT_CONNECTING);</span>
+<span class="fc" id="L392">        return true;</span>
+    }
+
+    /**
+     * Disconnects an existing connection or cancel a pending connection. The disconnection result
+     * is reported asynchronously through the
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
+     * callback.
+     */
+    public void disconnect() {
+<span class="pc bpc" id="L402" title="2 of 4 branches missed.">        if (mBluetoothAdapter == null || mBluetoothGatt == null) {</span>
+<span class="nc" id="L403">            Log.w(TAG, &quot;BluetoothAdapter not initialized&quot;);</span>
+<span class="nc" id="L404">            return;</span>
+        }
+//        mConnectionState = STATE_DISCONNECTED;
+
+<span class="fc" id="L408">        mBluetoothGatt.disconnect();</span>
+<span class="fc" id="L409">    }</span>
+
+    public void close() {
+<span class="fc bfc" id="L412" title="All 2 branches covered.">        if (mBluetoothGatt == null) {</span>
+<span class="fc" id="L413">            return;</span>
+        }
+<span class="fc" id="L415">        mBluetoothGatt.close();</span>
+<span class="fc" id="L416">        mBluetoothGatt = null;</span>
+
+<span class="fc" id="L418">        mConnectionState = STATE_DISCONNECTED;</span>
+<span class="fc" id="L419">        setConnectionFlagInPreference(StartButtonView.NO_DEVICE);</span>
+<span class="fc" id="L420">    }</span>
+
+    // Implements callback methods for GATT events that the app cares about.  For example,
+    // connection change and services discovered.
+<span class="fc" id="L424">    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {</span>
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+
+<span class="pc bpc" id="L428" title="1 of 2 branches missed.">            if (status != BluetoothGatt.GATT_SUCCESS) { //TODO: ??</span>
+<span class="nc" id="L429">                Log.i(TAG, &quot;onConnectionStateChange: &quot; + status);</span>
+            }
+
+            String intentAction;
+<span class="pc bpc" id="L433" title="2 of 6 branches missed.">            if (status==BluetoothGatt.GATT_SUCCESS &amp;&amp; newState == BluetoothProfile.STATE_CONNECTED &amp;&amp; mBluetoothGatt != null) {</span>
+<span class="fc" id="L434">                intentAction = ACTION_GATT_CONNECTED;</span>
+<span class="fc" id="L435">                mConnectionState = STATE_CONNECTED;</span>
+<span class="fc" id="L436">                broadcastUpdate(intentAction);</span>
+
+<span class="fc" id="L438">                Log.i(TAG, &quot;Connected to GATT server: &quot; + status);</span>
+                // Attempts to discover services after successful connection.
+<span class="fc" id="L440">                boolean result = mBluetoothGatt.discoverServices();</span>
+<span class="fc" id="L441">                Log.i(TAG, &quot;Attempting to start service discovery:&quot; + result);</span>
+
+<span class="fc" id="L443">                setConnectionFlagInPreference(StartButtonView.CONNECTED);</span>
+<span class="fc" id="L444">                setServiceDiscoveredFlagInPreference(false);</span>
+<span class="fc" id="L445">                addDeviceInPreference(gatt.getDevice().getAddress(), gatt.getDevice().getName());</span>
+
+                // usesr info pref
+//                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);
+//                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);
+
+//                sessionData = new SessionData(userStride);  // �꽭�뀡�뜲�씠�� 珥덇린�솕 0x1C(00)�닔�떊�썑濡� �씠�룞
+
+
+<span class="fc" id="L454">                HRM3200_state = HRM3200_STATE0; // 珥덇린 �긽�깭</span>
+
+<span class="fc" id="L456">                doOnceFlag = true;</span>
+
+<span class="pc bpc" id="L458" title="2 of 4 branches missed.">            } else if (status==BluetoothGatt.GATT_SUCCESS &amp;&amp; newState == BluetoothProfile.STATE_DISCONNECTED) {</span>
+<span class="fc" id="L459">                Log.i(TAG, &quot;Disconnected from GATT server: &quot; + status);</span>
+
+<span class="pc bpc" id="L461" title="1 of 2 branches missed.">                if (mConnectionState==STATE_CONNECTING) {</span>
+<span class="nc" id="L462">                    handler.post(new Runnable() {</span>
+                        @Override
+                        public void run() {
+<span class="nc" id="L465">                                Toast.makeText(BluetoothLeService.this, &quot;Connection failed&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L466">                        }</span>
+                    });
+                }
+
+<span class="fc" id="L470">                int sessionid = -1;</span>
+<span class="fc" id="L471">                Log.i(TAG, &quot;post Writing to DB&quot;);</span>
+<span class="pc bpc" id="L472" title="1 of 2 branches missed.">                if (sessionData != null) // �뜲�씠�꽣 諛쏄린 �떆�옉�븯湲� �쟾�뿉(0x1c �쟾�뿉) disconnect�릺硫� sessionData==null!</span>
+                {
+<span class="fc bfc" id="L474" title="All 2 branches covered.">                    if (sessionData.writeToDB(BluetoothLeService.this.getApplicationContext())) {  // DB ���옣 �꽦怨�</span>
+<span class="fc" id="L475">                        sessionid = sessionData.getSessionId();</span>
+                    }
+                }
+
+//                if (mConnectionState==STATE_CONNECTED &amp;&amp; stored_data_request_flag==false) {
+//                    Log.i(TAG, &quot;post Writing to DB&quot;);
+//                    final SessionData _sessionData = sessionData;
+//                    handler.post(new Runnable() {
+//
+//                        @Override
+//                        public void run() {
+//                            if (_sessionData != null) {
+//                                Log.i(TAG, &quot;call writeToDB&quot;);
+//                                _sessionData.writeToDB(BluetoothLeService.this.getApplicationContext());
+//                            }
+//                        }
+//                    });
+//                }
+
+//                sessionData = null;
+
+<span class="fc" id="L496">                mConnectionState = STATE_DISCONNECTED;</span>
+
+                // TODO: �뿰寃� �빐�젣 �썑 �뿰寃곗씠 �떎�떆 �릺�뼱 discoverServices()瑜� �샇異쒗븯�뒗 寃쎌슦媛� �엳�뼱�꽌 null濡� 諛붽씀吏� �븡�쓬
+//                mBluetoothGatt = null;
+<span class="fc" id="L500">                mBluetoothDeviceAddress = null;</span>
+
+<span class="fc" id="L502">                intentAction = ACTION_GATT_DISCONNECTED;</span>
+<span class="pc bpc" id="L503" title="1 of 4 branches missed.">                if ( (sessionid != -1) &amp;&amp; (stored_data_request_flag == false) )</span>
+<span class="fc" id="L504">                    intentAction = ACTION_DATA_STORE_AND_DISCONNECTED;  // �떎�떆媛� �뜲�씠���씤 寃쎌슦 Detail �솕硫댁쑝濡� �쟾�솚�븯湲� �쐞�빐</span>
+
+<span class="fc" id="L506">                broadcastUpdate(intentAction, sessionid);</span>
+//                broadcastUpdate(intentAction);
+
+<span class="fc" id="L509">                setConnectionFlagInPreference(StartButtonView.NO_DEVICE);</span>
+<span class="fc" id="L510">                setServiceDiscoveredFlagInPreference(false);</span>
+
+<span class="fc" id="L512">                HRM3200_state = HRM3200_STATE100; // 醫낅즺 �긽�깭</span>
+
+<span class="fc" id="L514">                doOnceFlag = true; // Do we need this?</span>
+<span class="fc" id="L515">                stored_data_request_flag = false;</span>
+
+<span class="fc" id="L517">                close();</span>
+<span class="fc" id="L518">            }</span>
+            else {
+<span class="nc" id="L520">                Log.i(TAG, &quot;onConnectionStateChange:  status: &quot; + status + &quot; newState: &quot; + newState);</span>
+<span class="nc bnc" id="L521" title="All 2 branches missed.">                if (mConnectionState != STATE_DISCONNECTED) {</span>
+
+<span class="nc" id="L523">                    mConnectionState = STATE_DISCONNECTED;</span>
+<span class="nc" id="L524">                    mBluetoothDeviceAddress = null;</span>
+
+<span class="nc" id="L526">                    intentAction = ACTION_GATT_DISCONNECTED;</span>
+<span class="nc" id="L527">                    broadcastUpdate(intentAction);</span>
+
+<span class="nc" id="L529">                    setConnectionFlagInPreference(StartButtonView.NO_DEVICE);</span>
+<span class="nc" id="L530">                    setServiceDiscoveredFlagInPreference(false);</span>
+
+<span class="nc" id="L532">                    HRM3200_state = HRM3200_STATE100; // 醫낅즺 �긽�깭</span>
+
+<span class="nc" id="L534">                    doOnceFlag = true; // Do we need this?</span>
+<span class="nc" id="L535">                    stored_data_request_flag = false;</span>
+
+<span class="nc" id="L537">                    close();</span>
+                }
+            }
+<span class="fc" id="L540">        }</span>
+
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+<span class="pc bpc" id="L544" title="1 of 2 branches missed.">            if (status == BluetoothGatt.GATT_SUCCESS) {</span>
+<span class="fc" id="L545">                Log.i(TAG, &quot;onServicesDiscovered received: &quot; + status);</span>
+
+<span class="fc" id="L547">                List&lt;BluetoothGattService&gt; gattServices = mBluetoothGatt.getServices();</span>
+<span class="fc bfc" id="L548" title="All 2 branches covered.">                for(BluetoothGattService service : gattServices) {</span>
+<span class="fc" id="L549">                    List&lt;BluetoothGattCharacteristic&gt; characteristics = service.getCharacteristics();</span>
+
+<span class="pc bpc" id="L551" title="3 of 4 branches missed.">                    if (HEART_RATE_MENU &amp;&amp; UUID_HEART_RATE_SERVICE.equals(service.getUuid())) {</span>
+//                        Log.i(TAG, UUID_HEART_RATE_SERVICE.toString() + &quot; == &quot; + service.getUuid().toString());
+
+<span class="nc bnc" id="L554" title="All 2 branches missed.">                        for (BluetoothGattCharacteristic characteristic : characteristics) {</span>
+
+//                            Log.i(TAG, UUID_HEART_RATE_MEASUREMENT.toString() + &quot; == &quot; + characteristic.getUuid().toString());
+
+<span class="nc bnc" id="L558" title="All 2 branches missed.">                            if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {</span>
+
+<span class="nc" id="L560">                                setCharacteristicNotification(characteristic, true);</span>
+
+                            }
+<span class="nc" id="L563">                        }</span>
+                    }
+
+<span class="pc bpc" id="L566" title="1 of 4 branches missed.">                    if (BATTERY_MENU &amp;&amp; UUID_BATTERY_SERVICE.equals(service.getUuid())) {</span>
+//                        Log.i(TAG, UUID_BATTERY_SERVICE.toString() + &quot; == &quot; + service.getUuid().toString());
+
+<span class="fc bfc" id="L569" title="All 2 branches covered.">                        for (BluetoothGattCharacteristic characteristic : characteristics) {</span>
+//                            Log.i(TAG, UUID_BATTERY_LEVEL.toString() + &quot; == &quot; + characteristic.getUuid().toString());
+
+<span class="pc bpc" id="L572" title="1 of 2 branches missed.">                            if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {</span>
+
+<span class="fc" id="L574">                                Log.i(TAG, &quot;BATTERY_LEVEL (Properties): &quot; + Integer.toHexString(characteristic.getProperties()));</span>
+<span class="fc" id="L575">                                setCharacteristicNotification(characteristic, true);</span>
+
+<span class="fc" id="L577">                                battery_level_characteristic = characteristic;</span>
+
+<span class="fc" id="L579">                                handler.postDelayed(new Runnable() {</span>
+                                    @Override
+                                    public void run() {
+<span class="pc bpc" id="L582" title="1 of 2 branches missed.">                                        if (health_measurement_characteristic_read != null)</span>
+<span class="fc" id="L583">                                            setCharacteristicNotification(health_measurement_characteristic_read, true);</span>
+<span class="fc" id="L584">                                    }</span>
+                                }, 1000);
+                                // Notification �닚�꽌: battery level 癒쇱��븳�썑, heart_rate(H3)泥섎━
+
+//                                readCharacteristic(characteristic);
+
+                            }
+<span class="fc" id="L591">                        }</span>
+                    }
+
+<span class="pc bpc" id="L594" title="1 of 4 branches missed.">                    if (MHEALTH_MENU &amp;&amp; UUID_MHEALTH_SERVICE.equals(service.getUuid())) {</span>
+                        // 0xff00
+//                        Log.i(TAG, UUID_MHEALTH_SERVICE.toString() + &quot; == &quot; + service.getUuid().toString());
+
+<span class="fc bfc" id="L598" title="All 2 branches covered.">                        for (BluetoothGattCharacteristic characteristic : characteristics) {</span>
+                            // 0xff01
+//                            Log.i(TAG, UUID_MHEALTH_MEASUREMENT_READ.toString() + &quot; == &quot; + characteristic.getUuid().toString());
+
+<span class="fc bfc" id="L602" title="All 2 branches covered.">                            if (UUID_MHEALTH_MEASUREMENT_READ.equals(characteristic.getUuid())) {</span>
+
+<span class="fc" id="L604">                                Log.i(TAG, &quot;MHEALTH_MEASUREMENT_READ (Properties): &quot; + Integer.toHexString(characteristic.getProperties()));</span>
+//                                setCharacteristicNotification(characteristic, true);
+<span class="fc" id="L606">                                health_measurement_characteristic_read = characteristic;</span>
+
+                            }
+
+                            // 0xff02
+//                            Log.i(TAG, UUID_MHEALTH_MEASUREMENT_WRITE.toString() + &quot; == &quot; + characteristic.getUuid().toString());
+
+<span class="fc bfc" id="L613" title="All 2 branches covered.">                            if (UUID_MHEALTH_MEASUREMENT_WRITE.equals(characteristic.getUuid())) {</span>
+
+<span class="fc" id="L615">                                Log.i(TAG, &quot;MHEALTH_MEASUREMENT_WRITE (Properties): &quot; + Integer.toHexString(characteristic.getProperties()));</span>
+                                //setCharacteristicNotification(characteristic, true);
+
+<span class="fc" id="L618">                                health_measurement_characteristic_write = characteristic;</span>
+                            }
+<span class="fc" id="L620">                        }</span>
+                    }
+
+
+<span class="fc" id="L624">                }</span>
+
+
+<span class="fc" id="L627">                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);</span>
+
+<span class="fc" id="L629">                setServiceDiscoveredFlagInPreference(true);</span>
+
+<span class="fc" id="L631">            } else {</span>
+<span class="nc" id="L632">                Log.w(TAG, &quot;onServicesDiscovered received: &quot; + status);</span>
+            }
+<span class="fc" id="L634">        }</span>
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+<span class="nc" id="L640">            Log.i(TAG, &quot;onCharacteristicRead is called...&quot;);</span>
+
+<span class="nc" id="L642">            printBytes(characteristic.getValue());</span>
+
+<span class="nc bnc" id="L644" title="All 2 branches missed.">            if (status == BluetoothGatt.GATT_SUCCESS) {</span>
+<span class="nc bnc" id="L645" title="All 2 branches missed.">                if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {</span>
+<span class="nc" id="L646">                    byte[] data = characteristic.getValue();</span>
+<span class="nc bnc" id="L647" title="All 4 branches missed.">                    if (data != null &amp;&amp; data.length &gt; 0) {</span>
+<span class="nc" id="L648">                        Intent intent = new Intent();</span>
+<span class="nc" id="L649">                        intent.setAction(MainActivity.ACTION_DATA_BATTERY_LEVEL_AVAILABLE);</span>
+<span class="nc" id="L650">                        intent.putExtra(MainActivity.BATTERY_LEVEL_KEY, (data[0] &amp; 0xff));</span>
+<span class="nc" id="L651">                        sendBroadcast(intent);</span>
+<span class="nc" id="L652">                        Log.i(TAG, &quot;Characteristic Read (Battery Level): &quot;);</span>
+                    }
+<span class="nc" id="L654">                }</span>
+                else {
+<span class="nc" id="L656">                    broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);</span>
+<span class="nc" id="L657">                    Log.i(TAG, &quot;Characteristic Read: &quot;);</span>
+                }
+            }
+<span class="nc" id="L660">        }</span>
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt,
+                                            BluetoothGattCharacteristic characteristic) {
+//            Log.i(TAG, &quot;onCharacteristicChanged is called... &quot; + characteristic.getUuid());
+<span class="fc" id="L666">            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);</span>
+
+
+<span class="fc" id="L669">            printBytes(characteristic.getValue());</span>
+
+<span class="pc bpc" id="L671" title="1 of 2 branches missed.">            if (UUID_MHEALTH_MEASUREMENT_READ.equals(characteristic.getUuid())) {</span>
+<span class="fc" id="L672">                Log.i(TAG, &quot;UUID_MHEALTH_MEASUREMENT_READ&quot;);</span>
+
+                // If HRM sends a message with 0x10, send back ACK with 0x11 and OK (00) or Error (01)
+<span class="fc" id="L675">                byte[] data = characteristic.getValue();</span>
+
+<span class="pc bpc" id="L677" title="3 of 6 branches missed.">                if ((data != null &amp;&amp; data.length&gt;1) == false) {</span>
+<span class="nc" id="L678">                    Log.i(TAG, &quot;data == null || data.length&lt;=1&quot;);</span>
+                }
+
+                // HRM3200 =&gt; 0x10
+<span class="pc bpc" id="L682" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE0) &amp;&amp; (data[1] &amp; 0xff) == 0x10) {</span>
+<span class="fc" id="L683">                    Log.i(TAG, &quot;ACK with 0x10&quot;);</span>
+
+                    //Toast.makeText(BluetoothLeService.this, &quot;H == Msg: �옣鍮� �떆媛� �쟾�넚 - 0x10 ==&gt; S&quot;, Toast.LENGTH_SHORT).show();
+
+                    // 0x11 =&gt; HRM3200
+                    // 0x80 =&gt; HRM3200
+<span class="fc" id="L689">                    synchorizeTime();</span>
+                }
+                // HRM3200 =&gt; 0x81
+<span class="pc bpc" id="L692" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE2) &amp;&amp; (data[1] &amp; 0xff) ==0x81) {</span>
+<span class="fc" id="L693">                    Log.i(TAG, &quot;ACK with 0x81&quot;);</span>
+
+                    // 0x82 (�떎�떆媛꾨뜲�씠�꽣 �슂泥� �삉�뒗 ���옣�맂 �뜲�씠�꽣 �슂泥�) =&gt; HRM3200
+<span class="fc" id="L696">                    requestRealtimeOrStoredData(data);</span>
+                }
+
+                // HRM3200 =&gt; 0x83 (�떎�떆媛� �뜲�씠�꽣  ACK OK/Error)
+<span class="pc bpc" id="L700" title="3 of 4 branches missed.">                else if (check(HRM3200_STATE4) &amp;&amp; (data[1] &amp; 0xff) ==0x83) {</span>
+                    // Toast.makeText(BluetoothLeService.this, &quot;H == Msg: �떎�떆媛� �뜲�씠�꽣 �슂泥� ACK - 0x83 ==&gt; S&quot;, Toast.LENGTH_SHORT).show();
+
+<span class="nc" id="L703">                    Log.i(TAG, &quot;ACK with 0x83&quot;);</span>
+
+<span class="nc bnc" id="L705" title="All 2 branches missed.">                    if (data.length == 5) {</span>
+<span class="nc bnc" id="L706" title="All 2 branches missed.">                        if ((data[3] &amp; 0xff) == 0x0) { // ACK with OK</span>
+<span class="nc" id="L707">                            set(HRM3200_STATE5);</span>
+                        } else { // ACK with Error
+<span class="nc" id="L709">                            set(HRM3200_STATE100);</span>
+<span class="nc" id="L710">                            disconnect();</span>
+                        }
+                    } else {
+<span class="nc" id="L713">                        Log.i(TAG, &quot;ACK with 0x83: data.length != 5&quot;);</span>
+                    }
+                }
+
+                // HRM3200 =&gt; 0x83 (���옣�맂 �뜲�씠�꽣 �긽愿��뾾�씠 ACK OK/Error)
+<span class="pc bpc" id="L718" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE6) &amp;&amp; (data[1] &amp; 0xff) ==0x83) {</span>
+                    // Toast.makeText(BluetoothLeService.this, &quot;H == Msg: �떎�떆媛� �뜲�씠�꽣 �슂泥� ACK - 0x83 ==&gt; S&quot;, Toast.LENGTH_SHORT).show();
+
+<span class="fc" id="L721">                    Log.i(TAG, &quot;ACK with 0x83&quot;);</span>
+
+<span class="pc bpc" id="L723" title="1 of 2 branches missed.">                    if (data.length == 5) {</span>
+<span class="pc bpc" id="L724" title="1 of 2 branches missed.">                        if ((data[3] &amp; 0xff) == 0x0) { // ACK with OK</span>
+<span class="fc" id="L725">                            set(HRM3200_STATE7);</span>
+                        } else { // ACK with Error
+<span class="nc" id="L727">                            set(HRM3200_STATE100);</span>
+<span class="nc" id="L728">                            disconnect();</span>
+                        }
+                    } else {
+<span class="nc" id="L731">                        Log.i(TAG, &quot;ACK with 0x83: data.length != 5&quot;);</span>
+                    }
+                }
+
+                // HRM3200 =&gt; 0x1A  (�떎�떆媛� �뜲�씠�꽣 �룄李�)
+<span class="pc bpc" id="L736" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE5) &amp;&amp; (data[1] &amp; 0xff) ==0x1A) {</span>
+
+<span class="fc" id="L738">                    Log.i(TAG, &quot;Health Data with 0x1A&quot;);</span>
+
+<span class="fc" id="L740">                    realtimeDataArrival(data);</span>
+
+<span class="fc bfc" id="L742" title="All 2 branches covered.">                    if (doOnceFlag) {</span>
+<span class="fc" id="L743">                        setConnectionFlagInPreference(StartButtonView.MEASURING);</span>
+<span class="fc" id="L744">                        doOnceFlag = false;</span>
+                    }
+                }
+
+                // HRM3200 =&gt; 0x12
+<span class="pc bpc" id="L749" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE7) &amp;&amp; (data[1] &amp; 0xff) ==0x12) {</span>
+
+<span class="fc" id="L751">                    Log.i(TAG, &quot;# of Session Data with 0x12&quot;);</span>
+
+//                    session_count = 0;
+<span class="pc bpc" id="L754" title="1 of 2 branches missed.">                    if (data.length == 5) {</span>
+
+<span class="fc" id="L756">                        session_count = data[3] &amp; 0xff;</span>
+<span class="fc" id="L757">                        session_index = 1;</span>
+
+<span class="fc" id="L759">                        requestSessionInfo(session_index);</span>
+
+<span class="fc" id="L761">                        Log.i(TAG, &quot;Session Count : &quot; + session_count);</span>
+<span class="fc" id="L762">                        Log.i(TAG, &quot;Session Index : &quot; + session_index);</span>
+                    }
+                    else {
+<span class="nc" id="L765">                        Log.i(TAG, &quot;0x12: data.length != 5&quot;);</span>
+                    }
+
+                }
+
+                // HRM3200 =&gt; 0x85
+<span class="pc bpc" id="L771" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE9) &amp;&amp; (data[1] &amp; 0xff) == 0x85) {</span>
+<span class="fc" id="L772">                    Log.i(TAG, &quot;ACK with 0x85&quot;);</span>
+
+<span class="pc bpc" id="L774" title="1 of 2 branches missed.">                    if (data.length == 5) {</span>
+<span class="pc bpc" id="L775" title="1 of 2 branches missed.">                        if ((data[3] &amp; 0xff) == 0x0) { // ACK with OK</span>
+<span class="fc" id="L776">                            set(HRM3200_STATE10);</span>
+                        } else { // ACK with Error
+<span class="nc" id="L778">                            set(HRM3200_STATE100);</span>
+<span class="nc" id="L779">                            disconnect();</span>
+                        }
+                    } else {
+<span class="nc" id="L782">                        Log.i(TAG, &quot;ACK with 0x85: data.length != 5&quot;);</span>
+                    }
+                }
+
+                // HRM3200 =&gt; 0x14
+                // Ack with 0x15 =&gt; HRM3200
+<span class="pc bpc" id="L788" title="1 of 4 branches missed.">                else if (check(HRM3200_STATE10) &amp;&amp; (data[1] &amp; 0xff) == 0x14) {</span>
+<span class="fc" id="L789">                    Log.i(TAG, &quot;Session Data with 0x14&quot;);</span>
+
+<span class="fc" id="L791">                    requestSessionData(data);</span>
+                }
+
+                // HRM3200 =&gt; 0x16 with data
+<span class="fc bfc" id="L795" title="All 4 branches covered.">                else if (check(HRM3200_STATE12) &amp;&amp; (data[1] &amp; 0xff) == 0x16) {</span>
+//                    Log.i(TAG, &quot;Stored Data with 0x16&quot;);
+
+//                    if (data.length == 13) {
+//                        printBytes(data);
+//                        Log.i(TAG, &quot;Session Index: &quot; + (data[3] &amp; 0xff)  );
+//                        Log.i(TAG, &quot;Data Index: &quot; + ( ((data[4] &amp; 0xff) * 256) + (data[5] &amp; 0xff) ) );
+//                    }
+<span class="fc" id="L803">                    sessionDataArrival(data);</span>
+
+                }
+
+                // HRM3200 =&gt; 0x18 (媛쒕퀎 �꽭�뀡 �뜲�씠�꽣 �쟾�넚 �셿猷�)
+<span class="fc bfc" id="L808" title="All 4 branches covered.">                else if (check(HRM3200_STATE12) &amp;&amp; (data[1] &amp; 0xff) ==0x18) {</span>
+
+<span class="fc" id="L810">                    Log.i(TAG, &quot;Stored Data with 0x18&quot;);</span>
+<span class="fc" id="L811">                    session_index = session_index + 1;</span>
+
+<span class="fc" id="L813">                    endOfSessionDataArrival(data);</span>
+//                    Log.i(TAG, &quot;Session Index : &quot; + session_index);
+                }
+/*
+                // 2015.04.15
+                // TODO: state check(�봽濡쒗넗肄� �닚�꽌 �솗�씤) �븘�슂
+                // HRM3200 =&gt; 0x1C (痢≪젙湲곗쓽 痢≪젙�떆�옉/醫낅즺 �븣由�)
+                else if ((data[1] &amp; 0xff) ==0x1C) {
+
+                    Log.i(TAG, &quot;Message with 0x1C&quot;);
+                    responseMeasuringState(data);
+                }
+*/
+                // Just for Testing ...
+<span class="pc bpc" id="L827" title="1 of 2 branches missed.">                else if ((data[1] &amp; 0xff) ==0x40) {</span>
+
+<span class="nc" id="L829">                    Log.i(TAG, &quot;Health Data with 0x40&quot;);</span>
+<span class="nc" id="L830">                    realtimeDataArrival(data);</span>
+                }
+                else {
+
+                }
+
+            }
+
+
+<span class="pc bpc" id="L839" title="1 of 2 branches missed.">            if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {</span>
+<span class="nc" id="L840">                byte[] data = characteristic.getValue();</span>
+<span class="nc bnc" id="L841" title="All 4 branches missed.">                if (data != null &amp;&amp; data.length &gt; 0) {</span>
+<span class="nc" id="L842">                    Intent intent = new Intent();</span>
+<span class="nc" id="L843">                    intent.setAction(MainActivity.ACTION_DATA_BATTERY_LEVEL_AVAILABLE);</span>
+<span class="nc" id="L844">                    intent.putExtra(MainActivity.BATTERY_LEVEL_KEY, (data[0] &amp; 0xff));</span>
+<span class="nc" id="L845">                    sendBroadcast(intent);</span>
+<span class="nc" id="L846">                    Log.i(TAG, &quot;Characteristic Changed (Battery Level): &quot;);</span>
+                }
+            }
+
+<span class="fc" id="L850">        }</span>
+    };
+
+    private void synchorizeTime() {
+
+<span class="fc" id="L855">        set(HRM3200_STATE1);</span>
+
+
+<span class="pc bpc" id="L858" title="1 of 2 branches missed.">        if (health_measurement_characteristic_write != null) {</span>
+            // Sending with 0x11
+<span class="fc" id="L860">            byte[] response = new byte[5];</span>
+<span class="fc" id="L861">            response[0] = (byte)0x80; // STX</span>
+<span class="fc" id="L862">            response[1] = (byte)0x11; // CMD</span>
+<span class="fc" id="L863">            response[2] = (byte)0x01; // Length</span>
+<span class="fc" id="L864">            response[3] = (byte)0x00; // OK</span>
+<span class="fc" id="L865">            response[4] = (byte)0xEF; // EOF</span>
+
+<span class="fc" id="L867">            Calendar now = Calendar.getInstance();</span>
+
+<span class="fc" id="L869">            health_measurement_characteristic_write.setValue(response);</span>
+
+
+            boolean result;
+<span class="fc" id="L873">            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L874">            Log.i(TAG, &quot;writeCharacteristic is called... : &quot; + result);</span>
+<span class="fc" id="L875">            printBytes(response);</span>
+
+//            if (result == false) {
+//                result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);
+//                Log.i(TAG, &quot;writeCharacteristic is called... : &quot; + result);
+//            }
+
+
+
+            // Sending with 0x80
+
+            class MyRunnable implements Runnable {
+                boolean result;
+                byte[] responseTime;
+
+<span class="fc" id="L890">                public MyRunnable(boolean result, byte[] responseTime) {</span>
+<span class="fc" id="L891">                    this.result = result;</span>
+<span class="fc" id="L892">                    this.responseTime = responseTime;</span>
+<span class="fc" id="L893">                }</span>
+
+                public void run() {
+                    try {
+<span class="fc" id="L897">                        Thread.sleep(1000);</span>
+<span class="nc" id="L898">                    } catch (InterruptedException e) {</span>
+<span class="nc" id="L899">                        e.printStackTrace();</span>
+<span class="fc" id="L900">                    }</span>
+
+                    try {
+<span class="fc" id="L903">                        health_measurement_characteristic_write.setValue(responseTime);</span>
+<span class="fc" id="L904">                        result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L905">                        Log.i(TAG, &quot;writeCharacteristic is called... : &quot; + result);</span>
+
+
+<span class="fc" id="L908">                        printBytes(responseTime);</span>
+
+//                    if (result == false) {
+//                        result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);
+//                        Log.i(TAG, &quot;writeCharacteristic is called... : &quot; + result);
+//                    }
+
+<span class="pc bpc" id="L915" title="1 of 2 branches missed.">                        if (result) {</span>
+<span class="fc" id="L916">                            set(HRM3200_STATE2);</span>
+                        } else {
+<span class="nc" id="L918">                            set(HRM3200_STATE100);</span>
+<span class="nc" id="L919">                            disconnect();</span>
+                        }
+                    }
+<span class="nc" id="L922">                    catch (Throwable t) {</span>
+<span class="nc" id="L923">                        set(HRM3200_STATE100);</span>
+<span class="nc" id="L924">                        disconnect();</span>
+<span class="fc" id="L925">                    }</span>
+
+<span class="fc" id="L927">                }</span>
+            }
+
+<span class="pc bpc" id="L930" title="1 of 2 branches missed.">            if (result) { // �븵�뿉�꽌 writeCharacterisitc�쓣 �꽦怨듯븳 寃쎌슦�뿉 洹� �떎�쓬�쑝濡� 吏꾪뻾</span>
+<span class="fc" id="L931">                SharedPreferences pref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="fc" id="L932">                int period = pref.getInt(UserSettingActivity.keyPeriod, 10);</span>
+                int overwrite;
+<span class="pc bpc" id="L934" title="1 of 2 branches missed.">                if (pref.getBoolean(UserSettingActivity.keyOverwrite, true))</span>
+<span class="fc" id="L935">                    overwrite = 0x00;</span>
+                else
+<span class="nc" id="L937">                    overwrite = 0x01;</span>
+
+
+
+<span class="fc" id="L941">                byte[] responseTime = new byte[12];</span>
+<span class="fc" id="L942">                responseTime[0] = (byte) 0x80; // STX</span>
+<span class="fc" id="L943">                responseTime[1] = (byte) 0x80; // CMD</span>
+<span class="fc" id="L944">                responseTime[2] = (byte) 0x08; // Length</span>
+<span class="fc" id="L945">                responseTime[3] = (byte) (now.get(Calendar.YEAR) - 2000); // 2015</span>
+<span class="fc" id="L946">                responseTime[4] = (byte) (now.get(Calendar.MONTH) + 1); // 3 + 1</span>
+<span class="fc" id="L947">                responseTime[5] = (byte) now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="fc" id="L948">                responseTime[6] = (byte) now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="fc" id="L949">                responseTime[7] = (byte) now.get(Calendar.MINUTE);</span>
+<span class="fc" id="L950">                responseTime[8] = (byte) now.get(Calendar.SECOND);</span>
+<span class="fc" id="L951">                responseTime[9] = (byte) period;  // period</span>
+<span class="fc" id="L952">                responseTime[10] = (byte) overwrite;  // Overwrite</span>
+<span class="fc" id="L953">                responseTime[11] = (byte) 0xEF;  // EOF</span>
+
+<span class="fc" id="L955">                Thread thread = new Thread(new MyRunnable(result, responseTime));</span>
+<span class="fc" id="L956">                thread.start();</span>
+//            try {
+//                thread.join();
+//            } catch (InterruptedException e) {
+//            }
+<span class="fc" id="L961">            }</span>
+            else {
+<span class="nc" id="L963">                set(HRM3200_STATE100);</span>
+<span class="nc" id="L964">                disconnect();</span>
+            }
+<span class="fc" id="L966">        }</span>
+        else {
+<span class="nc" id="L968">            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+        }
+<span class="fc" id="L970">    }</span>
+
+
+    void requestRealtimeOrStoredData(byte[] data) {
+<span class="fc" id="L974">        set(HRM3200_STATE3);</span>
+
+<span class="pc bpc" id="L976" title="2 of 4 branches missed.">        if (data != null &amp;&amp; data.length==6) {</span>
+
+            // realtime data �닔�떊留� 媛��뒫 2015.4.27
+<span class="fc bfc" id="L979" title="All 2 branches covered.">            if ( (data[4]&amp;0xff) == 0x1 ) {</span>
+<span class="fc" id="L980">                set(HRM3200_STATE5);</span>
+                // usesr info pref
+<span class="fc" id="L982">                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="fc" id="L983">                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);</span>
+
+//                �떎�떆媛꾨뜲�씠���뒗 ���옣二쇨린 period 1珥�
+<span class="fc" id="L986">                sessionData = new SessionData(userStride, 1, true); // �떎�떆媛� �뜲�씠�꽣�쓽 寃쎌슦 count媛믪쓣 怨꾩궛�빐�빞 �븿</span>
+
+<span class="fc" id="L988">                setConnectionFlagInPreference(StartButtonView.WAITING);</span>
+<span class="fc" id="L989">            }</span>
+
+<span class="pc bpc" id="L991" title="2 of 4 branches missed.">            else if ( (data[3]&amp;0xff)==0x0 &amp;&amp; (data[4]&amp;0xff)==0x0 ) {</span>
+              // �떎�떆媛� �뜲�씠�꽣瑜� �슂泥��븳 �긽�솴�뿉�꽌 Download�븷 �뜲�씠�꽣媛� �엳�뒗 �긽�솴, �떎�슫濡쒕뱶 �븷吏� �뿬遺�瑜� 臾쇱뼱蹂대뒗 UI
+//                if (stored_data_request_flag == true ) {
+<span class="fc" id="L994">                    Intent intent = new Intent();</span>
+<span class="fc" id="L995">                    intent.setAction(MainActivity.ACTION_STORED_DATA_AVAILABLE);</span>
+<span class="fc" id="L996">                    sendBroadcast(intent);</span>
+
+//                } else {
+
+//                }
+<span class="fc" id="L1001">            } else {</span>
+                // Real-time data request
+<span class="nc" id="L1003">                requestRealtime();</span>
+            }
+        }
+        else {
+<span class="nc" id="L1007">            Log.i(TAG, &quot;requestData: data != 6&quot;);</span>
+        }
+
+<span class="fc" id="L1010">    }</span>
+
+    void requestRealtime() {
+<span class="nc" id="L1013">        byte[] response = new byte[5];</span>
+
+<span class="nc" id="L1015">        response[0] = (byte) 0x80; // STX</span>
+<span class="nc" id="L1016">        response[1] = (byte) 0x82; // CMD</span>
+<span class="nc" id="L1017">        response[2] = (byte) 0x01; // Length</span>
+<span class="nc" id="L1018">        response[3] = (byte) 0x01; // Real-time data request</span>
+<span class="nc" id="L1019">        response[4] = (byte) 0xEF; // EOF</span>
+
+<span class="nc bnc" id="L1021" title="All 2 branches missed.">        if (health_measurement_characteristic_write != null) {</span>
+            boolean result;
+
+<span class="nc" id="L1024">            health_measurement_characteristic_write.setValue(response);</span>
+
+<span class="nc" id="L1026">            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="nc" id="L1027">            Log.i(TAG, &quot;requestRealtime: writeCharacteristic is called... : &quot; + result);</span>
+<span class="nc" id="L1028">            printBytes(response);</span>
+
+<span class="nc bnc" id="L1030" title="All 2 branches missed.">            if (result) {</span>
+<span class="nc" id="L1031">                set(HRM3200_STATE4);</span>
+
+<span class="nc" id="L1033">                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="nc" id="L1034">                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);</span>
+
+//                �떎�떆媛꾨뜲�씠���뒗 ���옣二쇨린 period 1珥�
+<span class="nc" id="L1037">                sessionData = new SessionData(userStride, 1, true); // �떎�떆媛� �뜲�씠�꽣�쓽 寃쎌슦 count媛믪쓣 怨꾩궛�빐�빞 �븿</span>
+
+<span class="nc" id="L1039">                setConnectionFlagInPreference(StartButtonView.WAITING);</span>
+
+<span class="nc" id="L1041">            } else {</span>
+<span class="nc" id="L1042">                set(HRM3200_STATE100);</span>
+<span class="nc" id="L1043">                disconnect();</span>
+            }
+
+<span class="nc" id="L1046">        } else {</span>
+<span class="nc" id="L1047">            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+        }
+
+<span class="nc" id="L1050">        stored_data_request_flag = false;</span>
+<span class="nc" id="L1051">    }</span>
+
+    void requestStoredData() {
+<span class="fc" id="L1054">        byte[] response = new byte[5];</span>
+
+<span class="fc" id="L1056">        response[0] = (byte) 0x80; // STX</span>
+<span class="fc" id="L1057">        response[1] = (byte) 0x82; // CMD</span>
+<span class="fc" id="L1058">        response[2] = (byte) 0x01; // Length</span>
+<span class="fc" id="L1059">        response[3] = (byte) 0x03; // Stored data request</span>
+<span class="fc" id="L1060">        response[4] = (byte) 0xEF; // EOF</span>
+
+<span class="pc bpc" id="L1062" title="1 of 2 branches missed.">        if (health_measurement_characteristic_write != null) {</span>
+            boolean result;
+
+<span class="fc" id="L1065">            health_measurement_characteristic_write.setValue(response);</span>
+
+<span class="fc" id="L1067">            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L1068">            Log.i(TAG, &quot;writeCharacteristic is called... : &quot; + result);</span>
+<span class="fc" id="L1069">            printBytes(response);</span>
+
+<span class="pc bpc" id="L1071" title="1 of 2 branches missed.">            if (result) {</span>
+<span class="fc" id="L1072">                set(HRM3200_STATE6);</span>
+            } else {
+<span class="nc" id="L1074">                set(HRM3200_STATE100);</span>
+<span class="nc" id="L1075">                disconnect();</span>
+            }
+
+<span class="fc" id="L1078">        } else {</span>
+<span class="nc" id="L1079">            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+        }
+
+<span class="fc" id="L1082">        stored_data_request_flag = true;</span>
+<span class="fc" id="L1083">    }</span>
+
+    void realtimeDataArrival(byte[] data) {
+<span class="pc bpc" id="L1086" title="1 of 2 branches missed.">        if (data.length == 11) {</span>
+
+<span class="fc" id="L1088">            int hr_status = data[3] &amp; 0xff;</span>
+<span class="fc" id="L1089">            int heart_rate = data[4] &amp; 0xff;</span>
+<span class="fc" id="L1090">            int act_level = data[5] &amp; 0xff;</span>
+<span class="fc" id="L1091">            int calorie = ( (data[6] &amp; 0xff) * 256 ) + (data[7] &amp; 0xff);</span>
+<span class="fc" id="L1092">            calorie = (calorie * userWeight) / 100;</span>
+
+<span class="fc" id="L1094">            int steps = ( (data[8] &amp; 0xff) * 256) + (data[9] &amp; 0xff);</span>
+
+<span class="fc" id="L1096">            sessionData.putData(this, heart_rate, act_level, calorie, steps, hr_status, -1);</span>
+
+<span class="fc" id="L1098">            int duration = sessionData.getIntDuration();</span>
+
+<span class="fc" id="L1100">            Intent intent = new Intent();</span>
+<span class="fc" id="L1101">            intent.setAction(MainActivity.ACTION_DATA_HEALTH_MEASUREMENT_AVAILABLE);</span>
+<span class="fc" id="L1102">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_KEY, heart_rate);</span>
+<span class="fc" id="L1103">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_HR_STATUS_KEY, hr_status);</span>
+<span class="fc" id="L1104">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_ACT_LEVEL_KEY, act_level);</span>
+<span class="fc" id="L1105">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_ENERGY_KEY, calorie);</span>
+<span class="fc" id="L1106">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_STEPS_KEY, steps);</span>
+<span class="fc" id="L1107">            intent.putExtra(MainActivity.HEALTH_MEASUREMENT_DURATION_KEY, duration);</span>
+
+<span class="fc" id="L1109">            sendBroadcast(intent);</span>
+        }
+        else {
+            // TODO:
+        }
+<span class="fc" id="L1114">    }</span>
+
+    ///// ���옣�맂 �뜲�씠�꽣 媛��졇�삤湲� �쐞�븳 �긽�깭
+
+    private int session_count;
+    private int session_index;
+    private int number_of_data_per_session;
+
+    void  requestSessionInfo(int no) {
+<span class="fc" id="L1123">        set(HRM3200_STATE8);</span>
+
+<span class="fc" id="L1125">        byte[] response = new byte[5];</span>
+
+<span class="fc" id="L1127">        response[0] = (byte) 0x80; // STX</span>
+<span class="fc" id="L1128">        response[1] = (byte) 0x84; // CMD</span>
+<span class="fc" id="L1129">        response[2] = (byte) 0x01; // Length</span>
+<span class="fc" id="L1130">        response[3] = (byte) no; // �쟾�넚 �슂泥� �꽭�뀡 踰덊샇</span>
+<span class="fc" id="L1131">        response[4] = (byte) 0xEF; // EOF</span>
+
+<span class="pc bpc" id="L1133" title="1 of 2 branches missed.">        if (health_measurement_characteristic_write != null) {</span>
+            boolean result;
+
+<span class="fc" id="L1136">            health_measurement_characteristic_write.setValue(response);</span>
+
+<span class="fc" id="L1138">            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L1139">            Log.i(TAG, &quot;0x84 writeCharacteristic is called... : &quot; + result);</span>
+<span class="fc" id="L1140">            printBytes(response);</span>
+
+<span class="pc bpc" id="L1142" title="1 of 2 branches missed.">            if (result) {</span>
+<span class="fc" id="L1143">                set(HRM3200_STATE9);</span>
+
+<span class="fc" id="L1145">                Intent intent = new Intent();</span>
+<span class="fc" id="L1146">                intent.setAction(MainActivity.ACTION_STORED_DATA_PROGRESS);</span>
+<span class="fc" id="L1147">                intent.putExtra(MainActivity.SESSION_COUNT_KEY, session_count);</span>
+<span class="fc" id="L1148">                intent.putExtra(MainActivity.SESSION_INDEX_KEY, no);</span>
+<span class="fc" id="L1149">                sendBroadcast(intent);</span>
+<span class="fc" id="L1150">            } else {</span>
+<span class="nc" id="L1151">                set(HRM3200_STATE100);</span>
+<span class="nc" id="L1152">                disconnect();</span>
+            }
+
+<span class="fc" id="L1155">        } else {</span>
+<span class="nc" id="L1156">            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+        }
+<span class="fc" id="L1158">    }</span>
+
+    void requestSessionData(byte[] data) {
+<span class="fc" id="L1161">        set(HRM3200_STATE11);</span>
+
+//        number_of_data_per_session = 0;
+
+<span class="pc bpc" id="L1165" title="1 of 2 branches missed.">        if (data.length == 15) {</span>
+<span class="fc" id="L1166">            number_of_data_per_session = ((data[4] &amp; 0xff) * 256) + (data[5] &amp; 0xff);</span>
+<span class="fc" id="L1167">            Log.i(TAG, &quot;Session Index: &quot; + (data[3] &amp; 0xff));</span>
+<span class="fc" id="L1168">            Log.i(TAG, &quot;# of data per session: &quot; + number_of_data_per_session);</span>
+
+<span class="fc" id="L1170">            int period = data[6] &amp; 0xff; // ���옣 二쇨린</span>
+<span class="fc" id="L1171">            int year   = (data[7] &amp; 0xff) + 2000;</span>
+<span class="fc" id="L1172">            int month  = data[8] &amp; 0xff;</span>
+<span class="fc" id="L1173">            int day    = data[9] &amp; 0xff;</span>
+<span class="fc" id="L1174">            int hour   = data[10] &amp; 0xff;</span>
+<span class="fc" id="L1175">            int min    = data[11] &amp; 0xff;</span>
+<span class="fc" id="L1176">            int sec    = data[12] &amp; 0xff;</span>
+<span class="fc" id="L1177">            int time_state = data[13] &amp; 0xff;</span>
+
+            // usesr info pref
+<span class="fc" id="L1180">            SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="fc" id="L1181">            int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);</span>
+//            int store_period = userinfoPref.getInt(UserSettingActivity.keyPeriod, 10);
+
+<span class="fc" id="L1184">            sessionData = new SessionData(userStride, period, number_of_data_per_session); // number_of_data_per_session</span>
+
+<span class="fc" id="L1186">            sessionData.setYear(year);</span>
+<span class="fc" id="L1187">            sessionData.setMonth(month);</span>
+<span class="fc" id="L1188">            sessionData.setDay(day);</span>
+<span class="fc" id="L1189">            sessionData.setHour(hour);</span>
+<span class="fc" id="L1190">            sessionData.setMin(min);</span>
+<span class="fc" id="L1191">            sessionData.setSec(sec);</span>
+
+
+            // Sending Ack
+<span class="fc" id="L1195">            byte[] response = new byte[5];</span>
+
+<span class="fc" id="L1197">            response[0] = (byte) 0x80; // STX</span>
+<span class="fc" id="L1198">            response[1] = (byte) 0x15; // CMD</span>
+<span class="fc" id="L1199">            response[2] = (byte) 0x01; // Length</span>
+<span class="fc" id="L1200">            response[3] = (byte) 0x00; // ACK OK</span>
+<span class="fc" id="L1201">            response[4] = (byte) 0xEF; // EOF</span>
+
+<span class="pc bpc" id="L1203" title="1 of 2 branches missed.">            if (health_measurement_characteristic_write != null) {</span>
+                boolean result;
+
+<span class="fc" id="L1206">                health_measurement_characteristic_write.setValue(response);</span>
+
+<span class="fc" id="L1208">                result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);</span>
+<span class="fc" id="L1209">                Log.i(TAG, &quot;0x15 writeCharacteristic is called... : &quot; + result);</span>
+<span class="fc" id="L1210">                printBytes(response);</span>
+
+
+<span class="pc bpc" id="L1213" title="1 of 2 branches missed.">                if (result) {</span>
+<span class="fc" id="L1214">                    set(HRM3200_STATE12);</span>
+                } else {
+<span class="nc" id="L1216">                    set(HRM3200_STATE100);</span>
+<span class="nc" id="L1217">                    disconnect();</span>
+                }
+<span class="fc" id="L1219">            } else {</span>
+<span class="nc" id="L1220">                Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);</span>
+            }
+        }
+        else {
+            // TODO:
+        }
+<span class="fc" id="L1226">    }</span>
+
+    void sessionDataArrival(byte[] data) {
+<span class="pc bpc" id="L1229" title="1 of 2 branches missed.">        if (data.length ==13) {</span>
+
+<span class="fc" id="L1231">            int session_number = data[3] &amp; 0xff;</span>
+<span class="fc" id="L1232">            int index = ((data[4] &amp; 0xff) * 256) + (data[5] &amp; 0xff);</span>
+
+<span class="fc" id="L1234">            int heart_rate = data[6] &amp; 0xff;</span>
+<span class="fc" id="L1235">            int act_level = data[7] &amp; 0xff;</span>
+<span class="fc" id="L1236">            int calorie = ((data[8] &amp; 0xff) * 256) + (data[9] &amp; 0xff);</span>
+<span class="fc" id="L1237">            calorie = (calorie * userWeight) / 100;</span>
+
+<span class="fc" id="L1239">            int steps = ((data[10] &amp; 0xff) * 256) + (data[11] &amp; 0xff);</span>
+
+<span class="fc" id="L1241">            sessionData.putData(this, heart_rate, act_level, calorie, steps, 0, index);</span>
+
+<span class="fc" id="L1243">            Intent intent = new Intent();</span>
+<span class="fc" id="L1244">            intent.setAction(MainActivity.ACTION_STORED_DATA_PROGRESS);</span>
+<span class="fc" id="L1245">            intent.putExtra(MainActivity.SESSION_COUNT_KEY, session_count);</span>
+<span class="fc" id="L1246">            intent.putExtra(MainActivity.SESSION_INDEX_KEY, session_number);</span>
+<span class="fc" id="L1247">            intent.putExtra(MainActivity.DATA_COUNT_KEY, number_of_data_per_session);</span>
+<span class="fc" id="L1248">            intent.putExtra(MainActivity.DATA_INDEX_KEY, index);</span>
+
+<span class="fc" id="L1250">            sendBroadcast(intent);</span>
+        }
+        else {
+            // TODO:
+        }
+<span class="fc" id="L1255">    }</span>
+
+    void endOfSessionDataArrival(byte[] data) {
+<span class="pc bpc" id="L1258" title="1 of 2 branches missed.">        if (data.length == 5) {</span>
+<span class="fc" id="L1259">            int session_number = data[3] &amp; 0xff;</span>
+
+<span class="fc" id="L1261">            Log.i(TAG, &quot;Session Index: &quot; + session_number);</span>
+
+<span class="fc" id="L1263">            sessionData.writeToDB(getApplicationContext());</span>
+
+//            // FOR UI
+//            Intent intent = new Intent();
+//            intent.setAction(MainActivity.ACTION_STORED_DATA_AVAILABLE);
+//            intent.putExtra(MainActivity.SESSION_COUNT_KEY, session_count);
+//            intent.putExtra(MainActivity.SESSION_INDEX_KEY, session_index);
+//
+//            sendBroadcast(intent);
+
+
+<span class="fc bfc" id="L1274" title="All 2 branches covered.">            if (session_index &lt;= session_count) {</span>
+<span class="fc" id="L1275">                requestSessionInfo(session_index);</span>
+            }
+            else {
+                // 紐⑤뱺 �꽭�뀡 �뜲�씠�꽣瑜� 媛��졇�솕�쓬
+                // Time to disconnet!!!
+<span class="fc" id="L1280">                set(HRM3200_STATE100);</span>
+<span class="fc" id="L1281">                disconnect();</span>
+
+<span class="fc" id="L1283">                Log.i(TAG, &quot;End of All Sessions&quot;);</span>
+
+<span class="fc" id="L1285">                int sessionid = sessionData.getSessionId();</span>
+
+<span class="fc" id="L1287">                Intent intent = new Intent();</span>
+<span class="fc" id="L1288">                intent.setAction(MainActivity.ACTION_STORED_DATA_COMPLETED);</span>
+<span class="fc" id="L1289">                intent.putExtra(SessionDataActivity.SESSION_ID_KEY, sessionid);</span>
+<span class="fc" id="L1290">                sendBroadcast(intent);</span>
+            }
+        }
+        else {
+            // TODO:
+        }
+<span class="fc" id="L1296">    }</span>
+    //////////
+
+    /*
+    // 2015.04.15 0x1D =&gt; HRM3200
+    void responseMeasuringState(byte[] data) {
+        if (data.length == 5) {
+
+            // Sending Ack
+            byte[] response = new byte[5];
+
+            response[0] = (byte) 0x80; // STX
+            response[1] = (byte) 0x1D; // CMD
+            response[2] = (byte) 0x01; // Length
+            response[3] = (byte) 0x00; // ACK OK
+            response[4] = (byte) 0xEF; // EOF
+
+            writeCharacteristic(response);
+//            if (health_measurement_characteristic_write != null) {
+//                boolean result;
+//
+//                health_measurement_characteristic_write.setValue(response);
+//
+//                result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);
+//                Log.i(TAG, &quot;0x1D writeCharacteristic is called... : &quot; + result);
+//                printBytes(response);
+//            } else {
+//                Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);
+//            }
+
+
+            if ( (data[3] &amp; 0xff) == 0x0 ) { // Start measuring
+
+                Intent intent = new Intent();
+                intent.setAction(MainActivity.ACTION_RESPONSE_MEASURING_STATUS);
+                intent.putExtra(MainActivity.MEASURING_START_OR_STOP_KEY, true);
+                sendBroadcast(intent);
+                Log.i(TAG, &quot;ACTION_RESPONSE_MEASURING_STATUS: start with 0x1C&quot;);
+
+                // usesr info pref
+                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);
+                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);
+                // �떎�떆媛꾨뜲�씠���뒗 ���옣二쇨린 1珥�
+//                int period = userinfoPref.getInt(UserSettingActivity.keyPeriod, 10);
+//                sessionData = new SessionData(userStride, period);
+                sessionData = new SessionData(userStride, 1, true); // �떎�떆媛� �뜲�씠�꽣濡� count瑜� 怨꾩궛�빐�빞 �븿
+
+                setConnectionFlagInPreference(StartButtonView.WAITING);
+
+            }
+            else if ( (data[3] &amp; 0xff) == 0x01 ) { // Stop measuring
+                Intent intent = new Intent();
+                intent.setAction(MainActivity.ACTION_RESPONSE_MEASURING_STATUS);
+                intent.putExtra(MainActivity.MEASURING_START_OR_STOP_KEY, false);
+                sendBroadcast(intent);
+                Log.i(TAG, &quot;ACTION_RESPONSE_MEASURING_STATUS: stop with 0x1C&quot;);
+
+                sessionData.writeToDB(BluetoothLeService.this.getApplicationContext());
+
+                setConnectionFlagInPreference(StartButtonView.CONNECTED);
+                doOnceFlag = true;
+            }
+
+        }
+        else {
+            // TODO:
+        }
+    }
+*/
+/*
+    private void writeCharacteristic(byte[] response) {
+//        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+//            Log.w(TAG, &quot;BluetoothAdapter not initialized&quot;);
+//            return;
+//        }
+
+        if (health_measurement_characteristic_write != null) {
+            boolean result;
+
+            health_measurement_characteristic_write.setValue(response);
+
+            result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);
+//            while(result == false) {
+//                result = mBluetoothGatt.writeCharacteristic(health_measurement_characteristic_write);
+//                Log.i(TAG, &quot;0x1D writeCharacteristic is called... : &quot; + result);
+//            }
+            Log.i(TAG, &quot;0x1D writeCharacteristic is called... : &quot; + result);
+            printBytes(response);
+        } else {
+            Log.i(TAG, &quot;health_measurement_characteristic_write is null&quot;);
+        }
+
+
+    }
+*/
+
+    /**
+     * Request a read on a given {@code BluetoothGattCharacteristic}. The read result is reported
+     * asynchronously through the {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
+     * callback.
+     *
+     * @param characteristic The characteristic to read from.
+     */
+    public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
+<span class="nc bnc" id="L1400" title="All 4 branches missed.">        if (mBluetoothAdapter == null || mBluetoothGatt == null) {</span>
+<span class="nc" id="L1401">            Log.w(TAG, &quot;BluetoothAdapter not initialized&quot;);</span>
+<span class="nc" id="L1402">            return;</span>
+        }
+
+<span class="nc" id="L1405">        boolean result = mBluetoothGatt.readCharacteristic(characteristic);</span>
+
+<span class="nc" id="L1407">        Log.i(TAG, &quot;readCharacteristic is called... : &quot; + result);</span>
+<span class="nc bnc" id="L1408" title="All 2 branches missed.">        Log.i(TAG, &quot;PROPERTY_READ : &quot; + ((characteristic.getProperties() &amp; BluetoothGattCharacteristic.PROPERTY_READ) != 0));</span>
+<span class="nc" id="L1409">    }</span>
+
+    /**
+     * Enables or disables notification on a give characteristic.
+     *
+     * @param characteristic Characteristic to act on.
+     * @param enabled If true, enable notification.  False otherwise.
+     */
+    public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
+                                              boolean enabled) {
+<span class="pc bpc" id="L1419" title="2 of 4 branches missed.">        if (mBluetoothAdapter == null || mBluetoothGatt == null) {</span>
+<span class="nc" id="L1420">            Log.w(TAG, &quot;BluetoothAdapter not initialized&quot;);</span>
+<span class="nc" id="L1421">            return;</span>
+        }
+<span class="fc" id="L1423">        Log.i(TAG, &quot;setCharacteristicNotification is called...&quot;);</span>
+<span class="fc" id="L1424">        boolean result = mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);</span>
+
+
+        //2015.04.15 For Battery level
+
+        // This is specific to Heart Rate Measurement.
+<span class="pc bpc" id="L1430" title="1 of 2 branches missed.">        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {</span>
+<span class="nc" id="L1431">            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(</span>
+<span class="nc" id="L1432">                    UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));</span>
+<span class="nc" id="L1433">            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);</span>
+<span class="nc" id="L1434">            mBluetoothGatt.writeDescriptor(descriptor);</span>
+        }
+
+        // BATTERY_LEVEL
+<span class="fc bfc" id="L1438" title="All 2 branches covered.">        if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {</span>
+<span class="fc" id="L1439">            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(</span>
+<span class="fc" id="L1440">                        UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));</span>
+<span class="pc bpc" id="L1441" title="1 of 2 branches missed.">            if (descriptor != null) {</span>
+<span class="fc" id="L1442">                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);</span>
+<span class="fc" id="L1443">                mBluetoothGatt.writeDescriptor(descriptor);</span>
+            }
+        }
+
+        // MHEALTH_MEASUREMENT_READ (0xff01)
+<span class="fc bfc" id="L1448" title="All 2 branches covered.">        if (UUID_MHEALTH_MEASUREMENT_READ.equals(characteristic.getUuid())) {</span>
+<span class="fc" id="L1449">            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(</span>
+<span class="fc" id="L1450">                    UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));</span>
+<span class="pc bpc" id="L1451" title="1 of 2 branches missed.">            if (descriptor != null) { // TODO: Sometimes, descriptor becomes null!!! It should't be.</span>
+<span class="fc" id="L1452">                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);</span>
+<span class="fc" id="L1453">                mBluetoothGatt.writeDescriptor(descriptor);</span>
+            }
+        }
+
+<span class="fc" id="L1457">    }</span>
+
+    private void broadcastUpdate(final String action) {
+<span class="fc" id="L1460">        final Intent intent = new Intent(action);</span>
+<span class="fc" id="L1461">        sendBroadcast(intent);</span>
+<span class="fc" id="L1462">    }</span>
+
+    private void broadcastUpdate(final String action, int sessionid) {
+<span class="fc" id="L1465">        final Intent intent = new Intent(action);</span>
+<span class="fc" id="L1466">        intent.putExtra(SessionDataActivity.SESSION_ID_KEY, sessionid);</span>
+<span class="fc" id="L1467">        sendBroadcast(intent);</span>
+<span class="fc" id="L1468">    }</span>
+
+    private void broadcastUpdate(final String action,
+                                 final BluetoothGattCharacteristic characteristic) {
+<span class="fc" id="L1472">        final Intent intent = new Intent(action);</span>
+
+        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
+        // carried out as per profile specifications:
+        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
+<span class="pc bpc" id="L1477" title="1 of 2 branches missed.">        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {</span>
+<span class="nc" id="L1478">            int flag = characteristic.getProperties();</span>
+<span class="nc" id="L1479">            int format = -1;</span>
+<span class="nc bnc" id="L1480" title="All 2 branches missed.">            if ((flag &amp; 0x01) != 0) {</span>
+<span class="nc" id="L1481">                format = BluetoothGattCharacteristic.FORMAT_UINT16;</span>
+<span class="nc" id="L1482">                Log.d(TAG, &quot;Heart rate format UINT16.&quot;);</span>
+            } else {
+<span class="nc" id="L1484">                format = BluetoothGattCharacteristic.FORMAT_UINT8;</span>
+<span class="nc" id="L1485">                Log.d(TAG, &quot;Heart rate format UINT8.&quot;);</span>
+            }
+<span class="nc" id="L1487">            final int heartRate = characteristic.getIntValue(format, 1);</span>
+<span class="nc" id="L1488">            Log.d(TAG, String.format(&quot;Received heart rate: %d&quot;, heartRate));</span>
+<span class="nc" id="L1489">            intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));</span>
+<span class="nc" id="L1490">            intent.putExtra(MainActivity.HEART_RATE_KEY, heartRate);</span>
+<span class="nc" id="L1491">            intent.setAction(MainActivity.ACTION_DATA_HEART_RATE_AVAILABLE);</span>
+<span class="nc" id="L1492">        } else {</span>
+            // For all other profiles, writes the data formatted in HEX.
+<span class="fc" id="L1494">            final byte[] data = characteristic.getValue();</span>
+<span class="pc bpc" id="L1495" title="1 of 2 branches missed.">            Log.i(TAG, &quot;Other Characteristic (length): &quot; + (data==null? -1 : data.length));</span>
+
+<span class="pc bpc" id="L1497" title="2 of 4 branches missed.">            if (data != null &amp;&amp; data.length &gt; 0) {</span>
+<span class="fc" id="L1498">                final StringBuilder stringBuilder = new StringBuilder(data.length);</span>
+<span class="fc bfc" id="L1499" title="All 2 branches covered.">                for(byte byteChar : data)</span>
+<span class="fc" id="L1500">                    stringBuilder.append(String.format(&quot;%02X &quot;, byteChar));</span>
+<span class="fc" id="L1501">                intent.putExtra(EXTRA_DATA, new String(data) + &quot;\n&quot; + stringBuilder.toString());</span>
+            }
+        }
+<span class="fc" id="L1504">        sendBroadcast(intent);</span>
+<span class="fc" id="L1505">    }</span>
+
+    /*
+     *  Printing Bytes for Logging
+     */
+    private void printBytes(byte[] data) {
+<span class="pc bpc" id="L1511" title="1 of 2 branches missed.">        if (data != null) {</span>
+<span class="fc" id="L1512">            StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L1513" title="All 2 branches covered.">            for (int i = 0; i &lt; data.length; i++) {</span>
+<span class="fc" id="L1514">                sb.append(String.format(&quot;%02X &quot;, data[i]));</span>
+            }
+<span class="fc" id="L1516">            Log.i(TAG, &quot;data : &quot; + sb.toString());</span>
+<span class="fc" id="L1517">        }</span>
+        else {
+<span class="nc" id="L1519">            Log.i(TAG, &quot;data is null&quot;);</span>
+        }
+<span class="fc" id="L1521">    }</span>
+
+
+    private void setConnectionFlagInPreference(int flag) {
+<span class="fc" id="L1525">        SharedPreferences pref = getApplicationContext().getSharedPreferences(MainActivity.prefName, 0);</span>
+
+<span class="fc" id="L1527">        SharedPreferences.Editor editor = pref.edit();</span>
+
+<span class="fc" id="L1529">        editor.putInt(MainActivity.connFlag, flag);</span>
+
+<span class="fc" id="L1531">        editor.commit();</span>
+<span class="fc" id="L1532">    }</span>
+
+    private void setServiceDiscoveredFlagInPreference(boolean flag) {
+<span class="fc" id="L1535">        SharedPreferences pref = getApplicationContext().getSharedPreferences(MainActivity.prefName, 0);</span>
+
+<span class="fc" id="L1537">        SharedPreferences.Editor editor = pref.edit();</span>
+
+<span class="fc" id="L1539">        editor.putBoolean(MainActivity.discoveryFlag, flag);</span>
+
+<span class="fc" id="L1541">        editor.commit();</span>
+<span class="fc" id="L1542">    }</span>
+
+    private void addDeviceInPreference(String uuid, String name) {
+<span class="fc" id="L1545">        SharedPreferences pref = getApplicationContext().getSharedPreferences(DeviceScanActivity.prefName, 0);</span>
+
+<span class="fc" id="L1547">        SharedPreferences.Editor editor = pref.edit();</span>
+
+<span class="fc" id="L1549">        editor.putString(uuid, name);</span>
+
+<span class="fc" id="L1551">        int i = 0;</span>
+        while (true) {
+<span class="fc" id="L1553">            String address = pref.getString(Integer.toString(i), &quot;&quot;);</span>
+<span class="pc bpc" id="L1554" title="1 of 4 branches missed.">            if (address == null || address == &quot;&quot;) {</span>
+<span class="fc" id="L1555">                break;</span>
+            } else {
+<span class="fc" id="L1557">                i = i + 1;</span>
+            }
+<span class="fc" id="L1559">        }</span>
+
+<span class="fc" id="L1561">        editor.putString(Integer.toString(i), uuid);</span>
+
+<span class="fc" id="L1563">        editor.commit();</span>
+<span class="fc" id="L1564">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

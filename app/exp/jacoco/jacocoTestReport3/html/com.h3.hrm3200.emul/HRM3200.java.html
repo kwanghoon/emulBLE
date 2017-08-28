@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>HRM3200.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul</a> &gt; <span class="el_source">HRM3200.java</span></div><h1>HRM3200.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul;
+
+
+import android.os.Message;
+
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Random;
+import java.util.UUID;
+
+import emul.bluetooth.BluetoothLE;
+import mocking.android.bluetooth.BLEService;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEDisconnect;
+import mocking.android.bluetooth.IBLEDiscoverService;
+
+/**
+ * Created by moonh on 2016-10-05.
+ */
+
+<span class="nc" id="L25">public class HRM3200 extends BluetoothLE {</span>
+
+    public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
+<span class="nc" id="L28">        Log.v(&quot;HRM3200&quot;, &quot;doDiscoverService...&quot;);</span>
+
+<span class="nc" id="L30">        ArrayList&lt;BLEService&gt; bleServiceList = new ArrayList&lt;BLEService&gt;();</span>
+
+<span class="nc" id="L32">        bleServiceList.add(new BLEService(UUID.fromString(&quot;00001800-0000-1000-8000-00805f9b34fb&quot;)));</span>
+
+<span class="nc" id="L34">        bleServiceList.add(new BLEService(UUID.fromString(&quot;00001801-0000-1000-8000-00805f9b34fb&quot;)));</span>
+
+<span class="nc" id="L36">        bleServiceList.add(new BLEService(UUID.fromString(&quot;0000180d-0000-1000-8000-00805f9b34fb&quot;),</span>
+<span class="nc" id="L37">                                        UUID.fromString(&quot;00002a37-0000-1000-8000-00805f9b34fb&quot;),</span>
+                                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                                        BluetoothGattCharacteristic.PERMISSION_WRITE));
+
+<span class="nc" id="L41">        bleServiceList.add(new BLEService(UUID.fromString(&quot;0000180f-0000-1000-8000-00805f9b34fb&quot;),</span>
+<span class="nc" id="L42">                                        UUID.fromString(&quot;00002a19-0000-1000-8000-00805f9b34fb&quot;),</span>
+                                        BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_READ,
+                                        BluetoothGattCharacteristic.PERMISSION_WRITE,
+<span class="nc" id="L45">                                        UUID.fromString(&quot;00002902-0000-1000-8000-00805f9b34fb&quot;)));</span>
+
+<span class="nc" id="L47">        bleServiceList.add(new BLEService(UUID.fromString(&quot;0000ff00-0000-1000-8000-00805f9b34fb&quot;),</span>
+<span class="nc" id="L48">                                        UUID.fromString(&quot;0000ff01-0000-1000-8000-00805f9b34fb&quot;),</span>
+                                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                                        BluetoothGattCharacteristic.PERMISSION_WRITE,
+<span class="nc" id="L51">                                        UUID.fromString(&quot;00002902-0000-1000-8000-00805f9b34fb&quot;)));</span>
+
+<span class="nc" id="L53">        bleServiceList.add(new BLEService(UUID.fromString(&quot;0000ff00-0000-1000-8000-00805f9b34fb&quot;),</span>
+<span class="nc" id="L54">                                        UUID.fromString(&quot;0000ff02-0000-1000-8000-00805f9b34fb&quot;),</span>
+                                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+                                        BluetoothGattCharacteristic.PERMISSION_WRITE,
+<span class="nc" id="L57">                                        UUID.fromString(&quot;00002902-0000-1000-8000-00805f9b34fb&quot;)));</span>
+
+<span class="nc" id="L59">        ibleDiscoverService.setResult(BluetoothGatt.GATT_SUCCESS, bleServiceList);</span>
+
+<span class="nc" id="L61">        callAfter(500, &quot;doDeviceTimeReply&quot;);</span>
+<span class="nc" id="L62">    }</span>
+
+    //
+<span class="nc" id="L65">    UUID serviceUuid = UUID.fromString(&quot;0000ff00-0000-1000-8000-00805f9b34fb&quot;);</span>
+<span class="nc" id="L66">    UUID characteristicUuid = UUID.fromString(&quot;0000ff01-0000-1000-8000-00805f9b34fb&quot;);</span>
+
+    public void doDeviceTimeReply(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L69">        Log.v(&quot;HRM3200-Emul&quot;, &quot;doDeviceTimeReply...&quot;);</span>
+
+<span class="nc" id="L71">        ibleChangeCharacteristic.setResult(</span>
+                serviceUuid, characteristicUuid,
+                new byte[]{(byte) 0x80, (byte) 0x10, (byte) 0x08, (byte) 0x0F, (byte) 0x05,
+                    (byte) 0x13, (byte) 0x11, (byte) 0x0B, (byte) 0x2D, (byte) 0x01, (byte) 0x00, (byte) 0xEF}
+        );
+<span class="nc" id="L76">    }</span>
+
+    boolean onMeasuring;
+    public void doRealtimeDataReply(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L80">        Log.v(&quot;HRM3200&quot;, &quot;doRealtimedataReply - Begin&quot;);</span>
+<span class="nc" id="L81">        ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                new byte[]{(byte) 0x80, (byte) 0x1A, (byte) 0x07, (byte) 0xFF, (byte) 0x50,
+                        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
+
+<span class="nc" id="L85">        Log.v(&quot;HRM3200&quot;, &quot;doRealtimedataReply - End: &quot; + onMeasuring);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (onMeasuring == true) {</span>
+<span class="nc" id="L87">            callAfter(500, &quot;doRealtimeDataReply&quot;);</span>
+        }
+<span class="nc" id="L89">    }</span>
+
+<span class="nc" id="L91">    private int sessionNumber = -1;</span>
+
+    public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic,
+                                      IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L95">        byte in[] = btGattCharacteristic.getValue();</span>
+
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if ((in[1] &amp; 0xff) == 0x11) {</span>
+            // do nothing
+            // 諛붾줈 �떎�쓬�뿉 0x80�씠 �삩�떎.
+        }
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x80) {</span>
+            // ���옣�뜲�씠�꽣 �쑀臾�/�떎�슫濡쒕뱶 媛��뒫�뿬遺�(0x81) �쟾�넚
+
+<span class="nc" id="L104">            Random random = new Random();</span>
+<span class="nc" id="L105">            int r = random.nextInt() % 3;</span>
+<span class="nc" id="L106">            r = 0;</span>
+
+<span class="nc bnc" id="L108" title="All 4 branches missed.">            switch (r) {</span>
+                // out[4] : 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�), �씠 硫붿떆吏� �쟾�넚�썑 諛붾줈 痢≪젙 �뜲�씠�� �쟾�넚�빐�빞 �븿
+                case 0:
+                    // out[3] 0x01: ���옣 �뜲�씠�꽣 �뾾�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="nc" id="L112">                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                            new byte[] { (byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF });
+
+<span class="nc" id="L115">                    callAfter(500, &quot;doRealtimeDataReply&quot;);</span>
+<span class="nc" id="L116">                    onMeasuring = true;</span>
+<span class="nc" id="L117">                    break;</span>
+
+                case 1:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="nc" id="L121">                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                            new byte[] { (byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF });
+
+<span class="nc" id="L124">                    callAfter(500, &quot;doRealtimeDataReply&quot;);</span>
+<span class="nc" id="L125">                    onMeasuring = true;</span>
+<span class="nc" id="L126">                    break;</span>
+
+                // out[4] : 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭, �씠 硫붿떆吏� �쟾�넚�썑 0x82 硫붿떆吏� 湲곕떎�젮�빞 �븿
+                case 2:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+<span class="nc" id="L131">                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                            new byte[] { (byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF });
+<span class="nc" id="L133">                    break;</span>
+
+                default:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+<span class="nc" id="L137">                    ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                            new byte[] { (byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF });
+                    break;
+            }
+<span class="nc" id="L141">        }</span>
+
+<span class="nc bnc" id="L143" title="All 4 branches missed.">        else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x02) {  // 痢≪젙醫낅즺 �슂泥�</span>
+<span class="nc" id="L144">            onMeasuring = false;</span>
+
+<span class="nc" id="L146">            callDoDisconnectAfter(500);</span>
+        }
+
+<span class="nc bnc" id="L149" title="All 4 branches missed.">        else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x01) {  // �떎�떆媛� �옄猷� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L150">            ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                    new byte[] { (byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF });
+
+<span class="nc" id="L153">            callAfter(500, &quot;doRealtimeDataReply&quot;);</span>
+<span class="nc" id="L154">            onMeasuring = true;</span>
+        }
+
+<span class="nc bnc" id="L157" title="All 4 branches missed.">        else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x03) {  // ���옣 �옄猷� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L158">            ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                    new byte[] { (byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF });
+
+<span class="nc" id="L161">            callAfter(500, &quot;doSendSessionCount&quot;);</span>
+        }
+
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x84) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L165">            sessionNumber = in[3] &amp; 0xff;</span>
+
+<span class="nc" id="L167">            ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                    new byte[] { (byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF });    // OK
+
+<span class="nc" id="L170">            callAfter(500, &quot;doSendSessionInfo&quot;);</span>
+        }
+
+<span class="nc bnc" id="L173" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x15) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦</span>
+
+<span class="nc" id="L175">            callAfter(0, &quot;doStoredDataReply&quot;);</span>
+
+            /*
+            byte[] storedData;
+            //= new byte[]{(byte) 0x80, (byte) 0x16, (byte) 0x09, (byte) sessionNumber, (byte) 0x00,
+            //        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+
+            Random random = new Random();
+            int heartrate = 110;
+            int calorie = -1;
+            int steps = 0;
+
+
+            // Heart Rate
+            int r = random.nextInt() % 3;
+            switch (r) {
+                case 0:
+                    heartrate--;
+                    break;
+                case 1:
+                    heartrate++;
+                    break;
+                default:
+                    break;
+            }
+            if (heartrate &lt; 50)
+                heartrate = 50;
+            else if (heartrate &gt; 150)
+                heartrate = 150;
+
+            // Calorie &amp; steps
+            calorie = calorie + 2;
+
+            steps++;
+
+            storedData = new byte[]{(byte) 0x80, (byte) 0x16, (byte) 0x09, (byte) sessionNumber, (byte) 0x00,
+                    (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+            storedData[5] = (byte) i;
+            storedData[6] = (byte) heartrate;
+            storedData[8] = (byte) (calorie / 256);
+            storedData[9] = (byte) (calorie % 256);
+            storedData[10] = (byte) (steps / 256);
+            storedData[11] = (byte) (steps % 256);
+
+            reply_msg = Message.obtain();
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
+            reply_msg.arg1 = PortingLayer.HRM_READ;
+            reply_msg.obj = storedData;
+            app_handler.sendMessage(reply_msg);
+
+
+            // end of session
+            reply_msg = Message.obtain();
+            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;
+            reply_msg.arg1 = PortingLayer.HRM_READ;
+            reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x18, (byte) 0x01, (byte) sessionNumber, (byte) 0xEF};
+            app_handler.sendMessageDelayed(reply_msg, 5000);
+*/
+        }
+
+        else {
+
+        }
+<span class="nc" id="L238">    }</span>
+
+    public void doSendSessionCount(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L241">        ibleChangeCharacteristic.setResult(</span>
+                serviceUuid, characteristicUuid,
+                new byte[] { (byte) 0x80, (byte) 0x12, (byte) 0x01, (byte) 0x05, (byte) 0xEF });
+<span class="nc" id="L244">    }</span>
+
+    public void doSendSessionInfo(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+<span class="nc" id="L248">        int count = 100;                    // �븳 �꽭�뀡�쓽 �옄猷뚯닔</span>
+<span class="nc" id="L249">        Calendar now = Calendar.getInstance();</span>
+<span class="nc" id="L250">        int year = now.get(Calendar.YEAR) - 2000;</span>
+<span class="nc" id="L251">        int month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L252">        int day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L253">        int hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L254">        int min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L255">        int sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L257">        ibleChangeCharacteristic.setResult(</span>
+                serviceUuid, characteristicUuid,
+                new byte[] { (byte) 0x80, (byte) 0x14, (byte) 0x0B, (byte) sessionNumber,
+                        (byte) 0x00, (byte) count, (byte) 0x01, (byte) year, (byte) month, (byte) day,
+                        (byte) hour, (byte) min, (byte) sec, (byte) 0x00,
+                        (byte) 0xEF });
+<span class="nc" id="L263">    }</span>
+
+
+<span class="nc" id="L266">    private int dataCount = 0;</span>
+<span class="nc" id="L267">    int heartrate = 110;</span>
+<span class="nc" id="L268">    int calorie = -1;</span>
+<span class="nc" id="L269">    int steps = 0;</span>
+    public void doStoredDataReply(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+        byte[] storedData;
+
+<span class="nc" id="L274">        Random random = new Random();</span>
+
+        // Heart Rate
+<span class="nc" id="L277">        int r = random.nextInt() % 3;</span>
+<span class="nc bnc" id="L278" title="All 3 branches missed.">        switch (r) {</span>
+            case 0:
+<span class="nc" id="L280">                heartrate--;</span>
+<span class="nc" id="L281">                break;</span>
+            case 1:
+<span class="nc" id="L283">                heartrate++;</span>
+<span class="nc" id="L284">                break;</span>
+            default:
+                break;
+        }
+<span class="nc bnc" id="L288" title="All 2 branches missed.">        if (heartrate &lt; 50)</span>
+<span class="nc" id="L289">            heartrate = 50;</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">        else if (heartrate &gt; 150)</span>
+<span class="nc" id="L291">            heartrate = 150;</span>
+
+        // Calorie &amp; steps
+<span class="nc" id="L294">        calorie = calorie + 2;</span>
+
+<span class="nc" id="L296">        steps++;</span>
+
+<span class="nc" id="L298">        dataCount++;</span>
+<span class="nc" id="L299">        ibleChangeCharacteristic.setResult(serviceUuid, characteristicUuid,</span>
+                new byte[] { (byte) 0x80, (byte) 0x16, (byte) 0x09, (byte) sessionNumber, (byte) 0x00, (byte) dataCount,
+                        (byte) heartrate, (byte) 0x00, (byte) (calorie / 256), (byte) (calorie % 256),
+                        (byte) (steps / 256), (byte) (steps % 256), (byte) 0xEF });
+
+<span class="nc bnc" id="L304" title="All 2 branches missed.">        if (dataCount &lt; 100) {</span>
+<span class="nc" id="L305">            callAfter(10, &quot;doStoredDataReply&quot;);</span>
+        }
+<span class="nc bnc" id="L307" title="All 2 branches missed.">        else if(dataCount == 100) {</span>
+<span class="nc" id="L308">            callAfter(10, &quot;doSendEndOfSession&quot;);</span>
+<span class="nc" id="L309">            dataCount = 0;</span>
+        }
+
+<span class="nc" id="L312">    }</span>
+
+    public void doSendEndOfSession(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L315">        ibleChangeCharacteristic.setResult(</span>
+                serviceUuid, characteristicUuid,
+                new byte[] { (byte) 0x80, (byte) 0x18, (byte) 0x01, (byte) sessionNumber, (byte) 0xEF });
+<span class="nc" id="L318">    }</span>
+}
+
+// service uuid
+// &quot;00001800-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00001801-0000-1000-8000-00805f9b34fb&quot;
+// &quot;0000180a-0000-1000-8000-00805f9b34fb&quot;
+// &quot;0000180d-0000-1000-8000-00805f9b34fb&quot; // Heart rate
+// &quot;0000180f-0000-1000-8000-00805f9b34fb&quot; // battery
+// &quot;0000ff00-0000-1000-8000-00805f9b34fb&quot; // HRM
+// characteristic uuid
+// &quot;00002a00-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a01-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a04-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a19-0000-1000-8000-00805f9b34fb&quot; // battery
+// &quot;00002a25-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a26-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a27-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a28-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a29-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a37-0000-1000-8000-00805f9b34fb&quot; // Heart rate
+// &quot;00002a38-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a39-0000-1000-8000-00805f9b34fb&quot;
+// &quot;00002a50-0000-1000-8000-00805f9b34fb&quot;
+// &quot;0000ff01-0000-1000-8000-00805f9b34fb&quot; // HRM read
+// &quot;0000ff02-0000-1000-8000-00805f9b34fb&quot; // HRM write
+// descripter uuid == &gt; CLIENT_CHARACTERISTIC_CONFIG
+// &quot;00002902-0000-1000-8000-00805f9b34fb&quot; // 3 times
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SplashActivity.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">SplashActivity.java</span></div><h1>SplashActivity.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.opengl.GLES20;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v7.app.ActionBarActivity;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
+
+
+<span class="nc" id="L19">public class SplashActivity extends Activity {</span>
+
+    Bitmap bitmapLogo;
+
+<span class="nc" id="L23">    private String TAG = &quot;SplashActivity&quot;;</span>
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L27">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L28">        setContentView(R.layout.activity_splash);</span>
+
+
+<span class="nc" id="L31">        ImageView imageView = (ImageView)findViewById(R.id.imageView);</span>
+
+//
+<span class="nc" id="L34">        DisplayMetrics metrics = new DisplayMetrics();</span>
+<span class="nc" id="L35">        getWindowManager().getDefaultDisplay().getMetrics(metrics);</span>
+
+<span class="nc" id="L37">        int dstWidth = metrics.widthPixels;</span>
+<span class="nc" id="L38">        int dstHeight = metrics.heightPixels;</span>
+
+
+<span class="nc" id="L41">        bitmapLogo = StartButtonView.decodeSampledBitmapFromResource(getResources(),</span>
+                    R.drawable.h3system_logo, dstWidth, dstHeight);
+
+<span class="nc" id="L44">        imageView.setImageBitmap(bitmapLogo);</span>
+
+<span class="nc" id="L46">        Log.i(TAG, &quot;width=&quot; + dstWidth + &quot;, height=&quot; + dstHeight);</span>
+<span class="nc" id="L47">        Log.v(TAG, &quot;Allocation byte count: &quot; + bitmapLogo.getByteCount() + &quot; for &quot; + R.drawable.h3system_logo);</span>
+
+
+
+//        BitmapFactory.Options options = new BitmapFactory.Options();
+//        options.inJustDecodeBounds = true;
+//        bitmapLogo = BitmapFactory.decodeResource(getResources(), R.drawable.h3system_logo);
+//        imageView.setImageBitmap(bitmapLogo);
+
+
+<span class="nc" id="L57">        Handler handler = new Handler ();</span>
+
+<span class="nc" id="L59">        final Intent intent = new Intent(this, MainActivity.class);</span>
+<span class="nc" id="L60">        handler.postDelayed(new Runnable() {</span>
+            @Override
+            public void run() {
+<span class="nc" id="L63">                startActivity(intent);</span>
+<span class="nc" id="L64">                finish();</span>
+<span class="nc" id="L65">            }</span>
+        }, 2000);
+
+<span class="nc" id="L68">    }</span>
+
+    @Override
+    protected void onPause() {
+<span class="nc" id="L72">        super.onPause();</span>
+
+<span class="nc" id="L74">        setContentView(new View(this)); // Galaxy4�뿉�꽌 App�뿉 �븷�떦�맂 硫붾え由ш� �쟻�뼱 Start/Stop 踰꾪듉 �씠誘몄�瑜� �쓣�슱�븣</span>
+                                        // OutOfMemory �뿉�윭媛� 諛쒖깮�븯�뒗 臾몄젣瑜� �빐寃고븯湲� �쐞�빐 濡쒓퀬 �씠誘몄�瑜� 媛뽮퀬 �엳�뒗
+                                        // ImageView瑜� �뜑�씠�긽 媛�由ы궎吏� �븡�룄濡� 肄붾뵫
+
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (bitmapLogo!=null) {</span>
+<span class="nc" id="L79">            bitmapLogo.recycle();</span>
+<span class="nc" id="L80">            bitmapLogo = null;</span>
+        }
+
+<span class="nc" id="L83">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+<span class="nc" id="L88">        getMenuInflater().inflate(R.menu.menu_splash, menu);</span>
+<span class="nc" id="L89">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+<span class="nc" id="L97">        int id = item.getItemId();</span>
+
+        //noinspection SimplifiableIfStatement
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        if (id == R.id.action_settings) {</span>
+<span class="nc" id="L101">            return true;</span>
+        }
+
+<span class="nc" id="L104">        return super.onOptionsItemSelected(item);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

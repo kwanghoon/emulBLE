@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>HeartRateDBHelper.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">HeartRateDBHelper.java</span></div><h1>HeartRateDBHelper.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import java.util.Calendar;
+
+/**
+ * Created by moonhyeonah on 2015. 4. 7..
+ */
+public class HeartRateDBHelper extends SQLiteOpenHelper {
+
+    public static final String DATABASE_NAME = &quot;database_heartrate&quot;;
+
+    public static final String TABLE_NAME_HR = &quot;table_heartrate&quot;;
+    public static final String COL_ID = &quot;_id&quot;;
+    public static final String COL_HEARTRATE = &quot;heartrate&quot;;
+    public static final String COL_ACTLEVEL = &quot;actlevel&quot;;
+    public static final String COL_CALORIE = &quot;calorie&quot;;
+    public static final String COL_STEP = &quot;step&quot;;
+    public static final String COL_HRSTATUS = &quot;hrstatus&quot;;
+    public static final String COL_HR_INDEX = &quot;hrindex&quot;;
+    public static final String COL_SESSION_ID = &quot;sessionid&quot;;
+//    public static final String COL_MEASURING_TIME = &quot;measuringtime&quot;;
+
+
+    public static final String TABLE_NAME_SESSION = &quot;table_session&quot;;
+    public static final String COL_YEAR = &quot;year&quot;;
+    public static final String COL_MONTH = &quot;month&quot;;
+    public static final String COL_DAY = &quot;day&quot;;
+    public static final String COL_HOUR = &quot;hour&quot;;
+    public static final String COL_MIN = &quot;min&quot;;
+    public static final String COL_SEC = &quot;sec&quot;;
+    public static final String COL_DURATION = &quot;duration&quot;;
+    public static final String COL_DISTANCE = &quot;distance&quot;;
+    public static final String COL_CALORIES = &quot;calories&quot;;
+    public static final String COL_HR_AVG = &quot;hr_avg&quot;;
+    public static final String COL_HR_MIN = &quot;hr_min&quot;;
+    public static final String COL_HR_MAX = &quot;hr_max&quot;;
+    public static final String COL_TIME_RED = &quot;red_zone&quot;;
+    public static final String COL_TIME_YELLOW = &quot;yellow_zone&quot;;
+    public static final String COL_TIME_GREEN = &quot;green_zone&quot;;
+    public static final String COL_TIME_CYAN = &quot;cyan_zone&quot;;
+    public static final String COL_TIME_BLUE = &quot;blue_zone&quot;;
+    public static final String COL_COUNT = &quot;count&quot;;             // �꽭�뀡蹂� �쟾泥� �뜲�씠�� 媛��닔
+    public static final String COL_PERIOD = &quot;period&quot;;
+    public static final String COL_STRIDE = &quot;stride&quot;;
+
+
+    public HeartRateDBHelper(Context context, SQLiteDatabase.CursorFactory factory, int version) {
+<span class="fc" id="L52">        super(context, DATABASE_NAME + &quot;.db&quot;, factory, version);</span>
+<span class="fc" id="L53">    }</span>
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+<span class="fc" id="L57">        db.execSQL(&quot;CREATE TABLE &quot; + TABLE_NAME_HR + &quot; ( &quot;</span>
+                + COL_ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT, &quot;   // 0
+                + COL_HEARTRATE + &quot; INTEGER, &quot;                      // 1
+                + COL_ACTLEVEL + &quot; INTEGER, &quot;                       // 2
+                + COL_CALORIE + &quot; INTEGER, &quot;                        // 3
+                + COL_STEP + &quot; INTEGER, &quot;                           // 4
+                + COL_HRSTATUS + &quot; INTEGER, &quot;                       // 5
+                + COL_HR_INDEX + &quot; INTEGER, &quot;                       // 6
+                + COL_SESSION_ID + &quot; INTEGER ) &quot;);                     // 7
+//                + COL_SESSION_ID + &quot; INTEGER, &quot;                     // 7
+//                + COL_MEASURING_TIME + &quot; INTEGER ) &quot;);               // 8
+
+
+
+<span class="fc" id="L71">        db.execSQL(&quot;CREATE TABLE &quot; + TABLE_NAME_SESSION + &quot; ( &quot;</span>
+                + COL_ID + &quot; INTEGER PRIMARY KEY AUTOINCREMENT, &quot;   // 0
+                + COL_YEAR + &quot; INTEGER, &quot;                           // 1
+                + COL_MONTH + &quot; INTEGER, &quot;                          // 2
+                + COL_DAY + &quot; INTEGER, &quot;                            // 3
+                + COL_HOUR + &quot; INTEGER, &quot;                           // 4
+                + COL_MIN + &quot; INTEGER, &quot;                            // 5
+                + COL_SEC + &quot; INTEGER, &quot;                            // 6
+                + COL_DURATION + &quot; INTEGER, &quot;                       // 7
+                + COL_DISTANCE + &quot; DOUBLE, &quot;                        // 8
+                + COL_CALORIES + &quot; INTEGER, &quot;                       // 9
+                + COL_HR_AVG + &quot; INTEGER, &quot;                         // 10
+                + COL_HR_MIN + &quot; INTEGER, &quot;                         // 11
+                + COL_HR_MAX + &quot; INTEGER, &quot;                         // 12
+                + COL_TIME_RED + &quot; INTEGER, &quot;                       // 13
+                + COL_TIME_YELLOW + &quot; INTEGER, &quot;                    // 14
+                + COL_TIME_GREEN + &quot; INTEGER, &quot;                     // 15
+                + COL_TIME_CYAN + &quot; INTEGER, &quot;                      // 16
+                + COL_TIME_BLUE + &quot; INTEGER, &quot;                      // 17
+                + COL_COUNT + &quot; INTEGER, &quot;                          // 18
+                + COL_PERIOD + &quot; INTEGER, &quot;                         // 19
+                + COL_STRIDE + &quot; INTEGER ) &quot;);                      // 20
+<span class="fc" id="L93">    }</span>
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+<span class="nc" id="L97">        db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + TABLE_NAME_HR);</span>
+<span class="nc" id="L98">        db.execSQL(&quot;DROP TABLE IF EXISTS &quot; + TABLE_NAME_SESSION);</span>
+<span class="nc" id="L99">        onCreate(db);</span>
+<span class="nc" id="L100">    }</span>
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

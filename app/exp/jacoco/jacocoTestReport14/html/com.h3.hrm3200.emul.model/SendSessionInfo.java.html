@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SendSessionInfo.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul.model</a> &gt; <span class="el_source">SendSessionInfo.java</span></div><h1>SendSessionInfo.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul.model;
+
+import com.h3.hrm3200.emul.AutoHRM3200;
+
+import java.util.Calendar;
+
+import emul.bluetooth.BluetoothLE;
+import emul.bluetooth.model.BLENotificationState;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+
+/**
+ * Created by khChoi on 2017-08-17.
+ */
+
+public class SendSessionInfo extends BLENotificationState {
+    private SharedSessionInfo sharedSessionInfo;
+    public SendSessionInfo(BluetoothLE bluetoothLE, SharedSessionInfo sharedSessionInfo) {
+<span class="fc" id="L18">        super(bluetoothLE);</span>
+<span class="fc" id="L19">        this.sharedSessionInfo = sharedSessionInfo;</span>
+<span class="fc" id="L20">    }</span>
+
+    @Override
+    public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+        //int count = 100;                    // �븳 �꽭�뀡�쓽 �옄猷뚯닔
+<span class="fc" id="L25">        Calendar now = Calendar.getInstance();</span>
+<span class="fc" id="L26">        int year = now.get(Calendar.YEAR) - 2000;</span>
+<span class="fc" id="L27">        int month = now.get(Calendar.MONTH) + 1;</span>
+<span class="fc" id="L28">        int day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="fc" id="L29">        int hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="fc" id="L30">        int min = now.get(Calendar.MINUTE);</span>
+<span class="fc" id="L31">        int sec = now.get(Calendar.SECOND);</span>
+
+<span class="fc" id="L33">        ibleChangeCharacteristic.setResult(</span>
+                AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,
+                new byte[] { (byte) 0x80, (byte) 0x14, (byte) 0x0B, (byte) sharedSessionInfo.sessionNumber,
+                        (byte) 0x00, (byte) sharedSessionInfo.dataTotalCount, (byte) 0x01, (byte) year, (byte) month, (byte) day,
+                        (byte) hour, (byte) min, (byte) sec, (byte) 0x00,
+                        (byte) 0xEF });
+<span class="fc" id="L39">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

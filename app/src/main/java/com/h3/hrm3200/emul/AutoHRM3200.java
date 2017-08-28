@@ -285,6 +285,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         vtx_State7_SendSessionCount.getAdjacencyList().add(vtx_ReqSessionInfo_1);
 
         sharedSessionInfo.dataTotalCount = 10;
+        sharedSessionInfo.dataCount = 0; // Moon
 
         // VERTEX
         VertexBLEState vtx_SendSessionInfo_1 = new VertexBLEState("State10 Send Session Info 1",
@@ -369,6 +370,7 @@ public class AutoHRM3200 extends AutoBluetoothLE {
         vtx_SendEndofSession_1.getAdjacencyList().add(vtx_ReqSessionInfo_2);
 
         sharedSessionInfo.dataTotalCount = 7;
+        sharedSessionInfo.dataCount = 0; // Moon
 
         // VERTEX
         VertexBLEState vtx_SendSessionInfo_2 = new VertexBLEState("State10 Send Session Info 2",

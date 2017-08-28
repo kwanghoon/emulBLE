@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BLEConnectState.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth.model</a> &gt; <span class="el_source">BLEConnectState.java</span></div><h1>BLEConnectState.java</h1><pre class="source lang-java linenums">package emul.bluetooth.model;
+
+import com.h3.hrm3200.Log;
+
+import java.util.ArrayList;
+
+import mocking.android.bluetooth.IBLEConnect;
+
+/**
+ * Created by khChoi on 2017-08-05.
+ */
+
+public class BLEConnectState extends BLEState {
+    private int succ_or_fail;
+    private int state;
+
+    public BLEConnectState(int succ_or_fail, int state) {
+<span class="fc" id="L18">        this(null, succ_or_fail, state);</span>
+<span class="fc" id="L19">    }</span>
+
+<span class="fc" id="L21">    public BLEConnectState(ArrayList&lt;BLEState&gt; next, int succ_or_fail, int state) {</span>
+<span class="fc" id="L22">        this.next = next;</span>
+<span class="fc" id="L23">        this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L24">        this.state = state;</span>
+<span class="fc" id="L25">    }</span>
+
+    @Override
+    public void setupAction() {
+<span class="fc" id="L29">        Log.v(&quot;[ HRM3200 ]&quot;, &quot;BLEConnectState - Select one of the scanned bluetooth devices ...&quot;);</span>
+<span class="fc" id="L30">    }</span>
+
+    @Override
+    public void action(IBLEConnect ibleconnect) {
+        // Condition: This action should be called in doConnect.
+
+        // Return succ_or_fail and state
+<span class="fc" id="L37">        ibleconnect.setConnectResult(succ_or_fail, state);</span>
+<span class="fc" id="L38">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

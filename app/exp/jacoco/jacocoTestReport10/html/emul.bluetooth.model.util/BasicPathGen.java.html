@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BasicPathGen.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth.model.util</a> &gt; <span class="el_source">BasicPathGen.java</span></div><h1>BasicPathGen.java</h1><pre class="source lang-java linenums">package emul.bluetooth.model.util;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+/**
+ * Created by moonh on 2017-07-15.
+ */
+<span class="nc" id="L10">public class BasicPathGen {</span>
+
+    private static ArrayList&lt;Vertex&gt; vertices;
+
+    public static Vertex findInitialState(ArrayList&lt;Vertex&gt; vertices) {
+<span class="pc bpc" id="L15" title="1 of 2 branches missed.">        for ( Vertex v : vertices ) {</span>
+<span class="pc bpc" id="L16" title="1 of 2 branches missed.">            if ( v.isInitial() )</span>
+<span class="fc" id="L17">                return v;</span>
+<span class="nc" id="L18">        }</span>
+
+<span class="nc" id="L20">        return null;  // This should never happen!!</span>
+    }
+
+    private static Vertex findState(String state, ArrayList&lt;Vertex&gt; vertices) {
+
+<span class="nc bnc" id="L25" title="All 2 branches missed.">        for ( Vertex v : vertices ) {</span>
+<span class="nc bnc" id="L26" title="All 2 branches missed.">            if ( v.getStateNumber().equals(state) )</span>
+<span class="nc" id="L27">                return v;</span>
+<span class="nc" id="L28">        }</span>
+<span class="nc" id="L29">        Vertex w = new Vertex(state);</span>
+<span class="nc" id="L30">        vertices.add(w);</span>
+<span class="nc" id="L31">        return w;</span>
+    }
+
+    public static void print(ArrayList&lt;Vertex&gt; vertices) {
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        for ( Vertex v : vertices ) {</span>
+<span class="fc" id="L36">            System.out.print(&quot;[ &quot; + v.getStateNumber() + &quot; ] &quot; );</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">            for ( Vertex w : v.getAdjacencyList() ) {</span>
+<span class="fc" id="L38">                System.out.print(w.getStateNumber() + &quot;; &quot;);</span>
+<span class="fc" id="L39">            }</span>
+<span class="fc" id="L40">            System.out.println();</span>
+<span class="fc" id="L41">        }</span>
+<span class="fc" id="L42">    }</span>
+
+    public static void DFS(Vertex v, Path p, int bound, BasicPaths basicPaths) {
+
+<span class="pc bpc" id="L46" title="2 of 4 branches missed.">        if ( p.length() &lt;= bound  &amp;&amp; p.isBasicPath(v) ) {</span>
+<span class="fc" id="L47">            p.add(v);</span>
+
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            if ( v.isFinal() ) {</span>
+<span class="fc" id="L50">                basicPaths.add(p);</span>
+
+<span class="fc" id="L52">                p.print();</span>
+
+            } else {
+<span class="fc bfc" id="L55" title="All 2 branches covered.">                for (Vertex n : v.getAdjacencyList()) {</span>
+<span class="fc" id="L56">                    DFS(n, p, bound, basicPaths);</span>
+<span class="fc" id="L57">                }</span>
+            }
+
+<span class="fc" id="L60">            p.remove();</span>
+        }
+<span class="fc" id="L62">    }</span>
+
+    public static int numOfEdges(ArrayList&lt;Vertex&gt; vertices) {
+<span class="fc" id="L65">        int n = 0;</span>
+
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        for (Vertex v : vertices) {</span>
+<span class="fc" id="L68">            ArrayList&lt;Vertex&gt; neighbors = v.getAdjacencyList();</span>
+
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            for (Vertex w : neighbors) {</span>
+<span class="fc" id="L71">                n++;</span>
+<span class="fc" id="L72">            }</span>
+<span class="fc" id="L73">        }</span>
+
+<span class="fc" id="L75">        return n;</span>
+    }
+
+    public static void main(String[] args) throws IOException {
+<span class="nc" id="L79">        Scanner scan = new Scanner(System.in);</span>
+
+<span class="nc" id="L81">        vertices = new ArrayList&lt;Vertex&gt;();</span>
+<span class="nc" id="L82">        int bound = 0;</span>
+
+<span class="nc" id="L84">        System.out.println(&quot;Input Edge: sourceState, destState&quot;);</span>
+
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        while ( scan.hasNext() ) {</span>
+
+<span class="nc" id="L88">            int source = scan.nextInt();</span>
+<span class="nc" id="L89">            int dest = scan.nextInt();</span>
+
+<span class="nc bnc" id="L91" title="All 4 branches missed.">            if ( source == -1 &amp;&amp; dest == -1 )</span>
+<span class="nc" id="L92">                break;</span>
+
+<span class="nc" id="L94">            bound++;</span>
+
+<span class="nc" id="L96">            Vertex srcVertex = findState(BasicPathGen.toString(source), vertices);</span>
+<span class="nc" id="L97">            Vertex destVertex = findState(BasicPathGen.toString(dest), vertices);</span>
+
+<span class="nc" id="L99">            srcVertex.getAdjacencyList().add(destVertex);</span>
+
+<span class="nc" id="L101">        }</span>
+
+<span class="nc" id="L103">        print(vertices);</span>
+<span class="nc" id="L104">        Vertex start = findInitialState(vertices);</span>
+<span class="nc" id="L105">        Path path = new Path();</span>
+<span class="nc" id="L106">        BasicPaths basicPaths = new BasicPaths();</span>
+
+<span class="nc" id="L108">        bound = bound * 2;</span>
+<span class="nc" id="L109">        DFS(start, path, bound, basicPaths );</span>
+
+<span class="nc" id="L111">        basicPaths.print();</span>
+<span class="nc" id="L112">    }</span>
+
+    private static String toString(int stateNumber) {
+<span class="nc" id="L115">        return &quot;State&quot; + stateNumber;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

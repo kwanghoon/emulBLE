@@ -1,0 +1,636 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothDeviceEmulator.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BluetoothDeviceEmulator.java</span></div><h1>BluetoothDeviceEmulator.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+
+import com.h3.hrm3200.Log;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Random;
+import java.util.UUID;
+
+import emul.bluetooth.BluetoothLE;
+import emul.bluetooth.model.BLEStateException;
+
+import static mocking.android.bluetooth.PortingLayer.CHANGE_CHARACTERISTIC_REPLY;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 22..
+ */
+
+/*
+TODO:
+�쁽�옱�쓽 BlueootoothDeviceEmulator�쓽 �씠由꾩� BluetoothScanEmulator濡� 諛붽씀�뒗 寃껋씠 諛붾엺吏곹븯�떎.
+洹몃━怨� LESCANCALLBACK_ONLESCAN_REQUEST case留� �룷�븿�븯�뒗 �빖�뱾�윭瑜� 媛뽰텛�룄濡� 諛붽씔�떎.
+
+�씠�� 蹂꾨룄濡� BluetoothDeviceEmulator �겢�옒�뒪瑜� �뵲濡� �몢�뼱 leConnect()瑜� 遺�瑜쇰븣 媛앹껜瑜� 留뚮뱺�떎.
+�씠 �겢�옒�뒪�뿉�뒗 CONNECT_GATT_REQUEST�� 洹� �씠�썑�쓽 ..._REQUEST瑜� 泥섎━�븯�뒗 �빖�뱶�윭瑜� 媛뽰텛�룄濡� 諛붽씔�떎.
+
+�씠�젃寃� 蹂�寃쏀븯硫� �뿬�윭 媛쒖쓽 BLE �뵒諛붿씠�뒪瑜� 泥섎━�븷 �닔 �엳�뒗 援ъ“媛� �맂�떎.
+ */
+public class BluetoothDeviceEmulator extends Thread {
+
+    public BluetoothDevice getRemoteDevice() {
+<span class="fc" id="L38">        return new BluetoothDevice(</span>
+<span class="fc" id="L39">                    bluetoothLE.getBluetoothDeviceAddress(),</span>
+<span class="fc" id="L40">                    bluetoothLE.getBluetoothDeviceName());</span>
+    }
+
+    private Handler app_handler;
+
+    // app_handler.sendMessage ( ... );
+
+    private BluetoothLE bluetoothLE;
+
+    public static BluetoothDeviceEmulator create(Handler app_handler, BluetoothLE bluetoothLE) {
+<span class="fc" id="L50">        BluetoothDeviceEmulator btdevemul = new BluetoothDeviceEmulator(app_handler);</span>
+<span class="fc" id="L51">        btdevemul.bluetoothLE = bluetoothLE;</span>
+<span class="fc" id="L52">        bluetoothLE.setBluetoothDeviceEmulator(btdevemul);</span>
+<span class="fc" id="L53">        return btdevemul;</span>
+    }
+
+<span class="fc" id="L56">    public BluetoothDeviceEmulator(Handler app_handler) {</span>
+<span class="fc" id="L57">        this.app_handler = app_handler;</span>
+<span class="fc" id="L58">    }</span>
+
+    private Handler handler ;
+
+    // for doBLEScan
+    String[] addrNameArr;
+
+    // for doConnect
+    int succ_or_fail;
+    int connect_state;
+
+    // for doDiscoverService
+//    int succ_or_fail;
+    ArrayList&lt;BLEService&gt; bleServiceList;
+
+    // for doConnect
+//    int succ_or_fail;
+//    int connect_state;
+
+    ArrayList&lt;TimedContinuation&gt; continuationQueue;
+
+    public void run() {
+<span class="fc" id="L80">        continuationQueue = new ArrayList&lt;TimedContinuation&gt;();</span>
+
+<span class="fc" id="L82">        Looper.prepare();</span>
+
+<span class="fc" id="L84">        handler = new Handler() {</span>
+            public void handleMessage(Message msg) {
+
+                try {
+
+                    Message reply_msg;
+<span class="pc bpc" id="L90" title="1 of 7 branches missed.">                    switch (msg.what) {</span>
+                        case PortingLayer.QUIT:
+<span class="fc" id="L92">                            Looper.myLooper().quit();</span>
+<span class="fc" id="L93">                            break;</span>
+
+                        case PortingLayer.LESCANCALLBACK_ONLESCAN_REQUEST:
+//                        reply_msg = Message.obtain();
+//                        reply_msg.what = PortingLayer.LESCANCALLBACK_ONLESCAN_REPLY;
+//                        // Put device, rssi, and scanRecord out of the msg
+//                        reply_msg.obj = new String[] {
+//                                bluetoothLE.getBluetoothDeviceAddress(),
+//                                bluetoothLE.getBluetoothDeviceName()
+//                        };
+//                        app_handler.sendMessage(reply_msg);
+
+
+<span class="fc" id="L106">                            bluetoothLE.doBLEScan(new IBLEScan() {</span>
+                                public void setBLEAddressName(String[] arg) {
+<span class="fc" id="L108">                                    addrNameArr = arg;</span>
+<span class="fc" id="L109">                                }</span>
+                            });
+
+<span class="fc" id="L112">                            reply_msg = Message.obtain();</span>
+<span class="fc" id="L113">                            reply_msg.what = PortingLayer.LESCANCALLBACK_ONLESCAN_REPLY;</span>
+                            // Put device, rssi, and scanRecord out of the msg
+<span class="fc" id="L115">                            reply_msg.obj = addrNameArr;</span>
+<span class="fc" id="L116">                            app_handler.sendMessage(reply_msg);</span>
+
+
+<span class="fc" id="L119">                            break;</span>
+
+                        case PortingLayer.CONNECT_GATT_REQUEST:
+
+<span class="fc" id="L123">                            bluetoothLE.doConnect(new IBLEConnect() {</span>
+                                @Override
+                                public void setConnectResult(int succ_or_fail, int state) {
+<span class="fc" id="L126">                                    BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L127">                                    BluetoothDeviceEmulator.this.connect_state = state;</span>
+<span class="fc" id="L128">                                }</span>
+                            });
+
+<span class="fc" id="L131">                            reply_msg = Message.obtain();</span>
+<span class="fc" id="L132">                            reply_msg.what = PortingLayer.CONNECT_GATT_REPLY;</span>
+<span class="fc" id="L133">                            reply_msg.obj = new int[]{succ_or_fail, connect_state};</span>
+<span class="fc" id="L134">                            app_handler.sendMessage(reply_msg);</span>
+
+<span class="fc" id="L136">                            break;</span>
+
+                        case PortingLayer.DISCOVER_SERVICES_REQUEST:
+<span class="fc" id="L139">                            Log.v(&quot;BluetoothDeviceEmulator&quot;, &quot;DISCOVER_SERVICES_REQUET&quot;);</span>
+
+<span class="fc" id="L141">                            bluetoothLE.doDiscoverService(new IBLEDiscoverService() {</span>
+                                @Override
+                                public void setResult(int succ_or_fail, ArrayList&lt;BLEService&gt; bleServiceList) {
+<span class="fc" id="L144">                                    BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L145">                                    BluetoothDeviceEmulator.this.bleServiceList = bleServiceList;</span>
+<span class="fc" id="L146">                                }</span>
+                            });
+<span class="fc" id="L148">                            reply_msg = Message.obtain();</span>
+<span class="fc" id="L149">                            reply_msg.what = PortingLayer.DISCOVER_SERVICES_REPLY;</span>
+<span class="fc" id="L150">                            reply_msg.arg1 = succ_or_fail;</span>
+<span class="fc" id="L151">                            reply_msg.obj = bleServiceList;</span>
+<span class="fc" id="L152">                            app_handler.sendMessage(reply_msg);</span>
+
+<span class="fc" id="L154">                            break;</span>
+
+                        case PortingLayer.WRITE_CHARACTERISTIC_REQUEST: // WriteCharacteristic
+
+<span class="fc" id="L158">                            BluetoothGattCharacteristic btGattCharacteristic =</span>
+                                    (BluetoothGattCharacteristic) msg.obj;
+<span class="fc" id="L160">                            bluetoothLE.doWriteCharacteristic(btGattCharacteristic,</span>
+<span class="fc" id="L161">                                    new IBLEChangeCharacteristic() {</span>
+                                        public void setResult(UUID serviceUuid, UUID characteristicUuid, byte[] bytes) {
+<span class="fc" id="L163">                                            BluetoothDeviceEmulator.this.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L164">                                            BluetoothDeviceEmulator.this.characteristicUuid = characteristicUuid;</span>
+<span class="fc" id="L165">                                            BluetoothDeviceEmulator.this.bytes = bytes;</span>
+<span class="fc" id="L166">                                        }</span>
+                                    });
+
+<span class="fc" id="L169">                            MessageChangeCharacteristic msgCC = new MessageChangeCharacteristic();</span>
+<span class="fc" id="L170">                            msgCC.serviceUuid = BluetoothDeviceEmulator.this.serviceUuid;</span>
+<span class="fc" id="L171">                            msgCC.characteristicUuid = BluetoothDeviceEmulator.this.characteristicUuid;</span>
+<span class="fc" id="L172">                            msgCC.bytes = BluetoothDeviceEmulator.this.bytes;</span>
+
+<span class="fc" id="L174">                            reply_msg = Message.obtain();</span>
+<span class="fc" id="L175">                            reply_msg.what = CHANGE_CHARACTERISTIC_REPLY;</span>
+<span class="fc" id="L176">                            reply_msg.obj = msgCC;</span>
+<span class="fc" id="L177">                            app_handler.sendMessage(reply_msg);</span>
+
+                            //deviceStateMachine(msg);
+<span class="fc" id="L180">                            break;</span>
+
+                        case PortingLayer.DISCONNECT_REQUEST:
+
+<span class="fc" id="L184">                            bluetoothLE.doDisconnect(new IBLEDisconnect() {</span>
+                                @Override
+                                public void setDisconnectResult(int succ_or_fail, int state) {
+<span class="fc" id="L187">                                    BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L188">                                    BluetoothDeviceEmulator.this.connect_state = state;</span>
+<span class="fc" id="L189">                                }</span>
+                            });
+
+<span class="fc" id="L192">                            reply_msg = Message.obtain();</span>
+<span class="fc" id="L193">                            reply_msg.what = PortingLayer.DISCONNECT_REPLY;</span>
+<span class="fc" id="L194">                            reply_msg.obj = new int[]{succ_or_fail, connect_state};</span>
+<span class="fc" id="L195">                            app_handler.sendMessage(reply_msg);</span>
+
+                            break;
+                    }
+
+                    // doM 硫붿냼�뱶�뿉�꽌 callAfter濡� 吏��젙�븳 continuation�쓣 app_handler �걧�뿉 異붽�
+<span class="fc" id="L201">                    Log.v(&quot;BluetoothDeviceEmulator&quot;, &quot;continuationQueue: &quot; + continuationQueue.size());</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">                    for (TimedContinuation timedContinuation : continuationQueue) {</span>
+<span class="fc" id="L203">                        int msec = timedContinuation.msec;</span>
+<span class="fc" id="L204">                        Runnable continuation = timedContinuation.continuation;</span>
+
+<span class="fc" id="L206">                        app_handler.postDelayed(continuation, msec);</span>
+<span class="fc" id="L207">                    }</span>
+<span class="fc" id="L208">                    continuationQueue.clear();</span>
+                }
+<span class="nc" id="L210">                catch(BLEStateException e) {</span>
+<span class="nc" id="L211">                    Log.v(&quot;BluetoothDeviceEmulator&quot;, e.exnMsg());</span>
+<span class="nc" id="L212">                    e.printStackTrace();</span>
+<span class="nc" id="L213">                    throw e;</span>
+<span class="fc" id="L214">                }</span>
+<span class="fc" id="L215">            }</span>
+        };
+
+<span class="fc" id="L218">        Looper.loop();</span>
+<span class="fc" id="L219">        System.out.println(&quot;BluetoothDeviceEmulator ends....&quot;);</span>
+<span class="fc" id="L220">    }</span>
+
+
+    // callAfter�뿉�꽌 �궗�슜
+    UUID serviceUuid;
+    UUID characteristicUuid;
+    byte[] bytes;
+    String methodName;
+
+    public void callAfter(int msec, String methodName) {
+<span class="fc" id="L230">        this.methodName = methodName;</span>
+
+<span class="fc" id="L232">        TimedContinuation timedContinuation = new TimedContinuation();</span>
+<span class="fc" id="L233">        timedContinuation.msec = msec;</span>
+<span class="fc" id="L234">        timedContinuation.continuation = new Runnable() {</span>
+            public void run() {
+                try {
+<span class="fc" id="L237">                    Class&lt;?&gt; clz = bluetoothLE.getClass();</span>
+<span class="fc" id="L238">                    Method mth = clz.getMethod(BluetoothDeviceEmulator.this.methodName, IBLEChangeCharacteristic.class);</span>
+
+<span class="fc" id="L240">                   mth.invoke(bluetoothLE, new IBLEChangeCharacteristic() {</span>
+                        public void setResult(UUID serviceUuid, UUID characteristicUuid, byte[] bytes) {
+<span class="fc" id="L242">                            BluetoothDeviceEmulator.this.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L243">                            BluetoothDeviceEmulator.this.characteristicUuid = characteristicUuid;</span>
+<span class="fc" id="L244">                            BluetoothDeviceEmulator.this.bytes = bytes;</span>
+<span class="fc" id="L245">                        }</span>
+                    });
+
+                    // app_handler瑜� �넻�빐�꽌 change characteristic�쓣 �빋�뿉 �삱�젮二쇨린
+                    Message reply_msg;
+<span class="fc" id="L250">                    MessageChangeCharacteristic msgbody = new MessageChangeCharacteristic();</span>
+
+<span class="fc" id="L252">                    reply_msg = Message.obtain();</span>
+<span class="fc" id="L253">                    reply_msg.what = CHANGE_CHARACTERISTIC_REPLY;</span>
+<span class="fc" id="L254">                    msgbody.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L255">                    msgbody.characteristicUuid = characteristicUuid;</span>
+<span class="fc" id="L256">                    msgbody.bytes = bytes;</span>
+<span class="fc" id="L257">                    reply_msg.obj = msgbody;</span>
+
+<span class="fc" id="L259">                    app_handler.sendMessage(reply_msg);</span>
+
+                    // doM 硫붿냼�뱶�뿉�꽌 callAfter濡� 吏��젙�븳 continuation�쓣 app_handler �걧�뿉 異붽�
+<span class="fc" id="L262">                    Log.v(&quot;BluetoothDeviceEmulator&quot;, &quot;continuationQueue: &quot; + continuationQueue.size());</span>
+<span class="fc bfc" id="L263" title="All 2 branches covered.">                    for(TimedContinuation timedContinuation : continuationQueue) {</span>
+<span class="fc" id="L264">                        int msec = timedContinuation.msec;</span>
+<span class="fc" id="L265">                        Runnable continuation = timedContinuation.continuation;</span>
+
+<span class="fc" id="L267">                        app_handler.postDelayed(continuation, msec);</span>
+<span class="fc" id="L268">                    }</span>
+<span class="fc" id="L269">                    continuationQueue.clear();</span>
+
+<span class="nc" id="L271">                } catch(NoSuchMethodException e) {</span>
+<span class="nc" id="L272">                    System.err.println(&quot;NoSuchMethodExcpetion:&quot; + BluetoothDeviceEmulator.this.methodName);</span>
+<span class="nc" id="L273">                } catch(IllegalAccessException e) {</span>
+<span class="nc" id="L274">                    System.err.println(&quot;IllegalAccessException:&quot; + BluetoothDeviceEmulator.this.methodName);</span>
+<span class="nc" id="L275">                } catch(InvocationTargetException e) {</span>
+<span class="nc" id="L276">                    System.err.println(&quot;InvocationTargetException:&quot; + BluetoothDeviceEmulator.this.methodName);</span>
+<span class="pc" id="L277">                }</span>
+<span class="fc" id="L278">            }</span>
+        };
+<span class="fc" id="L280">        continuationQueue.add(timedContinuation);</span>
+<span class="fc" id="L281">    }</span>
+
+    public void callDoDisconnectAfter(int msec) {
+<span class="fc" id="L284">        TimedContinuation timedContinuation = new TimedContinuation();</span>
+<span class="fc" id="L285">        timedContinuation.msec = msec;</span>
+<span class="fc" id="L286">        timedContinuation.continuation = new Runnable() {</span>
+            public void run() {
+<span class="fc" id="L288">                bluetoothLE.doDisconnect(new IBLEDisconnect() {</span>
+                    @Override
+                    public void setDisconnectResult(int succ_or_fail, int state) {
+<span class="fc" id="L291">                        BluetoothDeviceEmulator.this.succ_or_fail = succ_or_fail;</span>
+<span class="fc" id="L292">                        BluetoothDeviceEmulator.this.connect_state = state;</span>
+<span class="fc" id="L293">                    }</span>
+                });
+
+<span class="fc" id="L296">                Message reply_msg = Message.obtain();</span>
+<span class="fc" id="L297">                reply_msg.what = PortingLayer.DISCONNECT_REPLY;</span>
+<span class="fc" id="L298">                reply_msg.obj = new int[] {succ_or_fail, connect_state};</span>
+<span class="fc" id="L299">                app_handler.sendMessage(reply_msg);</span>
+
+                // doM 硫붿냼�뱶�뿉�꽌 callAfter濡� 吏��젙�븳 continuation�쓣 app_handler �걧�뿉 異붽�
+<span class="fc" id="L302">                Log.v(&quot;BluetoothDeviceEmulator&quot;, &quot;continuationQueue: &quot; + continuationQueue.size());</span>
+<span class="pc bpc" id="L303" title="1 of 2 branches missed.">                for(TimedContinuation timedContinuation : continuationQueue) {</span>
+<span class="nc" id="L304">                    int msec = timedContinuation.msec;</span>
+<span class="nc" id="L305">                    Runnable continuation = timedContinuation.continuation;</span>
+
+<span class="nc" id="L307">                    app_handler.postDelayed(continuation, msec);</span>
+<span class="nc" id="L308">                }</span>
+<span class="fc" id="L309">                continuationQueue.clear();</span>
+<span class="fc" id="L310">            }</span>
+        };
+<span class="fc" id="L312">        continuationQueue.add(timedContinuation);</span>
+<span class="fc" id="L313">    }</span>
+
+<span class="fc" id="L315">    private int sessionNumber = -1;</span>
+    private void deviceStateMachine(Message msg) {
+<span class="nc" id="L317">        byte in[] = ((BluetoothGattCharacteristic)msg.obj).getValue();</span>
+        Message reply_msg;
+
+<span class="nc bnc" id="L320" title="All 4 branches missed.">        if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x02) {  // 痢≪젙醫낅즺 �슂泥�</span>
+<span class="nc" id="L321">            createHRMData.interrupt();</span>
+
+<span class="nc" id="L323">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L324">            reply_msg.what = PortingLayer.CONNECT_GATT_REPLY;</span>
+<span class="nc" id="L325">            reply_msg.obj = new int[] {BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED};</span>
+<span class="nc" id="L326">            app_handler.sendMessage(reply_msg);</span>
+        }
+
+<span class="nc bnc" id="L329" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x80) {</span>
+            // ���옣�뜲�씠�꽣 �쑀臾�/�떎�슫濡쒕뱶 媛��뒫�뿬遺�(0x81) �쟾�넚
+
+<span class="nc" id="L332">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L333">            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L334">            reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+
+<span class="nc" id="L336">            Random random = new Random();</span>
+<span class="nc" id="L337">            int r = random.nextInt() % 3;</span>
+            //r = 2;
+
+<span class="nc bnc" id="L340" title="All 4 branches missed.">            switch (r) {</span>
+                // out[4] : 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�), �씠 硫붿떆吏� �쟾�넚�썑 諛붾줈 痢≪젙 �뜲�씠�� �쟾�넚�빐�빞 �븿
+                case 0:
+                    // out[3] 0x01: ���옣 �뜲�씠�꽣 �뾾�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="nc" id="L344">                    reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF};</span>
+<span class="nc" id="L345">                    createHRMData = new Thread( new MyRunnable() );</span>
+<span class="nc" id="L346">                    createHRMData.start();</span>
+<span class="nc" id="L347">                    break;</span>
+
+                case 1:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="nc" id="L351">                    reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF};</span>
+<span class="nc" id="L352">                    createHRMData = new Thread( new MyRunnable() );</span>
+<span class="nc" id="L353">                    createHRMData.start();</span>
+<span class="nc" id="L354">                    break;</span>
+
+                // out[4] : 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭, �씠 硫붿떆吏� �쟾�넚�썑 0x82 硫붿떆吏� 湲곕떎�젮�빞 �븿
+                case 2:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+<span class="nc" id="L359">                    reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF};</span>
+<span class="nc" id="L360">                    break;</span>
+
+                default:
+                    // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+<span class="nc" id="L364">                    reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF};</span>
+                    break;
+            }
+<span class="nc" id="L367">            app_handler.sendMessage(reply_msg);</span>
+<span class="nc" id="L368">        }</span>
+
+<span class="nc bnc" id="L370" title="All 4 branches missed.">        else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x01) {  // �떎�떆媛� �옄猷� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L371">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L372">            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L373">            reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L374">            reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};</span>
+            try {
+<span class="nc" id="L376">                Thread.sleep(2000);</span>
+<span class="nc" id="L377">            } catch (InterruptedException e) {</span>
+<span class="nc" id="L378">                e.printStackTrace();</span>
+<span class="nc" id="L379">            }</span>
+<span class="nc" id="L380">            app_handler.sendMessage(reply_msg);</span>
+
+<span class="nc" id="L382">            createHRMData = new Thread( new MyRunnable() );</span>
+<span class="nc" id="L383">            createHRMData.start();</span>
+        }
+//            else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x02) {  // 痢≪젙醫낅즺 �슂泥�
+//                createHRMData.interrupt();
+//                out = new byte[0];
+//            }
+<span class="nc bnc" id="L389" title="All 4 branches missed.">        else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x03) {  // ���옣 �옄猷� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L390">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L391">            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L392">            reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L393">            reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};</span>
+<span class="nc" id="L394">            app_handler.sendMessage(reply_msg);</span>
+
+<span class="nc" id="L396">            sendSessionCount();</span>
+        }
+
+<span class="nc bnc" id="L399" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x84) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦</span>
+<span class="nc" id="L400">            sessionNumber = in[3] &amp; 0xff;</span>
+
+<span class="nc" id="L402">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L403">            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L404">            reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L405">            reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF}; // OK</span>
+<span class="nc" id="L406">            app_handler.sendMessage(reply_msg);</span>
+
+<span class="nc" id="L408">            sendSessionInfo(sessionNumber);</span>
+        }
+
+<span class="nc bnc" id="L411" title="All 2 branches missed.">        else if ((in[1] &amp; 0xff) == 0x15) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦</span>
+            byte[] storedData;
+            //= new byte[]{(byte) 0x80, (byte) 0x16, (byte) 0x09, (byte) sessionNumber, (byte) 0x00,
+            //        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+
+<span class="nc" id="L416">            Random random = new Random();</span>
+<span class="nc" id="L417">            int heartrate = 110;</span>
+<span class="nc" id="L418">            int calorie = -1;</span>
+<span class="nc" id="L419">            int steps = 0;</span>
+
+
+
+<span class="nc bnc" id="L423" title="All 2 branches missed.">            for (int i=0; i&lt;100; i++) {</span>
+                // Heart Rate
+<span class="nc" id="L425">                int r = random.nextInt() % 3;</span>
+<span class="nc bnc" id="L426" title="All 3 branches missed.">                switch (r) {</span>
+                    case 0:
+<span class="nc" id="L428">                        heartrate--;</span>
+<span class="nc" id="L429">                        break;</span>
+                    case 1:
+<span class="nc" id="L431">                        heartrate++;</span>
+<span class="nc" id="L432">                        break;</span>
+                    default:
+                        break;
+                }
+<span class="nc bnc" id="L436" title="All 2 branches missed.">                if (heartrate &lt; 50)</span>
+<span class="nc" id="L437">                    heartrate = 50;</span>
+<span class="nc bnc" id="L438" title="All 2 branches missed.">                else if (heartrate &gt; 150)</span>
+<span class="nc" id="L439">                    heartrate = 150;</span>
+
+                // Calorie &amp; steps
+<span class="nc" id="L442">                calorie = calorie + 2;</span>
+
+<span class="nc" id="L444">                steps++;</span>
+
+<span class="nc" id="L446">                storedData = new byte[]{(byte) 0x80, (byte) 0x16, (byte) 0x09, (byte) sessionNumber, (byte) 0x00,</span>
+                        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+<span class="nc" id="L448">                storedData[5] = (byte)i;</span>
+<span class="nc" id="L449">                storedData[6] = (byte)heartrate;</span>
+<span class="nc" id="L450">                storedData[8] = (byte)(calorie/256);</span>
+<span class="nc" id="L451">                storedData[9] = (byte)(calorie%256);</span>
+<span class="nc" id="L452">                storedData[10] = (byte)(steps/256);</span>
+<span class="nc" id="L453">                storedData[11] = (byte)(steps%256);</span>
+
+<span class="nc" id="L455">                reply_msg = Message.obtain();</span>
+<span class="nc" id="L456">                reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L457">                reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L458">                reply_msg.obj = storedData;</span>
+<span class="nc" id="L459">                app_handler.sendMessage(reply_msg);</span>
+            }
+
+            // end of session
+<span class="nc" id="L463">            reply_msg = Message.obtain();</span>
+<span class="nc" id="L464">            reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L465">            reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L466">            reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x18, (byte) 0x01, (byte) sessionNumber, (byte) 0xEF};</span>
+<span class="nc" id="L467">            app_handler.sendMessageDelayed(reply_msg, 5000);</span>
+
+        }
+
+        else {
+
+        }
+
+<span class="nc" id="L475">    }</span>
+
+    private Thread createHRMData;
+
+    class MyRunnable implements Runnable {
+
+<span class="nc" id="L481">        public MyRunnable() {</span>
+
+<span class="nc" id="L483">            super();</span>
+<span class="nc" id="L484">        }</span>
+
+        public void run() {
+            while (true) {
+                try {
+<span class="nc" id="L489">                    Thread.sleep(1000);</span>
+<span class="nc" id="L490">                } catch (InterruptedException e) {</span>
+                    // TODO Auto-generated catch block
+                    //e.printStackTrace();
+<span class="nc" id="L493">                    return;</span>
+<span class="nc" id="L494">                }</span>
+//                Random random = new Random();
+<span class="nc" id="L496">                byte[] realTimeData = new byte[]{(byte) 0x80, (byte) 0x1A, (byte) 0x07, (byte) 0xFF, (byte) 0x50,</span>
+                        (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+//                int r = (random.nextInt()) % 101 + 50;
+//                realTimeData[4] = (byte)r;
+//                Log.w(&quot;Mocking&quot;, &quot;createHRMData : &quot; + r);
+
+<span class="nc" id="L502">                Message reply_msg = Message.obtain();</span>
+<span class="nc" id="L503">                reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L504">                reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L505">                reply_msg.obj = realTimeData;</span>
+<span class="nc" id="L506">                app_handler.sendMessage(reply_msg);</span>
+<span class="nc" id="L507">            }</span>
+        }
+    }
+/*
+    private byte[] stateMachine( byte[] in ){
+        byte[] out;
+
+        if ( in != null &amp;&amp; in.length &gt; 0 ) {
+            if ((in[1] &amp; 0xff) == 0x80) {
+            // ���옣�뜲�씠�꽣 �쑀臾�/�떎�슫濡쒕뱶 媛��뒫�뿬遺�(0x81) �쟾�넚
+
+                Random random = new Random();
+                int r = random.nextInt() % 3;
+                r = 2;
+
+                switch (r) {
+                    // out[4] : 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�), �씠 硫붿떆吏� �쟾�넚�썑 諛붾줈 痢≪젙 �뜲�씠�� �쟾�넚�빐�빞 �븿
+                    case 0:
+                        // out[3] 0x01: ���옣 �뜲�씠�꽣 �뾾�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+                        out = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF};
+                        createHRMData = new Thread( new MyRunnable() );
+                        createHRMData.start();
+                        break;
+
+                    case 1:
+                        // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+                        out = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF};
+                        createHRMData = new Thread( new MyRunnable() );
+                        createHRMData.start();
+                        break;
+
+                    // out[4] : 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭, �씠 硫붿떆吏� �쟾�넚�썑 0x82 硫붿떆吏� 湲곕떎�젮�빞 �븿
+                    case 2:
+                        // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+                        out = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+                        break;
+
+                    default:
+                        // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+                        out = new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF};
+                        break;
+                }
+
+            }
+
+            else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x01) {  // �떎�떆媛� �옄猷� �슂泥��씤 寃쎌슦
+                out = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                createHRMData = new Thread( new MyRunnable() );
+                createHRMData.start();
+            }
+//            else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x02) {  // 痢≪젙醫낅즺 �슂泥�
+//                createHRMData.interrupt();
+//                out = new byte[0];
+//            }
+            else if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x03) {  // ���옣 �옄猷� �슂泥��씤 寃쎌슦
+                out = new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
+
+                sendSessionCount();
+            }
+
+            else if ((in[1] &amp; 0xff) == 0x84) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦
+                out = new byte[]{(byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF}; // OK
+
+                sendSessionInfo((int)(in[3] &amp; 0xff));
+            }
+
+            else if ((in[1] &amp; 0xff) == 0x15) {                           // �꽭�뀡�뜲�씠�� �슂泥��씤 寃쎌슦
+                out = new byte[]{(byte) 0x80, (byte) 0x85, (byte) 0x01, (byte) 0x00, (byte) 0xEF}; // OK
+
+                sendSessionInfo((int)(in[3] &amp; 0xff));
+            }
+
+            else {
+                out = new byte[]{(byte) 0x80, (byte) 0x10, (byte) 0x08, (byte) 0x0F, (byte) 0x05,
+                        (byte) 0x13, (byte) 0x11, (byte) 0x0B, (byte) 0x2D, (byte) 0x01, (byte) 0x00, (byte) 0xEF};
+            }
+        }
+        else {
+            out = new byte[0];
+        }
+        return out;
+    }
+*/
+    private void sendSessionCount() {
+<span class="nc" id="L596">        Message reply_msg = Message.obtain();</span>
+<span class="nc" id="L597">        reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L598">        reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L599">        reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x12, (byte) 0x01, (byte) 0x05, (byte) 0xEF};</span>
+<span class="nc" id="L600">        app_handler.sendMessageDelayed(reply_msg, 5000);</span>
+<span class="nc" id="L601">    }</span>
+
+    private void sendSessionInfo(int sessionNumber) {
+
+<span class="nc" id="L605">        int count = 100;</span>
+<span class="nc" id="L606">        Calendar now = Calendar.getInstance();</span>
+<span class="nc" id="L607">        int year = now.get(Calendar.YEAR) - 2000;</span>
+<span class="nc" id="L608">        int month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L609">        int day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L610">        int hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L611">        int min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L612">        int sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L614">        Message reply_msg = Message.obtain();</span>
+<span class="nc" id="L615">        reply_msg.what = PortingLayer.WRITE_CHARACTERISTIC_REPLY;</span>
+<span class="nc" id="L616">        reply_msg.arg1 = PortingLayer.HRM_READ;</span>
+<span class="nc" id="L617">        reply_msg.obj = new byte[]{(byte) 0x80, (byte) 0x14, (byte) 0x0B, (byte) sessionNumber,</span>
+                        (byte) 0x00, (byte) count, (byte) 0x01, (byte) year, (byte) month, (byte) day,
+                        (byte) hour, (byte) min, (byte) sec, (byte) 0x00,
+                        (byte) 0xEF};
+<span class="nc" id="L621">        app_handler.sendMessageDelayed(reply_msg, 5000);</span>
+<span class="nc" id="L622">    }</span>
+
+    public Handler getHandler() {
+<span class="fc bfc" id="L625" title="All 2 branches covered.">        while ( handler == null )</span>
+<span class="fc" id="L626">            ;</span>
+
+<span class="fc" id="L628">        return handler;</span>
+    }
+}
+
+<span class="fc" id="L632">class TimedContinuation {</span>
+    int msec;
+    Runnable continuation;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

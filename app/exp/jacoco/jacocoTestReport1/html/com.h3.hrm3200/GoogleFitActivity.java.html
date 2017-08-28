@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>GoogleFitActivity.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">GoogleFitActivity.java</span></div><h1>GoogleFitActivity.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.os.AsyncTask;
+import android.support.v7.app.ActionBarActivity;
+import android.os.Bundle;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.ScrollView;
+import android.widget.TextView;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.Scopes;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.fitness.Fitness;
+import com.google.android.gms.fitness.data.DataPoint;
+import com.google.android.gms.fitness.data.DataSet;
+import com.google.android.gms.fitness.data.DataType;
+import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.data.Session;
+import com.google.android.gms.fitness.request.SessionReadRequest;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+
+<span class="nc" id="L37">public class GoogleFitActivity extends Activity {</span>
+
+    private final static String TAG = &quot;GoogleFitActivity&quot;;
+    private TextView textViewGF;
+
+<span class="nc" id="L42">    private boolean authInProgress = false;</span>
+    private static final String AUTH_PENDING = &quot;auth_state_pending&quot;;
+
+    private static final int REQUEST_OAUTH = 1001;
+    private static final String DATE_FORMAT = &quot;yyyy.MM.dd HH:mm:ss&quot;;
+
+<span class="nc" id="L48">    private GoogleApiClient mClient = null;</span>
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L52">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L53">        setContentView(R.layout.activity_google_fit);</span>
+
+<span class="nc" id="L55">        getActionBar().setHomeButtonEnabled(true);</span>
+<span class="nc" id="L56">        getActionBar().setDisplayShowTitleEnabled(false);</span>
+
+<span class="nc" id="L58">        textViewGF = (TextView)findViewById(R.id.textViewGF);</span>
+
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (savedInstanceState != null) {</span>
+<span class="nc" id="L61">            authInProgress = savedInstanceState.getBoolean(AUTH_PENDING);</span>
+        }
+
+<span class="nc" id="L64">        buildFitnessClient();</span>
+<span class="nc" id="L65">    }</span>
+
+    @Override
+    protected void onPause() {
+<span class="nc" id="L69">        super.onPause();</span>
+<span class="nc" id="L70">        textViewGF.setText(&quot;&quot;);</span>
+<span class="nc" id="L71">    }</span>
+
+    @Override
+    protected void onStop() {
+<span class="nc" id="L75">        super.onStop();</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (mClient.isConnected()) {</span>
+<span class="nc" id="L77">            mClient.disconnect();</span>
+        }
+<span class="nc" id="L79">    }</span>
+
+    @Override
+    protected void onStart() {
+<span class="nc" id="L83">        super.onStart();</span>
+<span class="nc" id="L84">        mClient.connect();</span>
+<span class="nc" id="L85">    }</span>
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (requestCode == REQUEST_OAUTH) {</span>
+<span class="nc" id="L90">            authInProgress = false;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (resultCode == RESULT_OK) {</span>
+                // Make sure the app is not already connected or attempting to connect
+<span class="nc bnc" id="L93" title="All 4 branches missed.">                if (!mClient.isConnecting() &amp;&amp; !mClient.isConnected()) {</span>
+<span class="nc" id="L94">                    mClient.connect();</span>
+                }
+            }
+        }
+<span class="nc" id="L98">    }</span>
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+<span class="nc" id="L102">        super.onSaveInstanceState(outState);</span>
+<span class="nc" id="L103">        outState.putBoolean(AUTH_PENDING, authInProgress);</span>
+<span class="nc" id="L104">    }</span>
+
+    private void buildFitnessClient() {
+        // Create the Google API Client
+<span class="nc" id="L108">        mClient = new GoogleApiClient.Builder(this)</span>
+<span class="nc" id="L109">                .addApi(Fitness.HISTORY_API)</span>
+<span class="nc" id="L110">                .addApi(Fitness.SESSIONS_API)</span>
+<span class="nc" id="L111">                .addScope(new Scope(Scopes.FITNESS_LOCATION_READ_WRITE))</span>
+<span class="nc" id="L112">                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))</span>
+<span class="nc" id="L113">                .addScope(new Scope(Scopes.FITNESS_BODY_READ_WRITE))</span>
+<span class="nc" id="L114">                .addConnectionCallbacks(</span>
+<span class="nc" id="L115">                        new GoogleApiClient.ConnectionCallbacks() {</span>
+                            @Override
+                            public void onConnected(Bundle bundle) {
+<span class="nc" id="L118">                                Log.i(TAG, &quot;Connected!!!&quot;);</span>
+                                // Now you can make calls to the Fitness APIs.  What to do?
+                                // Play with some sessions!!
+<span class="nc" id="L121">                                new VerifySessionTask().execute();</span>
+<span class="nc" id="L122">                            }</span>
+
+                            @Override
+                            public void onConnectionSuspended(int i) {
+                                // If your connection to the sensor gets lost at some point,
+                                // you'll be able to determine the reason and react to it here.
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                                if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {</span>
+<span class="nc" id="L129">                                    Log.i(TAG, &quot;Connection lost.  Cause: Network Lost.&quot;);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                                } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {</span>
+<span class="nc" id="L131">                                    Log.i(TAG, &quot;Connection lost.  Reason: Service Disconnected&quot;);</span>
+                                }
+<span class="nc" id="L133">                            }</span>
+                        }
+                )
+<span class="nc" id="L136">                .addOnConnectionFailedListener(</span>
+<span class="nc" id="L137">                        new GoogleApiClient.OnConnectionFailedListener() {</span>
+                            // Called whenever the API client fails to connect.
+                            @Override
+                            public void onConnectionFailed(ConnectionResult result) {
+<span class="nc" id="L141">                                Log.i(TAG, &quot;Connection failed. Cause: &quot; + result.toString());</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">                                if (!result.hasResolution()) {</span>
+                                    // Show the localized error dialog
+<span class="nc" id="L144">                                    GooglePlayServicesUtil.getErrorDialog(result.getErrorCode(),</span>
+<span class="nc" id="L145">                                            GoogleFitActivity.this, 0).show();</span>
+<span class="nc" id="L146">                                    return;</span>
+                                }
+                                // The failure has a resolution. Resolve it.
+                                // Called typically when the app is not yet authorized, and an
+                                // authorization dialog is displayed to the user.
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                                if (!authInProgress) {</span>
+                                    try {
+<span class="nc" id="L153">                                        Log.i(TAG, &quot;Attempting to resolve failed connection&quot;);</span>
+<span class="nc" id="L154">                                        authInProgress = true;</span>
+<span class="nc" id="L155">                                        result.startResolutionForResult(GoogleFitActivity.this,</span>
+                                                REQUEST_OAUTH);
+<span class="nc" id="L157">                                    } catch (IntentSender.SendIntentException e) {</span>
+<span class="nc" id="L158">                                        Log.e(TAG, &quot;Exception while starting resolution activity &quot; + e.toString());</span>
+<span class="nc" id="L159">                                    }</span>
+                                }
+<span class="nc" id="L161">                            }</span>
+                        }
+                )
+<span class="nc" id="L164">                .build();</span>
+<span class="nc" id="L165">    }</span>
+
+<span class="nc" id="L167">    private class VerifySessionTask extends AsyncTask&lt;Void, Void, Void&gt; {</span>
+        protected Void doInBackground(Void... params) {
+<span class="nc" id="L169">            SessionReadRequest readRequest = readHRMFitnessSession();</span>
+            com.google.android.gms.fitness.result.SessionReadResult
+<span class="nc" id="L171">                    sessionReadResult =</span>
+<span class="nc" id="L172">                    Fitness.SessionsApi.readSession(mClient, readRequest)</span>
+<span class="nc" id="L173">                            .await(1, TimeUnit.MINUTES);</span>
+
+            // Get a list of the sessions that match the criteria to check the result.
+<span class="nc" id="L176">            Log.i(TAG, &quot;Session read was successful. Number of returned sessions is: &quot;</span>
+<span class="nc" id="L177">                    + sessionReadResult.getSessions().size());</span>
+<span class="nc" id="L178">            appendToTextview(&quot;Session read was successful. Number of returned sessions is: &quot;</span>
+<span class="nc" id="L179">                    + sessionReadResult.getSessions().size());</span>
+
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            for (Session session : sessionReadResult.getSessions()) {</span>
+                // Process the session
+<span class="nc" id="L183">                dumpSession(session);</span>
+
+                // Process the data sets for this session
+<span class="nc" id="L186">                List&lt;DataSet&gt; dataSets = sessionReadResult.getDataSet(session);</span>
+<span class="nc bnc" id="L187" title="All 2 branches missed.">                for (DataSet dataSet : dataSets) {</span>
+<span class="nc" id="L188">                    dumpDataSet(dataSet);</span>
+<span class="nc" id="L189">                }</span>
+<span class="nc" id="L190">            }</span>
+            // [END read_session]
+
+<span class="nc" id="L193">            return null;</span>
+        }
+    }
+
+
+    private SessionReadRequest readHRMFitnessSession() {
+<span class="nc" id="L199">        Log.i(TAG, &quot;Reading History API results for session: &quot; + &quot;HRM3200&quot;);</span>
+        // [START build_read_session_request]
+        // Set a start and end time for our query, using a start time of 1 week before this moment.
+<span class="nc" id="L202">        Calendar cal = Calendar.getInstance();</span>
+<span class="nc" id="L203">        Date now = new Date();</span>
+<span class="nc" id="L204">        cal.setTime(now);</span>
+<span class="nc" id="L205">        long endTime = cal.getTimeInMillis();</span>
+<span class="nc" id="L206">        cal.add(Calendar.WEEK_OF_YEAR, -3);</span>
+<span class="nc" id="L207">        long startTime = cal.getTimeInMillis();</span>
+
+        // Build a session read request
+<span class="nc" id="L210">        SessionReadRequest readRequest = new SessionReadRequest.Builder()</span>
+//                .readSessionsFromAllApps()
+<span class="nc" id="L212">                .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)</span>
+<span class="nc" id="L213">                .read(DataType.AGGREGATE_STEP_COUNT_DELTA)</span>
+<span class="nc" id="L214">                .read(DataType.AGGREGATE_DISTANCE_DELTA)</span>
+<span class="nc" id="L215">                .read(DataType.AGGREGATE_CALORIES_EXPENDED)</span>
+<span class="nc" id="L216">                .read(DataType.TYPE_ACTIVITY_SEGMENT)</span>
+<span class="nc" id="L217">                .read(DataType.TYPE_HEART_RATE_BPM)</span>
+<span class="nc" id="L218">                .build();</span>
+        // [END build_read_session_request]
+
+<span class="nc" id="L221">        return readRequest;</span>
+    }
+
+    private void dumpDataSet(DataSet dataSet) {
+<span class="nc" id="L225">        Log.i(TAG, &quot;Data returned for Data type: &quot; + dataSet.getDataType().getName());</span>
+<span class="nc" id="L226">        appendToTextview(&quot;Data returned for Data type: &quot; + dataSet.getDataType().getName());</span>
+
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        for (DataPoint dp : dataSet.getDataPoints()) {</span>
+<span class="nc" id="L229">            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);</span>
+<span class="nc" id="L230">            appendToTextview(&quot;Data point:&quot;);</span>
+<span class="nc" id="L231">            appendToTextview(&quot;\tType: &quot; + dp.getDataType().getName());</span>
+<span class="nc" id="L232">            appendToTextview(&quot;\tStart: &quot; + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));</span>
+<span class="nc" id="L233">            appendToTextview(&quot;\tEnd: &quot; + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            for(Field field : dp.getDataType().getFields()) {</span>
+<span class="nc" id="L235">                appendToTextview(&quot;\tField: &quot; + field.getName() + &quot; Value: &quot; + dp.getValue(field));</span>
+<span class="nc" id="L236">            }</span>
+//            Log.i(TAG, &quot;Data point:&quot;);
+//            Log.i(TAG, &quot;\tType: &quot; + dp.getDataType().getName());
+//            Log.i(TAG, &quot;\tStart: &quot; + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
+//            Log.i(TAG, &quot;\tEnd: &quot; + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
+//            for(Field field : dp.getDataType().getFields()) {
+//                Log.i(TAG, &quot;\tField: &quot; + field.getName() +
+//                        &quot; Value: &quot; + dp.getValue(field));
+//            }
+<span class="nc" id="L245">        }</span>
+<span class="nc" id="L246">    }</span>
+
+    private void dumpSession(Session session) {
+<span class="nc" id="L249">        SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);</span>
+<span class="nc" id="L250">        appendToTextview(&quot;Data returned for Session: &quot; + session.getName()</span>
+<span class="nc" id="L251">                + &quot;\n\tDescription: &quot; + session.getDescription()</span>
+<span class="nc" id="L252">                + &quot;\n\tStart: &quot; + dateFormat.format(session.getStartTime(TimeUnit.MILLISECONDS))</span>
+<span class="nc" id="L253">                + &quot;\n\tEnd: &quot; + dateFormat.format(session.getEndTime(TimeUnit.MILLISECONDS)));</span>
+//        Log.i(TAG, &quot;Data returned for Session: &quot; + session.getName()
+//                + &quot;\n\tDescription: &quot; + session.getDescription()
+//                + &quot;\n\tStart: &quot; + dateFormat.format(session.getStartTime(TimeUnit.MILLISECONDS))
+//                + &quot;\n\tEnd: &quot; + dateFormat.format(session.getEndTime(TimeUnit.MILLISECONDS)));
+<span class="nc" id="L258">    }</span>
+
+    public void appendToTextview(String s) {
+<span class="nc" id="L261">        final String _s = s;</span>
+<span class="nc" id="L262">        this.runOnUiThread( (new Thread(new Runnable() {</span>
+            @Override
+            public void run() {
+<span class="nc" id="L265">                textViewGF.append(&quot;\n&quot; + _s);</span>
+<span class="nc" id="L266">            }</span>
+        })));
+<span class="nc" id="L268">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+<span class="nc" id="L273">        getMenuInflater().inflate(R.menu.menu_google_fit, menu);</span>
+<span class="nc" id="L274">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+<span class="nc" id="L282">        int id = item.getItemId();</span>
+
+        //noinspection SimplifiableIfStatement
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        if (id == R.id.action_settings) {</span>
+<span class="nc" id="L286">            return true;</span>
+        }
+<span class="nc bnc" id="L288" title="All 2 branches missed.">        else if (id == android.R.id.home)</span>
+        {
+<span class="nc" id="L290">            Intent intent = new Intent(this, MainActivity.class);</span>
+<span class="nc" id="L291">            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);</span>
+<span class="nc" id="L292">            startActivity(intent);</span>
+<span class="nc" id="L293">            return true;</span>
+        }
+<span class="nc" id="L295">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L300" title="All 2 branches missed.">        if (event.getAction() == KeyEvent.ACTION_DOWN) {</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">            switch (keyCode) {</span>
+                case KeyEvent.KEYCODE_BACK:
+<span class="nc" id="L303">                    new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)</span>
+<span class="nc" id="L304">                            .setTitle(&quot;Quit&quot;)</span>
+<span class="nc" id="L305">                            .setMessage(&quot;Do you want to quit?&quot;)</span>
+<span class="nc" id="L306">                            .setPositiveButton(&quot;Yes&quot;, new DialogInterface.OnClickListener() {</span>
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L309">                                    Intent intent = new Intent();</span>
+<span class="nc" id="L310">                                    intent.setAction(MainActivity.ACTION_FINISH_ACTIVITY);</span>
+<span class="nc" id="L311">                                    setResult(RESULT_OK, intent);</span>
+<span class="nc" id="L312">                                    finish();</span>
+//                                    finishAffinity();
+<span class="nc" id="L314">                                }</span>
+<span class="nc" id="L315">                            }).setNegativeButton( &quot;No&quot;, null ).show();</span>
+<span class="nc" id="L316">                    return true;</span>
+            }
+        }
+<span class="nc" id="L319">        return super.onKeyDown(keyCode, event);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

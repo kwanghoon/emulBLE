@@ -1,0 +1,660 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AutoHRM3200.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul</a> &gt; <span class="el_source">AutoHRM3200.java</span></div><h1>AutoHRM3200.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul;
+
+import com.h3.hrm3200.emul.model.AppTime_0x80_0x81_State;
+import com.h3.hrm3200.emul.model.CANCEL_DownloadStoredData_0x82_0x01_0x83;
+import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
+import com.h3.hrm3200.emul.model.DisconnectByApp;
+import com.h3.hrm3200.emul.model.InitializeData;
+import com.h3.hrm3200.emul.model.OK_0x11_State;
+import com.h3.hrm3200.emul.model.OK_0x15_State;
+import com.h3.hrm3200.emul.model.REQ_Disconnection_0x82_0x02_State;
+import com.h3.hrm3200.emul.model.REQ_DownloadStoredData_0x82_0x03_0x83;
+import com.h3.hrm3200.emul.model.REQ_RealtimeData_0x82_0x01;
+import com.h3.hrm3200.emul.model.REQ_SessionInfo_0x84_0x85;
+import com.h3.hrm3200.emul.model.RealtimeDataReply;
+import com.h3.hrm3200.emul.model.SendEndOfSession;
+import com.h3.hrm3200.emul.model.SendSessionCount;
+import com.h3.hrm3200.emul.model.SendSessionInfo;
+import com.h3.hrm3200.emul.model.ServiceDiscoveryHRM3200;
+import com.h3.hrm3200.emul.model.SharedSessionInfo;
+import com.h3.hrm3200.emul.model.StoredDataReply;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp;
+import com.h3.hrm3200.emul.scenario.Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice;
+
+import java.util.ArrayList;
+import java.util.UUID;
+
+import emul.bluetooth.AutoBluetoothLE;
+import emul.bluetooth.model.BLEConnectState;
+import emul.bluetooth.model.BLEDisconnectState;
+import emul.bluetooth.model.BLEScanState;
+import emul.bluetooth.model.BLEServiceDiscoverState;
+import emul.bluetooth.model.BLEState;
+import emul.bluetooth.model.BLEStateException;
+import emul.bluetooth.model.util.BasicPathGen;
+import emul.bluetooth.model.util.BasicPaths;
+import emul.bluetooth.model.util.Path;
+import emul.bluetooth.model.util.Vertex;
+import emul.bluetooth.model.util.VertexBLEState;
+import mocking.android.bluetooth.BLEService;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.BluetoothProfile;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEDisconnect;
+import mocking.android.bluetooth.IBLEDiscoverService;
+
+/**
+ * Created by khChoi on 2017-08-07.
+ *
+ * [�슂援ъ궗�빆]
+ *  - �긽�깭 �떎�씠�뼱洹몃옩�� �젙�긽�쟻�씤 �긽�솴留뚯쓣 湲곗닠�븳�떎.
+ *  - �빋�뿉�꽌 �뵒諛붿씠�뒪濡� �옒紐삳맂 紐낅졊�뼱瑜� �궡由щ뒗 寃쎌슦�뒗 100% 踰꾧렇�씠怨� �닔�젙�빐�빞 �븿
+ *  - �뵒諛붿씠�뒪�뿉�꽌 �빋�쑝濡� �옒紐삳맂 紐낅졊�뼱瑜� �삱由ш굅�굹 �듅�엳 鍮꾩젙�긽 �뿰寃고빐�젣�릺硫� �빋�� �쟻�젅�엳 ���쓳�빐�빞 �븿
+ *
+ * [Discussion]
+ *  - vtx_State1_0x80_0x81_Abnormal_0x01_0x00�뒗 �뵒諛붿씠�뒪媛� �뜲�씠�꽣瑜� �옒紐� �삱�젮以� 寃쎌슦
+ *    �셿�꽦�맂 �뵒諛붿씠�뒪�쓽 寃쎌슦 �씠�윴 �긽�솴�씠 諛쒖깮�븯吏� �븡寃좎�留� 媛쒕컻 以묒씠嫄곕굹 �뵒諛붿씠�뒪 �럩�썾�뼱 �뾽洹몃젅�씠瑜�
+ *    �븯�뒗 寃쎌슦 �봽濡쒗넗肄� 誘몄뒪留ㅼ튂媛� 諛쒖깮�븷 �닔 �엳�떎.
+ *
+ *    �떎�젣 �뵒諛붿씠�뒪瑜� 媛�吏�怨� �뀒�뒪�듃�븯湲� �뼱�젮�슦硫� �뿉裕щ젅�씠�꽣瑜� �넻�빐�꽌 �돺耳� �뀒�뒪�듃�븷 �닔 �엳�뿀�떎.
+ */
+
+public class AutoHRM3200 extends AutoBluetoothLE {
+    ArrayList&lt;BLEState&gt; path;
+    ArrayList&lt;Vertex&gt; vertices;
+
+    int indexOfBasicPath;
+    BasicPaths basicPaths;
+
+<span class="fc" id="L73">    public AutoHRM3200() {</span>
+        if(false) {
+            path = new ArrayList&lt;BLEState&gt;();
+
+            new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByApp(this, path);
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeData_DisconnectionByDevice(this, path);
+
+            // BUG : �뵒諛붿씠�뒪�뿉 ���옣�맂 �뜲�씠�꽣瑜� �떎�슫諛쏆� �븡�뒗 �꽑�깮�쓣 �븷 �븣 sessionData 媛앹껜瑜� 珥덇린�솕�븯吏� �븡�븘 NullReferenceException 諛쒖깮
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByApp(this, path);
+
+            // BUG : �뵒諛붿씠�뒪�뿉 ���옣�맂 �뜲�씠�꽣瑜� �떎�슫諛쏆� �븡�뒗 �꽑�깮�쓣 �븷 �븣 sessionData 媛앹껜瑜� 珥덇린�솕�븯吏� �븡�븘 NullReferenceException 諛쒖깮
+            // new Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice(this, path);
+
+            // BUG??? : �뵒諛붿씠�뒪�뿉 ���옣�맂 �뜲�씠�꽣瑜� 紐⑤몢 �떎�슫諛쏆� �떎�쓬 �빋�뿉�꽌 Disconnect 紐낅졊�쓣 �궡由щ㈃
+            //          �뵒諛붿씠�뒪�뿉�꽌 Disconnect �셿猷� �떊�샇瑜� 諛쏆� �븡怨� 醫낅즺
+            // new Scenario_BLEScan_Connect_Discovery_DownloadData_DisconnectionByDevice(this, path);
+
+            // Initialize a path for testing
+            this.setPath(path);
+            this.setIndex(0);
+        }
+        else {
+<span class="fc" id="L95">            _AutoHRM3200(&quot;&quot;);</span>
+
+            // Do test by changing the following index from 0 to (No of basic paths-1)
+<span class="fc" id="L98">            indexOfBasicPath = 10;</span>
+
+            // Build a path from the indexed basic path
+<span class="fc" id="L101">            path = new ArrayList&lt;BLEState&gt;();</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">            for(Vertex v : basicPaths.get(indexOfBasicPath).get()) {</span>
+<span class="fc" id="L103">                VertexBLEState vtx = (VertexBLEState)v;</span>
+<span class="fc" id="L104">                path.add(vtx.get());</span>
+<span class="fc" id="L105">            }</span>
+
+            // Initialize a path for testing
+<span class="fc" id="L108">            this.setPath(path);</span>
+<span class="fc" id="L109">            this.setIndex(0);</span>
+        }
+<span class="fc" id="L111">    }</span>
+
+    public void _AutoHRM3200(String str) {
+<span class="fc" id="L114">        buildGraph();</span>
+
+<span class="fc" id="L116">        BasicPathGen.print(vertices);</span>
+<span class="fc" id="L117">        Vertex start = BasicPathGen.findInitialState(vertices);</span>
+<span class="fc" id="L118">        Path path = new Path();</span>
+<span class="fc" id="L119">        basicPaths = new BasicPaths();</span>
+
+<span class="fc" id="L121">        int bound = BasicPathGen.numOfEdges(vertices);</span>
+
+<span class="fc" id="L123">        BasicPathGen.DFS(start, path, bound, basicPaths );</span>
+
+<span class="fc" id="L125">        basicPaths.print();</span>
+<span class="fc" id="L126">    }</span>
+
+    private void buildGraph() {
+<span class="fc" id="L129">        vertices = new ArrayList&lt;Vertex&gt;();</span>
+
+        // VERTEX:
+<span class="fc" id="L132">        VertexBLEState vtx_BLEScan =</span>
+                new VertexBLEState(&quot;BLEScan&quot;, Vertex.INITIAL_STATE, new BLEScanState(&quot;00:11:22:AA:BB:CC&quot;, &quot;HRM3200&quot;));
+
+<span class="fc" id="L135">        vertices.add(vtx_BLEScan);</span>
+
+        // VERTEX:
+<span class="fc" id="L138">        VertexBLEState vtx_ConnectSuccess =</span>
+                new VertexBLEState(&quot;BLEConnect Success&quot;,
+                        new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED));
+<span class="fc" id="L141">        VertexBLEState vtx_ConnectFail =</span>
+                new VertexBLEState(&quot;BLEConnect Failure&quot;, Vertex.FINAL_STATE,
+                        new BLEConnectState(BluetoothGatt.GATT_FAILURE, BluetoothProfile.STATE_CONNECTED));
+
+<span class="fc" id="L145">        vertices.add(vtx_ConnectSuccess);</span>
+<span class="fc" id="L146">        vertices.add(vtx_ConnectFail);</span>
+
+        // EDGE: vtx_BLEScan ---&gt; vtx_Connect
+<span class="fc" id="L149">        vtx_BLEScan.getAdjacencyList().add(vtx_ConnectSuccess);</span>
+<span class="fc" id="L150">        vtx_BLEScan.getAdjacencyList().add(vtx_ConnectFail);</span>
+
+        // TODO: vtx_ConnectFail is a final state?
+
+        // Service Discovery
+        //  1. GATT_SUCCESS,  HRM3200 Service List
+        //  2. GATT_FAILURE,  Empty Service List
+        //  3. and many more ...
+
+        // VERTEX:
+<span class="fc" id="L160">        VertexBLEState vtx_DiscoverServiceSuccess =</span>
+                new VertexBLEState(&quot;ServiceDiscovery Success&quot;,
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_SUCCESS,
+<span class="fc" id="L163">                                ServiceDiscoveryHRM3200.bleServiceList()));</span>
+
+<span class="fc" id="L165">        vertices.add(vtx_DiscoverServiceSuccess);</span>
+
+        // EDGE: vtx_Connect ---&gt; vtx_DiscoverService
+<span class="fc" id="L168">        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverServiceSuccess);</span>
+
+        // VERTEX :
+<span class="fc" id="L171">        VertexBLEState vtx_DiscoverServiceFailure =</span>
+                new VertexBLEState(&quot;ServiceDiscovery Failure&quot;,
+                        new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,
+                                new ArrayList&lt;BLEService&gt;()));
+
+<span class="fc" id="L176">        vertices.add(vtx_DiscoverServiceFailure);</span>
+
+        // EDGE :  vtx_ConnectSuccess ---&gt; vtx_DiscoverServiceFailure
+<span class="fc" id="L179">        vtx_ConnectSuccess.getAdjacencyList().add(vtx_DiscoverServiceFailure);</span>
+
+        // VERTEX:
+<span class="fc" id="L182">        VertexBLEState vtx_State0 = new VertexBLEState(&quot;State0&quot;, new DeviceTimeReplyState(this));</span>
+
+<span class="fc" id="L184">        vertices.add(vtx_State0);</span>
+
+        // EDGE: vtx_DiscoverService ---&gt; vtx_State0
+<span class="fc" id="L187">        vtx_DiscoverServiceSuccess.getAdjacencyList().add(vtx_State0);</span>
+
+        // VERTEX:
+<span class="fc" id="L190">        VertexBLEState vtx_State1_0x11 = new VertexBLEState(&quot;State1 0x11&quot;, new OK_0x11_State(this));</span>
+
+<span class="fc" id="L192">        vertices.add(vtx_State1_0x11);</span>
+
+        // EDGE: vtx_State0 ---&gt; vtx_State1_0x11
+<span class="fc" id="L195">        vtx_State0.getAdjacencyList().add(vtx_State1_0x11);</span>
+
+        // VERTEX:
+        // 1) 0x01, 0x01
+        // 2) 0x00, 0x01
+        // 3) 0x00, 0x00
+        // 4) Abnormal 0x10, 0x00
+<span class="fc" id="L202">        VertexBLEState vtx_State1_0x80_0x81_0x01_0x01 =</span>
+                new VertexBLEState(&quot;State1 0x80 0x01_0x01&quot;, new AppTime_0x80_0x81_State(this, 0x01, 0x01));
+<span class="fc" id="L204">        VertexBLEState vtx_State1_0x80_0x81_0x00_0x01 =</span>
+                new VertexBLEState(&quot;State1 0x80 0x00_0x01&quot;, new AppTime_0x80_0x81_State(this, 0x00, 0x01));
+<span class="fc" id="L206">        VertexBLEState vtx_State1_0x80_0x81_0x00_0x00 =</span>
+                new VertexBLEState(&quot;State1 0x80 0x00_0x00&quot;, new AppTime_0x80_0x81_State(this, 0x00, 0x00));
+
+<span class="fc" id="L209">        VertexBLEState vtx_State1_0x80_0x81_Abnormal_0x01_0x00 =</span>
+                new VertexBLEState(&quot;State1 0x80 0x00_0x00&quot;, new AppTime_0x80_0x81_State(this, 0x01, 0x00));
+
+<span class="fc" id="L212">        vertices.add(vtx_State1_0x80_0x81_0x01_0x01);</span>
+<span class="fc" id="L213">        vertices.add(vtx_State1_0x80_0x81_0x00_0x01);</span>
+<span class="fc" id="L214">        vertices.add(vtx_State1_0x80_0x81_0x00_0x00);</span>
+
+<span class="fc" id="L216">        vertices.add(vtx_State1_0x80_0x81_Abnormal_0x01_0x00);</span>
+
+        // EDGE: vtx_State1_0x11 ---&gt; vtxState1_0x80_0x01_0x01   (Measure data in realtime)
+        // EDGE: vtx_State1_0x11 ---&gt; vtxState1_0x80_0x00_0x01   (
+        // EDGE: vtx_State1_0x11 ---&gt; vtxState1_0x80_0x00_0x00
+        // EDGE: vtx_State1_0x11 ---&gt; vtx_State1_0x80_0x81_Abnormal_0x01_0x00
+<span class="fc" id="L222">        vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x01_0x01);</span>
+<span class="fc" id="L223">        vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x00_0x01);</span>
+<span class="fc" id="L224">        vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_0x00_0x00);</span>
+
+<span class="fc" id="L226">        vtx_State1_0x11.getAdjacencyList().add(vtx_State1_0x80_0x81_Abnormal_0x01_0x00);</span>
+
+        // 1. Realtime Data Reply
+        // TODO: SetNotification 紐낅졊�뼱瑜� �솗�씤�븯�뒗 �긽�깭 異붽� �븘�슂
+
+        // VERTEX:
+<span class="fc" id="L232">        VertexBLEState vtx_State5_0x1A_1 = new VertexBLEState(&quot;State5 1&quot;, new RealtimeDataReply(this));</span>
+<span class="fc" id="L233">        VertexBLEState vtx_State5_0x1A_2 = new VertexBLEState(&quot;State5 2&quot;, new RealtimeDataReply(this));</span>
+<span class="fc" id="L234">        VertexBLEState vtx_State5_0x1A_3 = new VertexBLEState(&quot;State5 3&quot;, new RealtimeDataReply(this));</span>
+<span class="fc" id="L235">        VertexBLEState vtx_State5_0x1A_4 = new VertexBLEState(&quot;State5 4&quot;, new RealtimeDataReply(this));</span>
+<span class="fc" id="L236">        VertexBLEState vtx_State5_0x1A_5 = new VertexBLEState(&quot;State5 5&quot;, new RealtimeDataReply(this));</span>
+
+<span class="fc" id="L238">        vertices.add(vtx_State5_0x1A_1);</span>
+<span class="fc" id="L239">        vertices.add(vtx_State5_0x1A_2);</span>
+<span class="fc" id="L240">        vertices.add(vtx_State5_0x1A_3);</span>
+<span class="fc" id="L241">        vertices.add(vtx_State5_0x1A_4);</span>
+<span class="fc" id="L242">        vertices.add(vtx_State5_0x1A_5);</span>
+
+        // EDGE :
+<span class="fc" id="L245">        vtx_State1_0x80_0x81_0x01_0x01.getAdjacencyList().add(vtx_State5_0x1A_1);  // 1st data after 0x81 0x01 0x01</span>
+<span class="fc" id="L246">        vtx_State1_0x80_0x81_0x00_0x01.getAdjacencyList().add(vtx_State5_0x1A_1);  // 1st data after 0x81 0x00 0x01</span>
+
+<span class="fc" id="L248">        vtx_State5_0x1A_1.getAdjacencyList().add(vtx_State5_0x1A_2);        // 2nd data</span>
+<span class="fc" id="L249">        vtx_State5_0x1A_2.getAdjacencyList().add(vtx_State5_0x1A_3);        // 3rd data</span>
+<span class="fc" id="L250">        vtx_State5_0x1A_3.getAdjacencyList().add(vtx_State5_0x1A_4);        // 4th data</span>
+<span class="fc" id="L251">        vtx_State5_0x1A_4.getAdjacencyList().add(vtx_State5_0x1A_5);        // 5th data</span>
+
+        // 2. Download Stored Data
+<span class="fc" id="L254">        VertexBLEState vtx_State6_REQ_0x82_0x03_0x83 = new VertexBLEState(&quot;State6 REQ_0x82_0x03_0x83&quot;,</span>
+                new REQ_DownloadStoredData_0x82_0x03_0x83(this));
+
+<span class="fc" id="L257">        vertices.add(vtx_State6_REQ_0x82_0x03_0x83);</span>
+
+        // EDGE : vtx_State1_0x80_0x81_0x00_0x00 ---&gt; vtx_State6_REQ_0x82_0x03_0x83
+<span class="fc" id="L260">        vtx_State1_0x80_0x81_0x00_0x00.getAdjacencyList().add(vtx_State6_REQ_0x82_0x03_0x83);</span>
+
+        // Session count
+<span class="fc" id="L263">        final int session_count = 2;</span>
+
+        // VERTEX :
+<span class="fc" id="L266">        VertexBLEState vtx_State7_SendSessionCount = new VertexBLEState(&quot;State7 Session Count&quot;,</span>
+                new SendSessionCount(this, session_count));
+
+<span class="fc" id="L269">        vertices.add(vtx_State7_SendSessionCount);</span>
+
+        // EDGE : vtx_State6_REQ_0x82_0x03_0x83 ---&gt; vtx_State7_SendSessionCount
+<span class="fc" id="L272">        vtx_State6_REQ_0x82_0x03_0x83.getAdjacencyList().add(vtx_State7_SendSessionCount);</span>
+
+<span class="fc" id="L274">        SharedSessionInfo sharedSessionInfo = new SharedSessionInfo();</span>
+
+        // 1st Session //////////////////////////////////////////////////////////////////////////
+
+        // VERTEX :
+<span class="fc" id="L279">        VertexBLEState vtx_ReqSessionInfo_1 = new VertexBLEState(&quot;State8 Req Session Info 1&quot;,</span>
+                new REQ_SessionInfo_0x84_0x85(this, sharedSessionInfo));
+
+<span class="fc" id="L282">        vertices.add(vtx_ReqSessionInfo_1);</span>
+
+        // EDGE : vtx_State7_SendSessionCount ---&gt; vtx_ReqSessionInfo_1
+<span class="fc" id="L285">        vtx_State7_SendSessionCount.getAdjacencyList().add(vtx_ReqSessionInfo_1);</span>
+
+<span class="fc" id="L287">        sharedSessionInfo.dataTotalCount = 10;</span>
+<span class="fc" id="L288">        sharedSessionInfo.dataCount = 0; // Moon</span>
+
+        // VERTEX
+<span class="fc" id="L291">        VertexBLEState vtx_SendSessionInfo_1 = new VertexBLEState(&quot;State10 Send Session Info 1&quot;,</span>
+                new SendSessionInfo(this, sharedSessionInfo));
+
+<span class="fc" id="L294">        vertices.add(vtx_SendSessionInfo_1);</span>
+
+        // EDGE : vtx_ReqSessionInfo_1 ---&gt; vtx_SendSessionInfo_1
+<span class="fc" id="L297">        vtx_ReqSessionInfo_1.getAdjacencyList().add(vtx_SendSessionInfo_1);</span>
+
+        // VERTEX :
+<span class="fc" id="L300">        VertexBLEState vtx_OK_0x15_State_1 = new VertexBLEState(&quot;State11 OK 0x15 1&quot;,</span>
+                new OK_0x15_State(this));
+
+<span class="fc" id="L303">        vertices.add(vtx_OK_0x15_State_1);</span>
+
+        // EDGE : vtx_SendSessionInfo_1 ---&gt; vtx_OK_0x15_State_1
+<span class="fc" id="L306">        vtx_SendSessionInfo_1.getAdjacencyList().add(vtx_OK_0x15_State_1);</span>
+
+        // VERTICES as many as dataTotalCount
+<span class="fc" id="L309">        VertexBLEState vtx_StoredDataReply_1_1 = new VertexBLEState(&quot;State12 Stored Data Reply 1 1&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L311">        VertexBLEState vtx_StoredDataReply_1_2 = new VertexBLEState(&quot;State12 Stored Data Reply 1 2&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L313">        VertexBLEState vtx_StoredDataReply_1_3 = new VertexBLEState(&quot;State12 Stored Data Reply 1 3&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L315">        VertexBLEState vtx_StoredDataReply_1_4 = new VertexBLEState(&quot;State12 Stored Data Reply 1 4&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L317">        VertexBLEState vtx_StoredDataReply_1_5 = new VertexBLEState(&quot;State12 Stored Data Reply 1 5&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L319">        VertexBLEState vtx_StoredDataReply_1_6 = new VertexBLEState(&quot;State12 Stored Data Reply 1 6&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L321">        VertexBLEState vtx_StoredDataReply_1_7 = new VertexBLEState(&quot;State12 Stored Data Reply 1 7&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L323">        VertexBLEState vtx_StoredDataReply_1_8 = new VertexBLEState(&quot;State12 Stored Data Reply 1 8&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L325">        VertexBLEState vtx_StoredDataReply_1_9 = new VertexBLEState(&quot;State12 Stored Data Reply 1 9&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L327">        VertexBLEState vtx_StoredDataReply_1_10 = new VertexBLEState(&quot;State12 Stored Data Reply 1 10&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+
+<span class="fc" id="L330">        VertexBLEState vtx_SendEndofSession_1 = new VertexBLEState(&quot;Send End of Session 1&quot;,</span>
+                new SendEndOfSession(this, sharedSessionInfo));
+
+<span class="fc" id="L333">        vertices.add(vtx_StoredDataReply_1_1);</span>
+<span class="fc" id="L334">        vertices.add(vtx_StoredDataReply_1_2);</span>
+<span class="fc" id="L335">        vertices.add(vtx_StoredDataReply_1_3);</span>
+<span class="fc" id="L336">        vertices.add(vtx_StoredDataReply_1_4);</span>
+<span class="fc" id="L337">        vertices.add(vtx_StoredDataReply_1_5);</span>
+<span class="fc" id="L338">        vertices.add(vtx_StoredDataReply_1_6);</span>
+<span class="fc" id="L339">        vertices.add(vtx_StoredDataReply_1_7);</span>
+<span class="fc" id="L340">        vertices.add(vtx_StoredDataReply_1_8);</span>
+<span class="fc" id="L341">        vertices.add(vtx_StoredDataReply_1_9);</span>
+<span class="fc" id="L342">        vertices.add(vtx_StoredDataReply_1_10);</span>
+
+<span class="fc" id="L344">        vertices.add(vtx_SendEndofSession_1);</span>
+
+        // EDGES :
+<span class="fc" id="L347">        vtx_OK_0x15_State_1.getAdjacencyList().add(vtx_StoredDataReply_1_1);</span>
+
+<span class="fc" id="L349">        vtx_StoredDataReply_1_1.getAdjacencyList().add(vtx_StoredDataReply_1_2);</span>
+<span class="fc" id="L350">        vtx_StoredDataReply_1_2.getAdjacencyList().add(vtx_StoredDataReply_1_3);</span>
+<span class="fc" id="L351">        vtx_StoredDataReply_1_3.getAdjacencyList().add(vtx_StoredDataReply_1_4);</span>
+<span class="fc" id="L352">        vtx_StoredDataReply_1_4.getAdjacencyList().add(vtx_StoredDataReply_1_5);</span>
+<span class="fc" id="L353">        vtx_StoredDataReply_1_5.getAdjacencyList().add(vtx_StoredDataReply_1_6);</span>
+<span class="fc" id="L354">        vtx_StoredDataReply_1_6.getAdjacencyList().add(vtx_StoredDataReply_1_7);</span>
+<span class="fc" id="L355">        vtx_StoredDataReply_1_7.getAdjacencyList().add(vtx_StoredDataReply_1_8);</span>
+<span class="fc" id="L356">        vtx_StoredDataReply_1_8.getAdjacencyList().add(vtx_StoredDataReply_1_9);</span>
+<span class="fc" id="L357">        vtx_StoredDataReply_1_9.getAdjacencyList().add(vtx_StoredDataReply_1_10);</span>
+
+<span class="fc" id="L359">        vtx_StoredDataReply_1_10.getAdjacencyList().add(vtx_SendEndofSession_1);</span>
+
+        // 2nd Session //////////////////////////////////////////////////////////////////////////
+
+        // VERTEX :
+<span class="fc" id="L364">        VertexBLEState vtx_ReqSessionInfo_2 = new VertexBLEState(&quot;State8 Req Session Info 2&quot;,</span>
+                new REQ_SessionInfo_0x84_0x85(this, sharedSessionInfo));
+
+<span class="fc" id="L367">        vertices.add(vtx_ReqSessionInfo_2);</span>
+
+        // EDGE : vtx_SendEndofSession_1 ---&gt; vtx_ReqSessionInfo_2
+<span class="fc" id="L370">        vtx_SendEndofSession_1.getAdjacencyList().add(vtx_ReqSessionInfo_2);</span>
+
+<span class="fc" id="L372">        sharedSessionInfo.dataTotalCount = 7;</span>
+<span class="fc" id="L373">        sharedSessionInfo.dataCount = 0; // Moon</span>
+
+        // VERTEX
+<span class="fc" id="L376">        VertexBLEState vtx_SendSessionInfo_2 = new VertexBLEState(&quot;State10 Send Session Info 2&quot;,</span>
+                new SendSessionInfo(this, sharedSessionInfo));
+
+<span class="fc" id="L379">        vertices.add(vtx_SendSessionInfo_2);</span>
+
+        // EDGE : vtx_ReqSessionInfo_2 ---&gt; vtx_SendSessionInfo_2
+<span class="fc" id="L382">        vtx_ReqSessionInfo_2.getAdjacencyList().add(vtx_SendSessionInfo_2);</span>
+
+        // VERTEX :
+<span class="fc" id="L385">        VertexBLEState vtx_OK_0x15_State_2 = new VertexBLEState(&quot;State11 OK 0x15 2&quot;,</span>
+                new OK_0x15_State(this));
+
+<span class="fc" id="L388">        vertices.add(vtx_OK_0x15_State_2);</span>
+
+        // EDGE : vtx_SendSessionInfo_2 ---&gt; vtx_OK_0x15_State_2
+<span class="fc" id="L391">        vtx_SendSessionInfo_2.getAdjacencyList().add(vtx_OK_0x15_State_2);</span>
+
+        // VERTICES as many as dataTotalCount
+<span class="fc" id="L394">        VertexBLEState vtx_StoredDataReply_2_1 = new VertexBLEState(&quot;State12 Stored Data Reply 2 1&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L396">        VertexBLEState vtx_StoredDataReply_2_2 = new VertexBLEState(&quot;State12 Stored Data Reply 2 2&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L398">        VertexBLEState vtx_StoredDataReply_2_3 = new VertexBLEState(&quot;State12 Stored Data Reply 2 3&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L400">        VertexBLEState vtx_StoredDataReply_2_4 = new VertexBLEState(&quot;State12 Stored Data Reply 2 4&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L402">        VertexBLEState vtx_StoredDataReply_2_5 = new VertexBLEState(&quot;State12 Stored Data Reply 2 5&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L404">        VertexBLEState vtx_StoredDataReply_2_6 = new VertexBLEState(&quot;State12 Stored Data Reply 2 6&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+<span class="fc" id="L406">        VertexBLEState vtx_StoredDataReply_2_7 = new VertexBLEState(&quot;State12 Stored Data Reply 2 7&quot;,</span>
+                new StoredDataReply(this, sharedSessionInfo));
+
+<span class="fc" id="L409">        VertexBLEState vtx_SendEndofSession_2 = new VertexBLEState(&quot;Send End of Session 2&quot;,</span>
+                new SendEndOfSession(this, sharedSessionInfo));
+
+<span class="fc" id="L412">        vertices.add(vtx_StoredDataReply_2_1);</span>
+<span class="fc" id="L413">        vertices.add(vtx_StoredDataReply_2_2);</span>
+<span class="fc" id="L414">        vertices.add(vtx_StoredDataReply_2_3);</span>
+<span class="fc" id="L415">        vertices.add(vtx_StoredDataReply_2_4);</span>
+<span class="fc" id="L416">        vertices.add(vtx_StoredDataReply_2_5);</span>
+<span class="fc" id="L417">        vertices.add(vtx_StoredDataReply_2_6);</span>
+<span class="fc" id="L418">        vertices.add(vtx_StoredDataReply_2_7);</span>
+
+<span class="fc" id="L420">        vertices.add(vtx_SendEndofSession_2);</span>
+
+        // EDGES :
+<span class="fc" id="L423">        vtx_OK_0x15_State_2.getAdjacencyList().add(vtx_StoredDataReply_2_1);</span>
+
+<span class="fc" id="L425">        vtx_StoredDataReply_2_1.getAdjacencyList().add(vtx_StoredDataReply_2_2);</span>
+<span class="fc" id="L426">        vtx_StoredDataReply_2_2.getAdjacencyList().add(vtx_StoredDataReply_2_3);</span>
+<span class="fc" id="L427">        vtx_StoredDataReply_2_3.getAdjacencyList().add(vtx_StoredDataReply_2_4);</span>
+<span class="fc" id="L428">        vtx_StoredDataReply_2_4.getAdjacencyList().add(vtx_StoredDataReply_2_5);</span>
+<span class="fc" id="L429">        vtx_StoredDataReply_2_5.getAdjacencyList().add(vtx_StoredDataReply_2_6);</span>
+<span class="fc" id="L430">        vtx_StoredDataReply_2_6.getAdjacencyList().add(vtx_StoredDataReply_2_7);</span>
+
+<span class="fc" id="L432">        vtx_StoredDataReply_2_7.getAdjacencyList().add(vtx_SendEndofSession_2);</span>
+
+        // End of All Sessions
+
+        // 3. Cancel to download stored data and to continue to receive realtime data
+
+        // VERTEX :
+<span class="fc" id="L439">        VertexBLEState vtx_State4_CANCEL_0x82_0x01_0x83 = new VertexBLEState(&quot;State4 CANCEL_0x82_0x01_0x83&quot;,</span>
+                new CANCEL_DownloadStoredData_0x82_0x01_0x83(this));
+
+<span class="fc" id="L442">        vertices.add(vtx_State4_CANCEL_0x82_0x01_0x83);</span>
+
+        // EDGE : vtx_State1_0x80_0x81_0x00_0x00 ---&gt; vtx_State4_CANCEL_0x82_0x01_0x83
+<span class="fc" id="L445">        vtx_State1_0x80_0x81_0x00_0x00.getAdjacencyList().add(vtx_State4_CANCEL_0x82_0x01_0x83);</span>
+
+        // EDGE : vtx_State4_CANCEL_0x82_0x01_0x83 ---&gt; vtx_State5_0x1A
+<span class="fc" id="L448">        vtx_State4_CANCEL_0x82_0x01_0x83.getAdjacencyList().add(vtx_State5_0x1A_1);</span>
+
+        // Disconnection
+        //     by App
+<span class="fc" id="L452">        VertexBLEState vtx_StateReqDisconnect_0x82_0x02 = new VertexBLEState(&quot;REQ_Disconnection 0x82 0x02&quot;,</span>
+                new REQ_Disconnection_0x82_0x02_State(this));
+<span class="fc" id="L454">        VertexBLEState vtx_StateDisconnectByApp = new VertexBLEState(&quot;Disconnection by App&quot;, Vertex.FINAL_STATE,</span>
+                new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED));
+
+<span class="fc" id="L457">        vertices.add(vtx_StateReqDisconnect_0x82_0x02);</span>
+<span class="fc" id="L458">        vertices.add(vtx_StateDisconnectByApp);</span>
+
+        // EDGE : 1) Disconnection by App after measuring data in realtime
+        //           vtx_State5_0x1A_5 ---&gt; vtx_StateReqDisconnect_0x82_0x02
+        //           vtx_StateReqDisconnect_0x82_0x02 ---&gt; vtx_StateDisconnectByApp
+
+<span class="fc" id="L464">        vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);</span>
+<span class="fc" id="L465">        vtx_StateReqDisconnect_0x82_0x02.getAdjacencyList().add(vtx_StateDisconnectByApp);</span>
+
+        //         2) Disconnection by App after failure in service discovery
+        //           vtx_DiscoverServiceFailure ---&gt; vtx_StateReqDisconnect_0x82_0x02
+        //
+        //         3) Disconnection by App after abnoraml data 0x81 0x01 0x00 in State2
+
+<span class="fc" id="L472">        vtx_DiscoverServiceFailure.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);</span>
+
+<span class="fc" id="L474">        vtx_State1_0x80_0x81_Abnormal_0x01_0x00.getAdjacencyList().add(vtx_StateReqDisconnect_0x82_0x02);</span>
+
+
+        //     by Device
+<span class="fc" id="L478">        VertexBLEState vtx_StateDisconnectByDevice = new VertexBLEState(&quot;Disconnection by Device&quot;, Vertex.FINAL_STATE,</span>
+                new BLEDisconnectState(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED));
+
+<span class="fc" id="L481">        vertices.add(vtx_StateDisconnectByDevice);</span>
+
+        // EDGE : 1) Disconnection by Device after measuring data in realtime
+        //            vtx_State5_0x1A_5 ---&gt; vtx_StateDiconnectByDevice
+        //
+        //        2) Discoonection by Device after downloading stored data
+        //           vtx_SendEndofSession_2 ---&gt; vtx_StateDisconnectByApp
+        //
+        //        3) Abnormal disconnection by Device after successful service discovery
+        //
+        //        4) Abnormal disconnection by Device after REQ Download Stored Data (0x82 03) and OK (0x83) in State 7
+        //
+        //        5) Abnormal disconnection by Device after Req Session Info (0x84) and OK (0x85) in State 10
+        //
+        //        6-1) Abnormal disconnection by Device after sending 7th stored data in the 1st session in State 12
+        //
+        //        7-1) Abnormal disconnection by Device after finishing sending all stored data of the 1st session in State 12
+        //
+        //        6-2) Abnormal disconnection by Device after sending 3rd stored data in the 2nd session in State 12
+        //
+        //        7-2) Abnormal disconnection by Device after finishing sending all stored data of the 2nd session in State 12
+
+<span class="fc" id="L503">        vtx_State5_0x1A_5.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L505">        vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByApp);</span>
+
+<span class="fc" id="L507">        vtx_DiscoverServiceSuccess.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L509">        vtx_State6_REQ_0x82_0x03_0x83.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L511">        vtx_ReqSessionInfo_1.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L513">        vtx_StoredDataReply_1_7.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L515">        vtx_SendEndofSession_1.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L517">        vtx_StoredDataReply_2_3.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+
+<span class="fc" id="L519">        vtx_SendEndofSession_2.getAdjacencyList().add(vtx_StateDisconnectByDevice);</span>
+<span class="fc" id="L520">    }</span>
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Service Discovery
+    //    - doDiscoverService
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
+    @Override
+    public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
+<span class="pc bpc" id="L529" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index() &lt; path.size()) {</span>
+<span class="fc" id="L530">            BLEState state = path.get(index());</span>
+<span class="pc bpc" id="L531" title="1 of 2 branches missed.">            if (state instanceof ServiceDiscoveryHRM3200) {</span>
+<span class="fc" id="L532">                state.action(ibleDiscoverService);</span>
+
+<span class="fc" id="L534">                incIndex();</span>
+
+<span class="fc" id="L536">                BLEState nextstate = path.get(index());</span>
+<span class="fc" id="L537">                nextstate.setupAction();</span>
+
+<span class="fc" id="L539">                return;</span>
+            }
+
+<span class="nc" id="L542">            throw new BLEStateException(&quot;doDiscoverService: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L545" title="All 2 branches missed.">        throw new BLEStateException(&quot;doDiscoverService: fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L547" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    // HRM3200 Service UUID and characteristic UUID
+<span class="fc" id="L551">    public static UUID serviceUuid = UUID.fromString(&quot;0000ff00-0000-1000-8000-00805f9b34fb&quot;);</span>
+<span class="fc" id="L552">    public static UUID characteristicUuid = UUID.fromString(&quot;0000ff01-0000-1000-8000-00805f9b34fb&quot;);</span>
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Notification (Change Characterisitcs)
+    //    - doNotification
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="pc bpc" id="L562" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index() &lt; path.size()) {</span>
+<span class="fc" id="L563">            BLEState state = path.get(index());</span>
+
+<span class="pc bpc" id="L565" title="11 of 14 branches missed.">            if (state instanceof DeviceTimeReplyState</span>
+                    || state instanceof RealtimeDataReply
+                    || state instanceof SendSessionInfo
+                    || state instanceof SendSessionCount
+                    || state instanceof InitializeData
+                    || state instanceof StoredDataReply
+                    || state instanceof SendEndOfSession)
+            {
+<span class="fc" id="L573">                state.action(ibleChangeCharacteristic);</span>
+
+<span class="fc" id="L575">                incIndex();</span>
+
+<span class="fc" id="L577">                BLEState nextstate = path.get(index());</span>
+<span class="fc" id="L578">                nextstate.setupAction();</span>
+
+<span class="fc" id="L580">                return;</span>
+            }
+
+<span class="nc" id="L583">            throw new BLEStateException(&quot;doNotification: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L586" title="All 2 branches missed.">        throw new BLEStateException(&quot;doNotification: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L588" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Write Characterisitcs  (Commands by Apps)
+    //    - doWriteCharacteristic
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic,
+                                      IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="pc bpc" id="L600" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index() &lt; path.size()) {</span>
+<span class="fc" id="L601">            BLEState state = path.get(index());</span>
+
+<span class="pc bpc" id="L603" title="5 of 16 branches missed.">            if (state instanceof OK_0x11_State</span>
+                    || state instanceof AppTime_0x80_0x81_State
+                    || state instanceof REQ_RealtimeData_0x82_0x01
+                    || state instanceof REQ_DownloadStoredData_0x82_0x03_0x83
+                    || state instanceof CANCEL_DownloadStoredData_0x82_0x01_0x83
+                    || state instanceof OK_0x15_State
+                    || state instanceof REQ_SessionInfo_0x84_0x85
+                    || state instanceof REQ_Disconnection_0x82_0x02_State)
+            {
+<span class="fc" id="L612">                state.action(btGattCharacteristic, ibleChangeCharacteristic);</span>
+
+<span class="fc" id="L614">                incIndex();</span>
+
+<span class="fc" id="L616">                BLEState nextstate = path.get(index());</span>
+<span class="fc" id="L617">                nextstate.setupAction();</span>
+
+<span class="fc" id="L619">                return;</span>
+            }
+
+<span class="nc" id="L622">            throw new BLEStateException(&quot;doWriteCharacteristic: &quot; + state.getClass().getCanonicalName());</span>
+        }
+
+<span class="nc bnc" id="L625" title="All 2 branches missed.">        throw new BLEStateException(&quot;doWriteCharacteristic: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L627" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  Disconnection
+    //    - doDisconnect
+    //    - Classes for relevant states
+    //////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void doDisconnect(IBLEDisconnect ibleDisconnect) {
+<span class="pc bpc" id="L638" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index() &lt; path.size()) {</span>
+<span class="fc" id="L639">            BLEState state = path.get(index());</span>
+
+<span class="pc bpc" id="L641" title="3 of 4 branches missed.">            if (state instanceof BLEDisconnectState</span>
+                    || state instanceof DisconnectByApp)
+            {
+                // We arrive at the final state!!
+<span class="fc" id="L645">                state.action(ibleDisconnect);</span>
+
+                // No incIndex();
+<span class="fc" id="L648">                return;</span>
+            }
+
+<span class="nc" id="L651">            throw new BLEStateException(&quot;doDisconnect: &quot; + state.getClass().getCanonicalName());</span>
+        }
+
+<span class="nc bnc" id="L654" title="All 2 branches missed.">        throw new BLEStateException(&quot;doDisconnect: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L656" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

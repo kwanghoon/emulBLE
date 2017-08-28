@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul.scenario</a> &gt; <span class="el_source">Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice.java</span></div><h1>Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul.scenario;
+
+import com.h3.hrm3200.emul.model.AppTime_0x80_0x81_State;
+import com.h3.hrm3200.emul.model.DeviceTimeReplyState;
+import com.h3.hrm3200.emul.model.OK_0x11_State;
+import com.h3.hrm3200.emul.model.REQ_RealtimeData_0x82_0x01;
+import com.h3.hrm3200.emul.model.RealtimeDataReply;
+import com.h3.hrm3200.emul.model.ServiceDiscoveryHRM3200;
+
+import java.util.ArrayList;
+
+import emul.bluetooth.BluetoothLE;
+import emul.bluetooth.model.BLEConnectState;
+import emul.bluetooth.model.BLEDisconnectState;
+import emul.bluetooth.model.BLEScanState;
+import emul.bluetooth.model.BLEServiceDiscoverState;
+import emul.bluetooth.model.BLEState;
+import emul.bluetooth.model.Scenario;
+import mocking.android.bluetooth.BLEService;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothProfile;
+
+/**
+ * Created by khChoi on 2017-08-17.
+ */
+
+public class Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice extends Scenario {
+    private BluetoothLE bluetoothLE;
+
+    public Scenario_BLEScan_Connect_Discovery_RealtimeDataByUI_DisconnectionByDevice(BluetoothLE bluetoothLE, ArrayList&lt;BLEState&gt; path) {
+<span class="nc" id="L31">        super(path);</span>
+<span class="nc" id="L32">        this.bluetoothLE = bluetoothLE;</span>
+<span class="nc" id="L33">        this.buildPath();</span>
+<span class="nc" id="L34">    }</span>
+
+    public void buildPath() {
+        // BLE Scan
+<span class="nc" id="L38">        BLEScanState bleScanState = new BLEScanState(&quot;00:11:22:AA:BB:CC&quot;, &quot;HRM3200&quot;);</span>
+<span class="nc" id="L39">        path().add(bleScanState);</span>
+
+        // BLE Connect
+<span class="nc" id="L42">        BLEConnectState bleConnectState =</span>
+                new BLEConnectState(BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_CONNECTED);
+<span class="nc" id="L44">        path().add(bleConnectState);</span>
+
+        // Service Discovery
+<span class="nc" id="L47">        BLEServiceDiscoverState bleServiceDiscoverState = new ServiceDiscoveryHRM3200(BluetoothGatt.GATT_FAILURE,</span>
+                new ArrayList&lt;BLEService&gt;());
+<span class="nc" id="L49">        path().add(bleServiceDiscoverState);</span>
+
+        // State0: Notification of Device Time
+<span class="nc" id="L52">        DeviceTimeReplyState deviceTimeReplyState = new DeviceTimeReplyState(bluetoothLE);</span>
+<span class="nc" id="L53">        path().add(deviceTimeReplyState);</span>
+
+        // State1: OK (0x11)
+<span class="nc" id="L56">        OK_0x11_State ok_0x11_state = new OK_0x11_State(bluetoothLE);</span>
+<span class="nc" id="L57">        path().add(ok_0x11_state);</span>
+
+        // State1-2: App Time (0x80)
+<span class="nc" id="L60">        AppTime_0x80_0x81_State appTime_0x80_0x81_state = new AppTime_0x80_0x81_State(bluetoothLE, 0x00, 0x00);</span>
+<span class="nc" id="L61">        path().add(appTime_0x80_0x81_state);</span>
+
+<span class="nc" id="L63">        REQ_RealtimeData_0x82_0x01 req_realtimeData_0x82_0x01 = new REQ_RealtimeData_0x82_0x01(bluetoothLE);</span>
+<span class="nc" id="L64">        path().add(req_realtimeData_0x82_0x01);</span>
+
+        // State5:
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        for (int i = 0; i&lt;10; i++) {</span>
+<span class="nc" id="L68">            RealtimeDataReply realtimeDataReply = new RealtimeDataReply(bluetoothLE);</span>
+<span class="nc" id="L69">            path().add(realtimeDataReply);</span>
+        }
+
+//        // A final state disconnected by App
+//
+//        // User presses the stop button.
+//        REQ_Disconnection_0x82_0x02_State req_disconnection_0x82_0x02_state = new REQ_Disconnection_0x82_0x02_State(this);
+//        path.add(req_disconnection_0x82_0x02_state);
+//
+//        // Disconnection by App
+//        DisconnectByApp disconnectByApp = new DisconnectByApp(this, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+//        path.add(disconnectByApp);
+
+        // Another final state disconnected by Device
+
+<span class="nc" id="L84">        BLEDisconnectState bleDisconnectState =</span>
+                new BLEDisconnectState(bluetoothLE, BluetoothGatt.GATT_SUCCESS, BluetoothProfile.STATE_DISCONNECTED);
+<span class="nc" id="L86">        path().add(bleDisconnectState);</span>
+<span class="nc" id="L87">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

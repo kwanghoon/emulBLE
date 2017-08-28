@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BLEState.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth.model</a> &gt; <span class="el_source">BLEState.java</span></div><h1>BLEState.java</h1><pre class="source lang-java linenums">package emul.bluetooth.model;
+
+import java.util.ArrayList;
+import java.util.UUID;
+
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEConnect;
+import mocking.android.bluetooth.IBLEDisconnect;
+import mocking.android.bluetooth.IBLEDiscoverService;
+import mocking.android.bluetooth.IBLEScan;
+
+/**
+ * Created by khChoi on 2017-08-05.
+ */
+
+<span class="fc" id="L17">public abstract class BLEState {</span>
+<span class="fc" id="L18">    protected ArrayList&lt;BLEState&gt; next = new ArrayList&lt;BLEState&gt;();</span>
+
+    // Setup actions to activate in the previous state
+    // This method is intended to be implemented as:
+    //     callAfter(500, &quot;method name&quot;);
+<span class="fc" id="L23">    public void setupAction() { }</span>
+
+    // Actions
+<span class="nc" id="L26">    public void action(IBLEScan iblescan) { }   // for BLEScanState</span>
+<span class="nc" id="L27">    public void action(IBLEConnect ibleconnect) { }     // for BLEConnectState</span>
+<span class="nc" id="L28">    public void action(IBLEDiscoverService ibleDiscoverService) { }     // for BLEServiceDiscoverState</span>
+<span class="nc" id="L29">    public void action(IBLEDisconnect ibleDisconnect) { }   // for BLEDisconnectState</span>
+<span class="nc" id="L30">    public void action(IBLEChangeCharacteristic ibleChangeCharacteristic) {}    // for BLENotificationState</span>
+    public void action(BluetoothGattCharacteristic btGattCharacteristic,
+<span class="nc" id="L32">                       IBLEChangeCharacteristic ibleChangeCharacteristic) {}      // for LBEWriteCharacteristicState</span>
+    public void action(IBLEChangeCharacteristic ibleChangeCharacgerisitc,       // for LBEWriteCharacteristicState
+                       BluetoothGattCharacteristic btGattCharacteristic,
+                       UUID serviceUuid,
+                       UUID characteristicUuid,
+<span class="nc" id="L37">                       byte[] bytes) { }</span>
+
+    public BLEState next(int index) {
+<span class="nc" id="L40">        return this.next.get(index);</span>
+    }
+
+<span class="nc" id="L43">    public void addNext(BLEState state) { this.next.add(state); }</span>
+
+<span class="nc" id="L45">    public int size() { return next.size(); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

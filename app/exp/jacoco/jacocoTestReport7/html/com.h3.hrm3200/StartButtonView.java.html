@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>StartButtonView.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">StartButtonView.java</span></div><h1>StartButtonView.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
+import android.opengl.GLES20;
+import android.util.AttributeSet;
+//import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Toast;
+
+import java.util.Calendar;
+import java.util.HashMap;
+
+/**
+ * Created by moonhyeonah on 2015. 4. 2..
+ */
+public class StartButtonView extends View {
+    public final static int PEAK_PERFORMANCE       = 1;
+    public final static int ANAEROBIC_INTENSIVE    = 2;
+    public final static int AEROBIC_FITNESS        = 3;
+    public final static int FAT_BURN_AND_ENDURANCE = 4;
+    public final static int WARM_UP_AND_RECOVERY   = 5;
+    public final static int DEFAULT_HEART_RATE_ZONE= 6;
+    public final static int START_AVAILABLE        = 7; //moon
+
+
+    // For connectionStatus
+    public final static int NO_DEVICE  = 1;   // �뿰寃� �걡源�
+    public final static int CONNECTING = 2;   // �뿰寃� �떆�룄
+    public final static int CONNECTED  = 3;   // �뿰寃곕맖
+    public final static int WAITING    = 4;   // �뿰寃곕릺怨� �뜲�씠�꽣 �쟾�넚 ��湲� : 0x1c (00)諛쏆쓬
+    public final static int MEASURING  = 5;   // �뿰寃곕릺怨� �뜲�씠�꽣 諛쏄퀬,
+                                              // 0x1c (01)�쓣 諛쏆쑝硫� CONNECTED濡� 諛붾��
+
+    // For Testing : LastUpdate
+    public final static int NOT_EXIST   = 1;
+    public final static int BATTERY     = 2;
+    public final static int HEART_RATE  = 3;
+    private int lastUpdate;
+
+    // States
+    private int heart_rate_zone;
+    private int bpm;
+    private int battery_level;
+    private int calorie;
+    private int steps;
+    private boolean start; // start==true =&gt; &quot;Start&quot; �몴�떆,  start==false =&gt; &quot;Stop&quot; �몴�떆
+    private int connectionStatus; // BLE Device Connection Status
+
+    private Context context;
+
+    private static final String TAG = &quot;StartButtonView&quot;;
+
+    public StartButtonView(Context context) {
+<span class="nc" id="L66">        super(context);</span>
+<span class="nc" id="L67">        initialize(context);</span>
+<span class="nc" id="L68">    }</span>
+
+    public StartButtonView(Context context, AttributeSet attributeSet) {
+<span class="fc" id="L71">        super(context, attributeSet);</span>
+<span class="fc" id="L72">        initialize(context);</span>
+<span class="fc" id="L73">    }</span>
+
+    private void initialize(Context context) {
+<span class="fc" id="L76">        this.context = context;</span>
+
+<span class="fc" id="L78">        start = true;</span>
+<span class="fc" id="L79">        connectionStatus = NO_DEVICE;</span>
+
+<span class="fc" id="L81">        SharedPreferences pref = context.getSharedPreferences(MainActivity.prefName, 0);</span>
+
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">        if (pref != null)</span>
+<span class="fc" id="L84">            connectionStatus = pref.getInt(MainActivity.connFlag, NO_DEVICE);</span>
+
+
+<span class="fc" id="L87">        heart_rate_zone = START_AVAILABLE;</span>
+<span class="fc" id="L88">        bpm = 0;</span>
+<span class="fc" id="L89">        battery_level = 0;</span>
+<span class="fc" id="L90">        calorie = 0;</span>
+<span class="fc" id="L91">        steps = 0;</span>
+
+<span class="fc" id="L93">        centerX = 0;</span>
+<span class="fc" id="L94">        centerY = 0;</span>
+<span class="fc" id="L95">        radius = 0;</span>
+
+
+<span class="fc" id="L98">        lastUpdate = NOT_EXIST;</span>
+<span class="fc" id="L99">    }</span>
+
+    //
+    public void setLastUpdate(int lastUpdate) {
+<span class="fc" id="L103">        this.lastUpdate = lastUpdate;</span>
+<span class="fc" id="L104">        invalidate();</span>
+<span class="fc" id="L105">    }</span>
+
+    public void setHeartRateZone(int heart_rate_zone) {
+<span class="fc" id="L108">        this.heart_rate_zone = heart_rate_zone;</span>
+<span class="fc" id="L109">        invalidate();</span>
+<span class="fc" id="L110">    }</span>
+
+    // moon set HeartRateZone for heart rate
+    public void chkHearRateZone(int heart_rate) {
+
+<span class="fc" id="L115">        SharedPreferences pref = context.getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+//        int birth = pref.getInt(UserSettingActivity.keyBirth, 0);
+
+<span class="fc" id="L118">        int temp = pref.getInt(UserSettingActivity.keyAge, 0);</span>
+<span class="fc" id="L119">        int age=40;</span>
+<span class="pc bpc" id="L120" title="2 of 4 branches missed.">        if (temp&gt;0 &amp;&amp; temp&lt;200) age = temp;  //TODO: 珥덇린媛믪씠 �빆�긽 議댁옱�븯硫� 臾몄젣 �뾾�쑝誘�濡� �궘�젣�빐�빞�븿</span>
+
+<span class="fc" id="L122">        int max_heart_rate = 220 - age;</span>
+<span class="fc" id="L123">        double rate = (heart_rate*100)/max_heart_rate;</span>
+
+
+<span class="pc bpc" id="L126" title="3 of 4 branches missed.">        if (rate&gt;=50 &amp;&amp; rate&lt;60)</span>
+<span class="nc" id="L127">            heart_rate_zone = WARM_UP_AND_RECOVERY;</span>
+<span class="pc bpc" id="L128" title="3 of 4 branches missed.">        else if (rate&gt;=60 &amp;&amp; rate&lt;70)</span>
+<span class="nc" id="L129">            heart_rate_zone = FAT_BURN_AND_ENDURANCE;</span>
+<span class="pc bpc" id="L130" title="3 of 4 branches missed.">        else if (rate&gt;=70 &amp;&amp; rate&lt;80)</span>
+<span class="nc" id="L131">            heart_rate_zone = AEROBIC_FITNESS;</span>
+<span class="pc bpc" id="L132" title="3 of 4 branches missed.">        else if (rate&gt;=80 &amp;&amp; rate&lt;90)</span>
+<span class="nc" id="L133">            heart_rate_zone = ANAEROBIC_INTENSIVE;</span>
+<span class="pc bpc" id="L134" title="3 of 4 branches missed.">        else if (rate&gt;=90 &amp;&amp; rate&lt;100)</span>
+<span class="nc" id="L135">            heart_rate_zone = PEAK_PERFORMANCE;</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        else if (rate&gt;=100)</span>
+<span class="nc" id="L137">            heart_rate_zone = PEAK_PERFORMANCE;</span>
+        else
+<span class="fc" id="L139">            heart_rate_zone = DEFAULT_HEART_RATE_ZONE;</span>
+
+<span class="fc" id="L141">        setHeartRateZone(heart_rate_zone);</span>
+
+<span class="fc" id="L143">    }</span>
+
+    public void setBPM(int bpm) {
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">        if (bpm &lt; 0) bpm = 0;</span>
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">        else if (bpm &gt; 500) bpm = 500;</span>
+
+<span class="fc" id="L149">        this.bpm = bpm;</span>
+//        lastUpdate = HEART_RATE;
+
+<span class="fc" id="L152">        invalidate();</span>
+<span class="fc" id="L153">    }</span>
+
+    public void setStart(boolean start) {
+<span class="fc" id="L156">        this.start = start;</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">        if (start) {</span>
+<span class="fc" id="L158">            heart_rate_zone = START_AVAILABLE;</span>
+        } else {
+        }
+
+<span class="fc" id="L162">        invalidate();</span>
+<span class="fc" id="L163">    }</span>
+
+    public void setConnectionStatus(int connectionStatus) {
+<span class="fc" id="L166">        this.connectionStatus = connectionStatus;</span>
+
+<span class="fc" id="L168">        invalidate();</span>
+<span class="fc" id="L169">    }</span>
+
+//    public int getColorOfHeartRateZone() {
+//        switch(heart_rate_zone) {
+//            case PEAK_PERFORMANCE:
+//                return Color.RED;
+//            case ANAEROBIC_INTENSIVE:
+//                return Color.YELLOW;
+//            case AEROBIC_FITNESS:
+//                return Color.GREEN;
+//            case FAT_BURN_AND_ENDURANCE:
+//                return Color.CYAN;
+//            case WARM_UP_AND_RECOVERY:
+//                return Color.BLUE;
+//            default:
+//                return Color.BLUE; // Should reach here.
+//        }
+//    }
+
+    //Select stop image moon
+    public int getImageNameOfHeartRateZone() {
+<span class="pc bpc" id="L190" title="6 of 8 branches missed.">        switch(heart_rate_zone) {</span>
+            case PEAK_PERFORMANCE:
+<span class="nc" id="L192">                return R.drawable.stop_06;</span>
+            case ANAEROBIC_INTENSIVE:
+<span class="nc" id="L194">                return R.drawable.stop_05;</span>
+            case AEROBIC_FITNESS:
+<span class="nc" id="L196">                return R.drawable.stop_04;</span>
+            case FAT_BURN_AND_ENDURANCE:
+<span class="nc" id="L198">                return R.drawable.stop_03;</span>
+            case WARM_UP_AND_RECOVERY:
+<span class="nc" id="L200">                return R.drawable.stop_02;</span>
+            case DEFAULT_HEART_RATE_ZONE:
+<span class="fc" id="L202">                return R.drawable.stop_01;</span>
+            case START_AVAILABLE:
+<span class="fc" id="L204">                return R.drawable.start_bt;</span>
+            default:
+<span class="nc" id="L206">                return R.drawable.start_bt;</span>
+        }
+    }
+
+    private float centerX;
+    private float centerY;
+    private float radius;
+<span class="pc" id="L213">    private float radiusdelta=10;</span>
+
+    private Bitmap oldBit;
+
+
+    public static int calculateInSampleSize(
+            BitmapFactory.Options options, int reqWidth, int reqHeight) {
+
+<span class="fc" id="L221">        Log.v(TAG, &quot;Raw Height and Width: &quot; + options.outHeight + &quot;, &quot; + options.outWidth);</span>
+
+        // Raw height and width of image
+<span class="fc" id="L224">        final int height = options.outHeight;</span>
+<span class="fc" id="L225">        final int width = options.outWidth;</span>
+<span class="fc" id="L226">        int inSampleSize = 1;</span>
+
+<span class="pc bpc" id="L228" title="3 of 4 branches missed.">        if (height &gt; reqHeight || width &gt; reqWidth) {</span>
+
+<span class="fc" id="L230">            final int halfHeight = height ; // TODO: height / 2 ==&gt; height</span>
+<span class="fc" id="L231">            final int halfWidth = width ; // TODO: width / 2 ==&gt; width</span>
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+<span class="pc bpc" id="L235" title="1 of 4 branches missed.">            while ((halfHeight / inSampleSize) &gt; reqHeight</span>
+                    &amp;&amp; (halfWidth / inSampleSize) &gt; reqWidth) {
+<span class="fc" id="L237">                inSampleSize *= 2;</span>
+            }
+        }
+
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">        if (inSampleSize == 1) inSampleSize = 2; // TODO:</span>
+
+<span class="fc" id="L243">        return inSampleSize;</span>
+    }
+
+    public static Bitmap decodeSampledBitmapFromResource(Resources res, int resId,
+                                                         int reqWidth, int reqHeight) {
+        // First decode with inJustDecodeBounds=true to check dimensions
+<span class="fc" id="L249">        final BitmapFactory.Options options = new BitmapFactory.Options();</span>
+<span class="fc" id="L250">        options.inJustDecodeBounds = true;</span>
+<span class="fc" id="L251">        BitmapFactory.decodeResource(res, resId, options);</span>
+
+        // Calculate inSampleSize
+<span class="fc" id="L254">        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);</span>
+
+<span class="fc" id="L256">        Log.v(TAG, &quot;inSampleSize=&quot; + options.inSampleSize);</span>
+
+        // Decode bitmap with inSampleSize set
+<span class="fc" id="L259">        options.inJustDecodeBounds = false;</span>
+<span class="fc" id="L260">        return BitmapFactory.decodeResource(res, resId, options);</span>
+    }
+
+
+    @Override
+    public void onDraw(Canvas canvas) {
+<span class="fc" id="L266">        Rect rect = canvas.getClipBounds();</span>
+
+<span class="fc" id="L268">        Paint paint = new Paint();</span>
+
+//        paint.setStrokeWidth(5);
+//        paint.setStyle(Paint.Style.STROKE);
+//        paint.setColor(getColorOfHeartRateZone());
+
+        // Draw a Circle
+<span class="fc" id="L275">        final float ratio = 2.5f;</span>
+
+<span class="fc" id="L277">        float width = rect.right - rect.left;</span>
+<span class="fc" id="L278">        float height = rect.bottom - rect.top;</span>
+
+<span class="fc" id="L280">        float centerX = rect.left + width/2;</span>
+<span class="fc" id="L281">        float centerY = rect.top + height/2;</span>
+
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        float radius = (width&gt;height ? height : width)/ratio;</span>
+
+<span class="fc" id="L285">        this.centerX = centerX;</span>
+<span class="fc" id="L286">        this.centerY = centerY;</span>
+
+<span class="fc" id="L288">        this.radius = radius;</span>
+
+<span class="fc" id="L290">        RectF rectF = new RectF(centerX-radius, centerY-radius,</span>
+                                centerX+radius, centerY+radius);
+
+//        BitmapFactory.Options options = new BitmapFactory.Options();
+//
+<span class="fc" id="L295">        int dstWidth = (int)(radius*2);</span>
+
+//        Log.i(TAG, &quot;src(Height,Width): &quot; +  src.getHeight() + &quot;,&quot; + src.getWidth()  + &quot;, dstWidth: &quot; + dstWidth);
+
+
+<span class="fc" id="L300">        Bitmap src = decodeSampledBitmapFromResource(getResources(), getImageNameOfHeartRateZone(), dstWidth, dstWidth);</span>
+
+<span class="fc" id="L302">        Log.v(TAG, &quot;Allocation byte count: &quot; + src.getByteCount() + &quot; for &quot; + getImageNameOfHeartRateZone());</span>
+
+<span class="fc" id="L304">        canvas.drawBitmap(src, null, rectF, null);</span>
+<span class="pc bpc" id="L305" title="1 of 4 branches missed.">        if ( (oldBit!=null) &amp;&amp; !(oldBit.equals(src)) )</span>
+<span class="fc" id="L306">            oldBit.recycle();</span>
+<span class="fc" id="L307">        oldBit = src;</span>
+
+<span class="fc" id="L309">        float diameterHorizontal = rect.right - width / ratio - rect.left + width / ratio;</span>
+<span class="fc" id="L310">        float diameterVertical = rect.bottom - height / ratio - rect.top + height / ratio;</span>
+
+
+        // Draw BPM Text
+<span class="fc" id="L314">        paint = new Paint();</span>
+<span class="fc" id="L315">        paint.setTextSize(100);</span>
+<span class="fc" id="L316">        paint.setTextAlign(Paint.Align.CENTER);</span>
+<span class="fc" id="L317">        paint.setColor(Color.WHITE);            //TODO 湲곌린 �겕湲곗뿉 �뵲瑜� 泥섎━</span>
+
+<span class="fc" id="L319">        canvas.drawText(bpm + &quot; bpm&quot;, rect.left+width/2, rect.top+height/2+diameterVertical/4, paint);</span>
+
+
+        // 媛��옣 理쒓렐 �뜲�씠�� �뾽�뜲�씠�듃 �떆媛�
+<span class="fc" id="L323">        Calendar now = Calendar.getInstance();</span>
+<span class="fc" id="L324">        int hour  = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="fc" id="L325">        int min   = now.get(Calendar.MINUTE);</span>
+<span class="fc" id="L326">        int sec   = now.get(Calendar.SECOND);</span>
+
+<span class="fc" id="L328">        paint = new Paint();</span>
+<span class="fc" id="L329">        paint.setTextSize(25);</span>
+<span class="fc" id="L330">        paint.setTextAlign(Paint.Align.CENTER);</span>
+<span class="fc" id="L331">        paint.setColor(Color.WHITE);</span>
+
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">        if (lastUpdate == BATTERY)</span>
+<span class="nc" id="L334">            canvas.drawText(&quot;Last updated (Battery) &lt; &quot; + hour + &quot;:&quot; + min + &quot;:&quot; + sec + &quot; &gt;&quot;, rect.left+200, rect.bottom-30, paint);</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        else if (lastUpdate == HEART_RATE)</span>
+<span class="fc" id="L336">            canvas.drawText(&quot;Last updated (HR) &lt; &quot; + hour + &quot;:&quot; + min + &quot;:&quot; + sec + &quot; &gt;&quot;, rect.left+200, rect.bottom-30, paint);</span>
+
+<span class="fc" id="L338">        lastUpdate = NOT_EXIST;</span>
+
+
+
+
+        // Draw Connection Status Text
+<span class="fc" id="L344">        paint = new Paint();</span>
+<span class="fc" id="L345">        paint.setTextSize(50);</span>
+<span class="fc" id="L346">        paint.setTextAlign(Paint.Align.CENTER);</span>
+<span class="fc" id="L347">        paint.setColor(Color.WHITE);</span>
+
+<span class="fc bfc" id="L349" title="All 2 branches covered.">        if (connectionStatus == NO_DEVICE) {</span>
+<span class="fc" id="L350">            canvas.drawText(&quot;Not Connected&quot;,</span>
+                    centerX, rect.top+50, paint);
+<span class="pc bpc" id="L352" title="1 of 2 branches missed.">        } else if (connectionStatus == CONNECTING) {</span>
+<span class="nc" id="L353">            canvas.drawText(&quot;Connecting ...&quot;,</span>
+                    centerX, rect.top+50, paint);
+<span class="pc bpc" id="L355" title="1 of 2 branches missed.">        } else if (connectionStatus == WAITING) {</span>
+<span class="nc" id="L356">            canvas.drawText(&quot;Waiting&quot;,</span>
+                    centerX, rect.top+50, paint);
+<span class="fc bfc" id="L358" title="All 2 branches covered.">        } else if (connectionStatus == CONNECTED) {</span>
+<span class="fc" id="L359">            canvas.drawText(&quot;Connected&quot;,</span>
+                    centerX, rect.top+50, paint);
+        }
+<span class="pc bpc" id="L362" title="1 of 2 branches missed.">        else if (connectionStatus == MEASURING) {</span>
+<span class="fc" id="L363">            canvas.drawText(&quot;Measuring&quot;,</span>
+                    centerX, rect.top+50, paint);
+        }
+
+
+<span class="fc" id="L368">    }</span>
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+
+<span class="fc" id="L373">        float radius2 = (event.getX() - centerX) * (event.getX() - centerX)</span>
+<span class="fc" id="L374">                + (event.getY() - centerY) * (event.getY() - centerY);</span>
+
+<span class="pc bpc" id="L376" title="1 of 2 branches missed.">        if (radius2 &lt; radius * radius + radiusdelta) {</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">            if (event.getAction()==MotionEvent.ACTION_DOWN) {</span>
+                // 踰꾪듉�쓣 �늻瑜� �슚怨� 洹몃━湲�
+<span class="fc" id="L379">                return true;</span>
+            }
+<span class="pc bpc" id="L381" title="1 of 2 branches missed.">            else if (event.getAction()==MotionEvent.ACTION_UP) {</span>
+
+//                Toast.makeText(context, &quot;Feature Disabled...(On Debugging)&quot;, Toast.LENGTH_SHORT).show();
+
+<span class="fc" id="L385">                Intent intent = new Intent();</span>
+<span class="fc" id="L386">                intent.setAction(MainActivity.ACTION_PRESS_START_BUTTON);</span>
+<span class="fc" id="L387">                intent.putExtra(MainActivity.START_KEY, start);</span>
+<span class="fc" id="L388">                context.sendBroadcast(intent);</span>
+
+//                setStart(!start);
+<span class="fc" id="L391">                return true;</span>
+            }
+        }
+
+
+<span class="nc" id="L396">        return super.onTouchEvent(event);</span>
+    }
+
+    public void cleanUp() {
+<span class="nc bnc" id="L400" title="All 2 branches missed.">        if (oldBit != null) {</span>
+<span class="nc" id="L401">            oldBit.recycle();</span>
+        }
+<span class="nc" id="L403">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
