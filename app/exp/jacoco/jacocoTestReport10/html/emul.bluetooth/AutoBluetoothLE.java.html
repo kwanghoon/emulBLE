@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AutoBluetoothLE.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth</a> &gt; <span class="el_source">AutoBluetoothLE.java</span></div><h1>AutoBluetoothLE.java</h1><pre class="source lang-java linenums">package emul.bluetooth;
+
+import android.os.Message;
+
+import java.util.ArrayList;
+
+import emul.bluetooth.model.BLEConnectState;
+import emul.bluetooth.model.BLEDisconnectState;
+import emul.bluetooth.model.BLEScanState;
+import emul.bluetooth.model.BLEServiceDiscoverState;
+import emul.bluetooth.model.BLEState;
+import emul.bluetooth.model.BLEStateException;
+import emul.bluetooth.model.BLEWriteCharacteristicState;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEConnect;
+import mocking.android.bluetooth.IBLEDisconnect;
+import mocking.android.bluetooth.IBLEDiscoverService;
+import mocking.android.bluetooth.IBLEScan;
+
+/**
+ * Created by khChoi on 2017-08-07.
+ */
+
+<span class="fc" id="L25">public class AutoBluetoothLE extends BluetoothLE {</span>
+    private ArrayList&lt;BLEState&gt; path;
+    private int index;
+
+    public void setPath(ArrayList&lt;BLEState&gt; path) {
+<span class="fc" id="L30">        this.path = path;</span>
+<span class="fc" id="L31">    }</span>
+
+    public void setIndex(int index) {
+<span class="fc" id="L34">        this.index = index;</span>
+<span class="fc" id="L35">    }</span>
+
+<span class="fc" id="L37">    public int index() { return index; }</span>
+
+<span class="fc" id="L39">    public void incIndex() { index++; }</span>
+
+    @Override
+    public void doBLEScan(IBLEScan iblescan) {
+<span class="pc bpc" id="L43" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="fc" id="L44">            BLEState state = path.get(index);</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">            if (state instanceof BLEScanState) {</span>
+<span class="fc" id="L46">                state.action(iblescan);</span>
+
+<span class="fc" id="L48">                index++;</span>
+
+<span class="fc" id="L50">                BLEState nextstate = path.get(index());</span>
+<span class="fc" id="L51">                nextstate.setupAction();</span>
+
+<span class="fc" id="L53">                return;</span>
+            }
+
+<span class="nc" id="L56">            throw new BLEStateException(&quot;doBLEScan: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        throw new BLEStateException(&quot;doBLEScan: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L61" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    @Override
+    public void doConnect(IBLEConnect ibleconnect) {
+<span class="pc bpc" id="L66" title="2 of 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="fc" id="L67">            BLEState state = path.get(index);</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">            if (state instanceof BLEConnectState) {</span>
+<span class="fc" id="L69">                state.action(ibleconnect);</span>
+
+<span class="fc" id="L71">                index++;</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">                if (index &lt; path.size()) {</span>
+
+<span class="fc" id="L74">                    BLEState nextstate = path.get(index());</span>
+<span class="fc" id="L75">                    nextstate.setupAction();</span>
+                }
+<span class="fc" id="L77">                return;</span>
+            }
+
+<span class="nc" id="L80">            throw new BLEStateException(&quot;doConnect: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        throw new BLEStateException(&quot;doConnect: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    @Override
+    public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
+<span class="nc bnc" id="L90" title="All 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="nc" id="L91">            BLEState state = path.get(index);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            if (state instanceof BLEServiceDiscoverState) {</span>
+<span class="nc" id="L93">                state.action(ibleDiscoverService);</span>
+
+<span class="nc" id="L95">                index++;</span>
+
+<span class="nc" id="L97">                BLEState nextstate = path.get(index());</span>
+<span class="nc" id="L98">                nextstate.setupAction();</span>
+
+<span class="nc" id="L100">                return;</span>
+            }
+<span class="nc" id="L102">            throw new BLEStateException(&quot;doDiscoverService: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        throw new BLEStateException(&quot;doDiscoverService: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    @Override
+    public void doDisconnect(IBLEDisconnect ibleDisconnect) {
+<span class="nc bnc" id="L112" title="All 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="nc" id="L113">            BLEState state = path.get(index);</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (state instanceof BLEDisconnectState) {</span>
+<span class="nc" id="L115">                state.action(ibleDisconnect);</span>
+
+//                index++;
+//
+//                BLEState nextstate = path.get(index());
+//                nextstate.setupAction();
+
+<span class="nc" id="L122">                return;</span>
+            }
+<span class="nc" id="L124">            throw new BLEStateException(&quot;doDisconnect: &quot; + state.getClass());</span>
+        }
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        throw new BLEStateException(&quot;doDisconnect: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    @Override
+    public void doReadCharacteristic(Message msg) {
+<span class="nc" id="L133">        super.doReadCharacteristic(msg);</span>
+<span class="nc" id="L134">    }</span>
+
+    @Override
+    public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic, IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc bnc" id="L138" title="All 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="nc" id="L139">            BLEState state = path.get(index);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">            if (state instanceof BLEWriteCharacteristicState) {</span>
+                //state.action();
+
+<span class="nc" id="L143">                index++;</span>
+
+<span class="nc" id="L145">                BLEState nextstate = path.get(index());</span>
+<span class="nc" id="L146">                nextstate.setupAction();</span>
+
+<span class="nc" id="L148">                return;</span>
+            }
+
+<span class="nc" id="L151">            throw new BLEStateException(&quot;doWriteCharacteristic: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        throw new BLEStateException(&quot;doWriteCharacteristic: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+
+    @Override
+    public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc bnc" id="L161" title="All 4 branches missed.">        if (path != null &amp;&amp; index &lt; path.size()) {</span>
+<span class="nc" id="L162">            BLEState state = path.get(index);</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">            if (state instanceof BLEWriteCharacteristicState) {</span>
+                // state.action();
+
+<span class="nc" id="L166">                index++;</span>
+
+<span class="nc" id="L168">                BLEState nextstate = path.get(index());</span>
+<span class="nc" id="L169">                nextstate.setupAction();</span>
+
+<span class="nc" id="L171">                return;</span>
+            }
+
+<span class="nc" id="L174">            throw new BLEStateException(&quot;doNotification: &quot; + state.getClass());</span>
+        }
+
+<span class="nc bnc" id="L177" title="All 2 branches missed.">        throw new BLEStateException(&quot;doNotification: path fails &quot;</span>
+                + (path != null) + &quot; &quot;
+<span class="nc bnc" id="L179" title="All 2 branches missed.">                + (index() &lt; path.size()) );</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

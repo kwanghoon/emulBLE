@@ -69,10 +69,11 @@ public class AutoBluetoothLE extends BluetoothLE {
                 state.action(ibleconnect);
 
                 index++;
+                if (index < path.size()) {
 
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
-
+                    BLEState nextstate = path.get(index());
+                    nextstate.setupAction();
+                }
                 return;
             }
 
@@ -113,10 +114,10 @@ public class AutoBluetoothLE extends BluetoothLE {
             if (state instanceof BLEDisconnectState) {
                 state.action(ibleDisconnect);
 
-                index++;
-
-                BLEState nextstate = path.get(index());
-                nextstate.setupAction();
+//                index++;
+//
+//                BLEState nextstate = path.get(index());
+//                nextstate.setupAction();
 
                 return;
             }

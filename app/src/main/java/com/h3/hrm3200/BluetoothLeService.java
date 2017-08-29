@@ -813,7 +813,7 @@ public class BluetoothLeService extends Service {
                     endOfSessionDataArrival(data);
 //                    Log.i(TAG, "Session Index : " + session_index);
                 }
-
+/*
                 // 2015.04.15
                 // TODO: state check(프로토콜 순서 확인) 필요
                 // HRM3200 => 0x1C (측정기의 측정시작/종료 알림)
@@ -822,7 +822,7 @@ public class BluetoothLeService extends Service {
                     Log.i(TAG, "Message with 0x1C");
                     responseMeasuringState(data);
                 }
-
+*/
                 // Just for Testing ...
                 else if ((data[1] & 0xff) ==0x40) {
 
@@ -1029,6 +1029,15 @@ public class BluetoothLeService extends Service {
 
             if (result) {
                 set(HRM3200_STATE4);
+
+                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);
+                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);
+
+//                실시간데이타는 저장주기 period 1초
+                sessionData = new SessionData(userStride, 1, true); // 실시간 데이터의 경우 count값을 계산해야 함
+
+                setConnectionFlagInPreference(StartButtonView.WAITING);
+
             } else {
                 set(HRM3200_STATE100);
                 disconnect();
@@ -1287,6 +1296,7 @@ public class BluetoothLeService extends Service {
     }
     //////////
 
+    /*
     // 2015.04.15 0x1D => HRM3200
     void responseMeasuringState(byte[] data) {
         if (data.length == 5) {
@@ -1351,8 +1361,8 @@ public class BluetoothLeService extends Service {
             // TODO:
         }
     }
-
-
+*/
+/*
     private void writeCharacteristic(byte[] response) {
 //        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
 //            Log.w(TAG, "BluetoothAdapter not initialized");
@@ -1377,7 +1387,7 @@ public class BluetoothLeService extends Service {
 
 
     }
-
+*/
 
     /**
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read result is reported

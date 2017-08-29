@@ -1,0 +1,1086 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MainActivity.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">MainActivity.java</span></div><h1>MainActivity.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+
+import android.app.ActionBar;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.IntentSender;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Message;
+import android.support.v7.app.ActionBarActivity;
+import android.os.Bundle;
+import android.os.Handler;
+//import android.util.Log;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.Scopes;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.fitness.Fitness;
+
+import java.util.ArrayList;
+
+
+<span class="fc" id="L46">public class MainActivity extends Activity {</span>
+
+<span class="fc" id="L48">    private String VERSION = &quot;2015-05-21-13-30&quot;;</span>
+    //
+    // UI :
+    //       2015/5/19 : ���씠��諛�(�븸�뀡諛�)�뿉 諛깃렇�씪�슫�뱶 �씠誘몄� 異붽�,
+    //                   �꽭�뀡�뜲�씠�� groupindicator �씠誘몄�濡� 蹂�寃�-&gt;�썝�옒��濡�, �긽�꽭�뜲�씠�� 諛곌꼍�깋 異붽�
+    //       2015/5/15 : user info �솕硫� �씠誘몄� �닔�젙
+    //       2015/5/13 : 硫붿씤�솕硫� duration 踰꾧렇 �닔�젙, �솕硫� 異쒕젰 臾몄옄�뿴 �닔�젙, 洹몃옒�봽�솕硫� calorie �씠誘몄� 異붽�
+    //       2015/5/11 : GoogleFit 踰꾪듉 �겢由��떆 google fit濡� �삱由� �뜲�씠�� 寃��깋�빐�꽌 異쒕젰�븯�뒗 �솕硫� 異붽�
+    //       2015/5/10 : stop�겢由��떆, ���옣�뜲�씠�� �떎�슫濡쒕뱶 �셿猷뚯떆 洹몃옒�봽�솕硫댁쑝濡� �쟾�솚 異붽�
+    //       2015/5/9  : ble�걡湲몃븣 progressDialog �엳�쑝硫� 醫낅즺
+    //       2015/5/7  : 硫붿씤�솕硫� duration 異붽��븯怨� �쐞移� 蹂�寃�
+    //       2015/5/6  : 洹몃옒�봽 洹몃━湲� -&gt; index濡� order by �븯�룄濡� �닔�젙, �넀�떎�뜲�씠�� 蹂댁젙洹몃옒�봽 諛⑸쾿 �닔�젙
+    //       2015/5/5  : �떎�슫濡쒕뱶以� �넀�떎�뜲�씠�� 蹂댁젙 洹몃옒�봽 洹몃━湲� -&gt; 踰꾧렇 �닔�젙
+    //       2015/5/2  : �꽕移섑썑 理쒖큹 �떎�뻾�떆, user_info媛� ���옣�릺吏� �븡�븯�쓣 寃쎌슦�뒗 UserInfo �솕硫댁쑝濡� �쟾�솚
+    //       2015/5/2  : 洹몃옒�봽 �솕硫� Zone Time, Calorie 異붽�, �떎�슫濡쒕뱶以� �넀�떎�뜲�씠�� 蹂댁젙 洹몃옒�봽 洹몃━湲�
+    //       2015/5/1  : manifest file, Application �빆紐� attribute以� android:largeHeap=&quot;true&quot;濡� �꽕�젙
+    //                   -&gt; TODO: �씠誘몄� 濡쒕뱶 臾몄젣濡� 異붽� -&gt; �젣嫄� �썑 �뀒�뒪�듃 �븘�슂
+    //       2015/4/30 : Out Of Memory =&gt; 硫붿씤 �솕硫� Start踰꾪듉 �씠誘몄� �겕湲곕�� 湲곌린�뿉 留욎텛�뒗 諛⑸쾿 �옱�닔�젙
+    //                   Device Scan �솕硫� cancel 踰꾪듉 湲곕뒫 �솢�꽦�솕
+    //       2015/4/29 : UserInfo �솕硫� stride, weight �엯�젰諛⑸쾿 蹂�寃�
+    //       2015/4/29 : 硫붿씤 �솕硫� Start踰꾪듉 �씠誘몄� �겕湲곕�� 湲곌린�뿉 留욎텛�뒗 諛⑸쾿 �닔�젙, UserInfo �깮�뀈�룄 �엯�젰 肄붾뱶 �닔�젙
+    //       2015/4/28 : Back key濡� 醫낅즺�븷嫄댁� �솗�씤�븯�뒗 ���솕�긽�옄 異붽�
+    //       2015/4/28 : 硫붿씤 �솕硫� Start踰꾪듉 �씠誘몄� �겕湲곕�� 湲곌린�뿉 留욎텛�룄濡� �닔�젙
+    //       2015/4/28 : SessionData 理쒓렐�옄猷뚮��꽣 �씫�뼱�삤�룄濡� �닔�젙
+    //       2015/4/27 : UserInfo �깮�뀈�룄 �엯�젰 諛⑸쾿 spinner 濡� 蹂�寃�
+    //                   DeviceScan �솕硫댁뿉�꽌 �벑濡� device �궘�젣�떆 �솗�씤 dialog 異붽�
+    //       2015/4/24 : 硫붿씤 �솕硫� Menu�뿉 DB Writing Mode 異붽� (Default: Writing All Data Once)
+    //                    (�씠 硫붾돱 �꽑�깮�떆 Writing Pieces of Data濡� �쟾�솚�븯怨�, �떎�떆 �꽑�깮�븯硫� Default濡� �쟾�솚)
+    //            =&gt; Writing Pieces of Data : 60媛� �뜲�씠�꽣 �뱾�뼱�삱�븣留덈떎 ���옣 (�벐�젅�뱶 �궗�슜)
+    //            =&gt; Writing All Data Once : 紐⑤뱺 �뜲�씠�꽣媛� �뱾�뼱�삤硫� ���옣�븯�뒗 湲곗〈 諛⑸쾿 (�벐�젅�뱶 誘몄궗�슜)
+    //       2015/4/23 : Stored Data瑜� 諛쏆쓣 �븣 0%~100%源뚯� �굹�삤�룄濡� 怨듭떇 �닔�젙
+    //       2015/4/23 : Logo �씠誘몄�媛� �꼫臾� 而ㅼ꽌 Galaxy4�뿉�꽌 硫붾え由� 遺�議깆쑝濡� 二쎈뒗 臾몄젣 �빐寃�
+    //       2015/4/22 : GraphView heart_rate_zone蹂� �깋�긽 異붽�
+    //       2015/4/21 : �꽭�뀡�뜲�씠�� �꽑�깮�궘�젣
+    //       2015/4/18 : �꽭�뀡�뜲�씠�� �꽑�깮 UI(泥댄겕諛뺤뒪) 異붽�, DB �궘�젣 異붽� �븘�슂
+    //       2015/4/18 : 濡쒓퀬�솕硫� 異붽�
+    //       2015/4/17 : 痢≪젙湲� �뀒�뒪�듃瑜� �쐞�빐 理쒖떊 �닔�떊 �뜲�씠�� �떆媛� �솕硫� 異쒕젰(lastUpdated)
+    //       2015/4/16 : �꽌鍮꾩뒪 �룞�옉 以� �떎瑜� �빋�쑝濡� �쟾�솚�븯怨� �룎�븘�삤�뜑�씪�룄 �씪愿��꽦�엳�뒗 UI
+    //                   (Start/Stop, Measuring �뀓�뒪�듃 �벑) �쑀吏�
+    //       2015/4/16 : 痢≪젙二쇨린(period) 異붽�, SessionDataDetail �븸�떚鍮꾪떚 蹂�寃�
+    //       2015/4/16 : 諛고꽣由� �씫湲� �셿猷�
+    //       2015/4/16 : 0x1c, 0x1d, 0x82 (02)�뿉 �뵲瑜� UI 蹂�寃�
+    //       2015/4/15 : ���옣�맂 �뜲�씠�꽣 媛��졇�삤湲� UI 援ы쁽 諛� �뀒�뒪�듃 �셿猷�
+    //       Main, Device Scan, User Setting, Session Data
+    //       Display Heart Rate (from Custom Health Measurement) in MainActivity
+    //       Auto Scanning in DeviceScanActivity by an Intent action.
+    //       Automatically Starting
+    //       UI Image �옉�뾽
+    //       Two list views in DeviceScanActivity
+    //       Reset Service 硫붾돱 異붽�
+    //       Read Battery 硫붾돱 異붽�
+    //       �뀓�뒪�듃瑜� �씠誘몄� 踰꾪듉�쑝濡� 紐⑤몢 援먯껜
+    //       洹몃옒�봽 湲곕뒫 異붽� (GraphActivity)
+
+    // BLE :
+    //       2015/5/20 : [0x11][0x80] �넚�떊 �룄以� disconnect �맂 寃쎌슦 exception 泥섎━
+    //       2015/5/2  : ���옣�뜲�씠�� �닔�떊以� �넀�떎�맂 �뜲�씠��瑜� duration, Zone time�뿉 諛섏쁺
+    //       2015/5/2  : 痢≪젙湲곌� �씠誘� 痢≪젙以묒씠�씪 �떎�슫濡쒕뱶遺덇�(痢≪젙�슂泥�遺덇�)�씪�븣 �떎�떆媛꾨뜲�씠�� �닔�떊��湲� �긽�깭濡� 吏꾪뻾
+    //                   �떎�떆媛꾨뜲�씠���쓽 �꽭�뀡�떆�옉�떆媛꾩� 泥� 痢≪젙�옄猷� �닔�떊�떆媛꾩쑝濡� �뾽�뜲�씠�듃�븯�뒗 肄붾뱶 異붽�
+    //       2015/5/1  : ���옣二쇨린�뒗 �떎�떆媛� �뜲�씠���뒗 1珥� -&gt; duration 蹂�寃�,
+    //                   sessionData�쓽 �룊洹좉컪 怨꾩궛�떆 �뜲�씠��媛��닔�뒗 �떎�젣 �닔�떊�븳 媛��닔濡� 蹂�寃�
+    //       2015/4/28 : calorie, distance 怨꾩궛 諛⑹떇 蹂�寃�. hr_status DB�뿉 異붽�
+    //       2015/4/24 : DB Writing Mode�뿉�꽌 遺꾨━�빐�꽌 ���옣�븯�뒗 諛⑹떇(Writing Pieces of Data)�뿉�꽌
+    //                    duration, average, min, max �벑�씠 �젣��濡� �꽕�젙�릺吏� �븡�뒗 臾몄젣 �닔�젙
+    //       2015/4/24 : �떎�떆媛� �뜲�씠�꽣 �삉�뒗 ���옣�맂 �뜲�씠�꽣瑜� 60媛쒓� �뱾�뼱�삱�븣留덈떎 DB ���옣�븯�룄濡� �닔�젙
+    //       2015/4/23 : onConnectionChange�뿉�꽌 GATT_SUCCESS媛� �븘�땶 status�씤 寃쎌슦�뿉 ���븳 泥섎━
+    //       2015/4/23 : onConnectionChange�뿉�꽌 DISCONNECT �긽�깭�씠硫� close()�룄 異붽��븯�룄濡� �꽔�쓬
+    //                    (disconnect �썑�뿉 close瑜� 遺�瑜댁� �븡�쑝硫� �씠�뒋媛� �깮湲� �닔 �엳�쓬)
+    //       2015/4/22 : UserSetting 硫댁뿉�꽌 overwrite �꽕�젙 異붽� &gt; 4/23 �닔�젙
+    //       2015/4/22 : ���옣�뜲�씠�� �뿰�룄臾몄젣 �셿猷�
+    //       2015/4/22 : HRM3200 �긽�깭 湲곌퀎 援ы쁽
+    //                     (�긽�깭媛� 瑗ъ씠�뒗 寃쎌슦, �삁瑜쇰뱾�뼱 writeCharacteristic fail, 諛붾줈 disconnect �릺�룄濡�)
+    //       2015/4/17 : DB�뿉 �몢踰� ���옣�릺�뒗 踰꾧렇 �닔�젙
+    //       2015/4/17 : ���옣 二쇨린 DB 諛섏쁺
+    //       2015/4/17 : 0x82 痢≪젙以묒� 蹂대궡怨� 1珥덊썑 disconnect()
+    //       2015/4/16 : 諛고꽣由� Noti�� �떎�떆媛� �뜲�씠�꽣 Noti�뿉 1珥� 媛꾧꺽�쓣 �몢怨� 蹂대궡�룄濡� �닔�젙
+    //       2015/4/16 : 0x1c, 0x1d, 0x82 (02) �봽濡쒗넗肄� 吏��썝
+    //       2015/4/14: ���옣�맂 �뜲�씠�꽣 媛��졇�삤湲� 湲곕뒫 援ы쁽 諛� PC �떆裕щ젅�씠�꽣瑜� �넻�븳 �뀒�뒪�듃 �셿猷�
+    //       Scanning, Connection, Heart Rate,
+    //       Battery Level
+    //       H3 Custom Health Measurement
+    //       �떎�떆媛� �뜲�씠�꽣 DB ���옣
+    //       DB 異붽� (HeartRateDBHelper.java 異붽�)
+    //
+    //
+    // �옉�뾽�븳 �궡�슜
+    //       2015/5/19 : bluetoothGatt disconnect callback�씠 鍮꾩젙�긽�쟻�쑝濡� �씪�뼱�궃 寃쎌슦 db write�븯怨� 洹몃옒�봽�솕硫�
+    //                   �쟾�솚�븯�뒗 遺�遺� 肄붾뱶 �닔�젙 writeDB() write �꽦怨�/�떎�뙣 由ы꽩�븯�룄濡� �닔�젙
+    //       2015/5/19 : �꽭�뀡 merge �븷�븣 泥� �뜲�씠���뒗 臾댁“嫄� �깦�뵆留곹븯寃� �닔�젙, �떆媛꾧컙寃� �씤�뜳�뒪�솕 怨꾩궛諛⑸쾿 �닔�젙
+    //       2015/5/15 : progressbar 踰꾧렇 �닔�젙
+    //       2015/5/15 : putData 怨꾩궛諛⑸쾿 蹂�寃�, stride 異붽� 愿��젴 踰꾧렇 �닔�젙
+    //       2015/5/15 : �꽭�뀡 merge �븷�븣 �넻怨꾩옉�뾽 �떎�떆 �븯�룄濡� 蹂�寃�
+    //       2015/5/13 : 硫붿씤�솕硫� GoogleFit 踰꾪듉 �겢由��떆 �궗�슜�옄 怨꾩젙 �꽑�깮, 沅뚰븳 �꽕�젙留� �븯�룄濡� 蹂�寃�,
+    //                   �뾽濡쒕뱶 �뜲�씠�� �씫�뼱�삤湲곕뒗 硫붾돱濡� �쟾�솚
+    //       2015/5/13 : WAIT �긽�깭, 利� 痢≪젙媛믪씠 �븯�굹�룄 �닔�떊�릺吏� �븡�� �긽�깭�뿉�꽌혻痢≪젙湲곗쓽 醫낅즺踰꾪듉�쓣 �겢由��떆 �빋�씠 �떎�슫-&gt; 踰꾧렇 �닔�젙
+    //       2015/5/13 : google fit �뾽濡쒕뱶 �옄猷뚯뿉 calorie,distance 異붽�
+    //       2015/5/13 : �꽭�뀡 merge�떆 period �떎瑜� 寃쎌슦 泥섎━ (10珥덈줈 �깦�뵆留곸쓣 �븯�뿬 ���옣)
+    //                 : �몢 �꽭�뀡媛� �떆媛꾩감�룄 index�뿉 諛섏쁺
+    //       2015/5/10 : �몢 �꽭�뀡 merge 異붽�
+    //       2015/5/7  : Google Fit �뿰�룞
+    //       2015/5/7  : csv �뙆�씪�뿉 痢≪젙�떆媛� 異붽�(DB�뿉�뒗 異붽��븯吏� �븡�쓬)
+    //       2015/5/6  : Google Fit code �닔�젙 諛� �뀒�뒪�듃
+    //       2015/5/5  : DB�뒪�궎留� 蹂�寃�
+    //       2015/5/5  : Google Fit code 異붽� 諛� �뀒�뒪�듃以�
+    //       2015/4/28 : csv �뙆�씪 蹂�寃�
+    //       2015/4/27 : 硫붿씤 �솕硫� Start踰꾪듉�쓽 �씠誘� �궗�슜�셿猷뚰븳 bitmap�쓣 recycle
+    //       2015/4/24 : Log瑜� �룞�쟻�쑝濡� Enable/Disable �떆�궎�뒗 硫붾돱瑜� 硫붿씤 �솕硫댁뿉 異붽�
+    //       2015/4/22 : csv �뙆�씪 �깮�꽦�빐�꽌 �씠硫붿씪濡� 蹂대궡�뒗 湲곕뒫 異붽�
+    //       2015/4/22 : �뿰寃� �빐�젣 �떆 �몢 踰� disconnect 遺�瑜대뒗 踰꾧렇(?) �닔�젙
+    //       2015/4/16 : SessionData�궡�뿉 DB 湲곕줉 �뿬遺�瑜� �몴�떆�븯�뒗 flag瑜� �몢�뼱 以묐났 writing 諛⑹�
+    //       2015/4/14 : BluetoothLeSerivce�쓽 BluetoothGattCallback 肄붾뱶 �젙由�
+    //       Smartphone�뿉�꽌 �젙吏��뻽�쓣�븣 二쎈뒗 臾몄젣�� DB�뿉 2踰� �벐湲곌� 諛쒖깮�븯�뒗 臾몄젣 �빐寃�
+    //       Trying to connect �긽�깭�� Connection Failed �긽�깭瑜� UI�뿉 異붽�
+    //       UserInfo�뿉�꽌 &quot;&quot;瑜� Int濡� 諛붽씀�젮�떎 �삁�쇅 諛쒖깮�븯�뒗 臾몄젣 �빐寃�
+    //       BluetoothLeService�뿉�꽌 �뿰寃� �긽�깭�뿉 �깉濡쒖슫 �뿰寃� �슂泥��쓣 臾댁떆
+    //       BluetoothLeService�뿉�꽌 鍮꾩뿰寃� �긽�깭�뿉�꽌 諛고꽣由� �젅踰� �씫湲� �슂泥��쓣 臾댁떆
+    //       distance�뒗 理쒖쥌媛믪쑝濡�
+    //       Home 踰꾪듉泥섎━
+    //       StoredData �슂泥� �봽濡쒗넗肄� �뀒�뒪�듃 異붽�
+
+    //
+    // Issues ==&gt; OK
+    //   - 2015/4/16: �꽌鍮꾩뒪 �룞�옉 以� UI瑜� kill�븯怨� �떎�떆 �쓣�썱�쓣 �븣 �꽌鍮꾩뒪 �룞�옉怨� �씪愿��꽦�엳寃� UI�� 留욌뒗吏� �솗�씤 �븘�슂
+    //   - 2015/4/16: �봽濡쒗넗肄� state 愿�由� �븘�슂. (�쁽�옱�뒗 以묎컙 state 遺��꽣 �룞�옉 媛��뒫)
+    //   - 2015/4/14: ���옣�맂 �뜲�씠�꽣�쓽 �뿰�룄�뒗 15�씠怨� �떎�떆媛� �뜲�씠�꽣�쓽 �뿰�룄�뒗 2015濡� �떎瑜닿쾶 �몴湲�
+    //   - 2015/4/14: BluetoothLEService�쓽 synchronizeTime()�뿉�꽌 留� 泥섏쓬 write 2�쉶 �븯�뒗 �떆�룄媛� �떎�뙣
+    //
+    //   - Settings�뿉�꽌 �뿰寃고븳 �떎�쓬 Main�쑝濡� �룎�븘�삤硫� STOP 踰꾪듉�씠 �굹���빞 �븿(START 踰꾪듉 �몴�떆)
+    //   - Settings�뿉�꽌 ReScan�빐�꽌 �뿰寃고븯硫� �뿰寃곕맂 �뵒諛붿씠�뒪媛� �벑濡앸릺�뼱�빞 �븯�뒗�뜲 UI�쟻�쑝濡� �벑濡앸릺吏� �븡�쓬
+    //   - Start/Stop 踰꾪듉怨� �봽濡쒗넗肄� �뿰�룞�씠 瑗ъ씠�뒗 寃쎌슦 醫낆쥌 諛쒖깮
+
+    // TODO:
+    //   - 2015/4/22: ���옣�맂 �꽭�뀡 �뜲�씠�꽣 媛��졇�삤�뒗 �룄以묒뿉 Cancel�븯�뒗 湲곕뒫
+    //   -            writeToDB瑜� �뒪�젅�뱶濡� 諛붽씀�뼱 留롮� �뜲�씠�꽣 湲곕줉�떆 UI�뿉 吏��옣�씠 �뾾�룄濡� ==&gt; OK
+    //   -            ���옣 �뜲�씠�꽣 download �썑 detail 踰꾪듉�쓣 �늻瑜대㈃ �빐�떦 洹몃옒�봽 蹂댁뿬二쇨린 ==&gt; OK
+    //   -            洹몃옒�봽�뿉�꽌 �젅踰� 蹂� �깋源붿쓣 �떎瑜닿쾶 �몴�떆�븯湲� (�긽 =&gt; �삤�뵂 �냼�뒪 遺꾩꽍 �븘�슂) ==&gt; OK
+    //   -            Google Fit �뿰�룞 (�긽 =&gt; �깦�뵆 �뀒�뒪�듃 諛� API 遺꾩꽍) ==&gt; OK
+
+
+
+
+    // Intent
+
+    // For H3 System Defined Characteristic
+    public static final String HEALTH_MEASUREMENT_KEY = &quot;health measurement&quot;;
+    public static final String HEALTH_MEASUREMENT_HR_STATUS_KEY = &quot;hr status&quot;;
+    public static final String HEALTH_MEASUREMENT_ACT_LEVEL_KEY = &quot;act level&quot;;
+    public static final String HEALTH_MEASUREMENT_ENERGY_KEY = &quot;energy expended&quot;;
+    public static final String HEALTH_MEASUREMENT_STEPS_KEY = &quot;steps&quot;;
+    public static final String HEALTH_MEASUREMENT_DURATION_KEY = &quot;duration&quot;;
+
+    public static final String ACTION_DATA_HEALTH_MEASUREMENT_AVAILABLE = &quot;android.intent.action.HEALTH_MEASUREMENT&quot;;
+
+    // For BLE Standard Characteristic
+    public static final String BATTERY_LEVEL_KEY = &quot;battery level&quot;;
+    public static final String ACTION_DATA_BATTERY_LEVEL_AVAILABLE = &quot;android.intent.action.BATTERY_LEVEL&quot;;
+
+    public static final String HEART_RATE_KEY = &quot;heart rate&quot;;
+    public static final String ACTION_DATA_HEART_RATE_AVAILABLE = &quot;android.intent.action.HEART_RATE&quot;;
+
+    //
+    public static final String START_KEY = &quot;start key&quot;;
+    public static final String ACTION_PRESS_START_BUTTON = &quot;android.intent.action.PRESS_START_BUTTON&quot;;
+
+    public static final String ACTION_STORED_DATA_AVAILABLE = &quot;android.intent.action.STORED_DATA&quot;;
+
+    // For progressBar
+    public static final String SESSION_COUNT_KEY = &quot;session count&quot;;
+    public static final String SESSION_INDEX_KEY = &quot;session index&quot;;
+    public static final String DATA_COUNT_KEY = &quot;data count&quot;; // optional
+    public static final String DATA_INDEX_KEY = &quot;data index&quot;; // optional
+    public static final String ACTION_STORED_DATA_PROGRESS = &quot;android.intent.action.STORED_DATA_PROGESS&quot;;
+
+    public static final String ACTION_STORED_DATA_COMPLETED = &quot;android.intent.action.STORED_DATA_COMPLETED&quot;;
+
+    // For [0x1C]
+    public static final String MEASURING_START_OR_STOP_KEY = &quot;measuring start or stop&quot;;
+    public static final String ACTION_RESPONSE_MEASURING_STATUS = &quot;android.intent.action.RESPONSE_MEASURING_STATUS&quot;;
+
+    // �빋 醫낅즺
+    public static final String ACTION_FINISH_ACTIVITY = &quot;android.intent.action.FINISH_ACTIVITY&quot;;
+
+
+    public final static String prefName = &quot;MainActivityPref&quot;;
+    public final static String connFlag = &quot;connection&quot;;
+    public final static String discoveryFlag = &quot;discovered&quot;;
+
+    private ImageButton buttonUserInfo;
+    private ImageButton buttonSetting;
+    private ImageButton buttonSessionData;
+    private ImageButton buttonRecord;
+
+    private TextView textViewBatteryLevel;
+    private TextView textViewCalorie;
+    private TextView textViewSteps;
+    private TextView textViewDuration;
+
+    private StartButtonView startButtonView;
+
+    private static final String TAG = &quot;MainActivity&quot;;
+
+<span class="fc" id="L249">    private boolean canPressToStart = true;</span>
+
+<span class="fc" id="L251">    private Handler handler = new Handler();</span>
+
+    // For GoogleApiClient
+<span class="fc" id="L254">    private boolean authInProgress = false;</span>
+    private static final int REQUEST_OAUTH = 1001;
+<span class="fc" id="L256">    private GoogleApiClient mGoogleApiClient = null;</span>
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="fc" id="L261">        super.onCreate(savedInstanceState);</span>
+<span class="fc" id="L262">        setContentView(R.layout.activity_main);</span>
+
+
+<span class="fc" id="L265">        getActionBar().setHomeButtonEnabled(true);</span>
+<span class="fc" id="L266">        getActionBar().setDisplayShowTitleEnabled(false);</span>
+
+
+<span class="fc" id="L269">        startButtonView = (StartButtonView)findViewById(R.id.customView1);</span>
+
+<span class="fc" id="L271">        buttonUserInfo = (ImageButton)findViewById(R.id.imageButton);</span>
+<span class="fc" id="L272">        buttonSetting = (ImageButton)findViewById(R.id.imageButton2);</span>
+<span class="fc" id="L273">        buttonSessionData = (ImageButton)findViewById(R.id.imageButton3);</span>
+<span class="fc" id="L274">        buttonRecord = (ImageButton)findViewById(R.id.imageButton4);</span>
+
+<span class="fc" id="L276">        textViewBatteryLevel = (TextView)findViewById(R.id.textView4);</span>
+<span class="fc" id="L277">        textViewCalorie = (TextView)findViewById(R.id.textView);</span>
+<span class="fc" id="L278">        textViewSteps = (TextView)findViewById(R.id.textView2);</span>
+<span class="fc" id="L279">        textViewDuration = (TextView)findViewById(R.id.textViewDuration);</span>
+<span class="fc" id="L280">        textViewDuration.setTextSize((float)((textViewDuration.getTextSize())*0.55));</span>
+//        Log.i(TAG, &quot;textViewDuration.getTextSize: &quot; + textViewDuration.getTextSize());
+
+
+        // usesr info pref
+<span class="fc" id="L285">        SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="fc" id="L286">        boolean userInfoSetting = userinfoPref.getBoolean(UserSettingActivity.keyStored, false);</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">        if (userInfoSetting == false) {</span>
+<span class="fc" id="L288">            Intent intent = new Intent();</span>
+<span class="fc" id="L289">            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.UserSettingActivity&quot;);</span>
+<span class="fc" id="L290">            startActivityForResult(intent, 0);</span>
+        }
+
+<span class="fc" id="L293">    }</span>
+
+    @Override
+    protected void onResume() {
+<span class="fc" id="L297">        super.onResume();</span>
+
+<span class="fc" id="L299">        IntentFilter intentFilter = new IntentFilter();</span>
+
+<span class="fc" id="L301">        intentFilter.addAction(MainActivity.ACTION_PRESS_START_BUTTON);</span>
+
+<span class="fc" id="L303">        intentFilter.addAction(ACTION_STORED_DATA_AVAILABLE);</span>
+<span class="fc" id="L304">        intentFilter.addAction(ACTION_STORED_DATA_PROGRESS);</span>
+<span class="fc" id="L305">        intentFilter.addAction(ACTION_STORED_DATA_COMPLETED);</span>
+<span class="fc" id="L306">        intentFilter.addAction(ACTION_RESPONSE_MEASURING_STATUS);</span>
+
+<span class="fc" id="L308">        intentFilter.addAction(ACTION_DATA_HEALTH_MEASUREMENT_AVAILABLE);</span>
+<span class="fc" id="L309">        intentFilter.addAction(ACTION_DATA_HEART_RATE_AVAILABLE);</span>
+<span class="fc" id="L310">        intentFilter.addAction(ACTION_DATA_BATTERY_LEVEL_AVAILABLE);</span>
+<span class="fc" id="L311">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTING);</span>
+<span class="fc" id="L312">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);</span>
+<span class="fc" id="L313">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);</span>
+<span class="fc" id="L314">        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);</span>
+<span class="fc" id="L315">        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE); // Standard Heart Rate</span>
+
+<span class="fc" id="L317">        intentFilter.addAction(BluetoothLeService.ACTION_DATA_STORE_AND_DISCONNECTED);</span>
+
+<span class="fc" id="L319">        registerReceiver(mainActivityReceiver, intentFilter);</span>
+
+
+//        // usesr info pref
+//        SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);
+//        userWeight = userinfoPref.getInt(UserSettingActivity.keyWeight, 0);
+//
+
+        // If connected
+<span class="fc" id="L328">        SharedPreferences pref = getSharedPreferences(MainActivity.prefName, 0);</span>
+<span class="fc" id="L329">        int connectionStatus = pref.getInt(MainActivity.connFlag, StartButtonView.NO_DEVICE);</span>
+<span class="fc" id="L330">        boolean discoveredStatus = pref.getBoolean(MainActivity.discoveryFlag, false);</span>
+
+<span class="fc" id="L332">        startButtonView.setConnectionStatus(connectionStatus);</span>
+
+//        if (discoveredStatus) {
+////            startPolling(INTERVAL);
+//            requestToReadBatteryLevel();
+//        }
+
+<span class="fc bfc" id="L339" title="All 2 branches covered.">        if (connectionStatus == StartButtonView.NO_DEVICE) {</span>
+<span class="fc" id="L340">            startButtonView.setStart(true);</span>
+<span class="fc" id="L341">            startButtonView.setBPM(0);</span>
+
+<span class="fc" id="L343">            setBattery(0);</span>
+<span class="fc" id="L344">            setCalorie(0);</span>
+<span class="fc" id="L345">            setSteps(0);</span>
+<span class="fc" id="L346">            setDuration(0);</span>
+
+<span class="fc" id="L348">            canPressToStart = true;</span>
+        }
+        else {
+<span class="pc bpc" id="L351" title="4 of 5 branches missed.">            switch(connectionStatus) {</span>
+                case StartButtonView.CONNECTING:
+<span class="nc" id="L353">                    startButtonView.setStart(false);</span>
+<span class="nc" id="L354">                    canPressToStart = false;</span>
+<span class="nc" id="L355">                    break;</span>
+                case StartButtonView.CONNECTED:
+<span class="fc" id="L357">                    startButtonView.setStart(false);</span>
+<span class="fc" id="L358">                    canPressToStart = false;</span>
+<span class="fc" id="L359">                    break;</span>
+                case StartButtonView.WAITING:
+<span class="nc" id="L361">                    startButtonView.setStart(false);</span>
+<span class="nc" id="L362">                    canPressToStart = false;</span>
+<span class="nc" id="L363">                    break;</span>
+                case StartButtonView.MEASURING:
+<span class="nc" id="L365">                    startButtonView.setStart(false);</span>
+<span class="nc" id="L366">                    canPressToStart = true;</span>
+                    break;
+            }
+
+        }
+<span class="fc" id="L371">    }</span>
+
+    @Override
+    protected void onPause() {
+<span class="fc" id="L375">        super.onPause();</span>
+
+<span class="fc" id="L377">        unregisterReceiver(mainActivityReceiver);</span>
+//        stopPolling();
+<span class="fc" id="L379">    }</span>
+
+    @Override
+    protected void onStop() {
+<span class="fc" id="L383">        super.onStop();</span>
+<span class="pc bpc" id="L384" title="3 of 4 branches missed.">        if ( (mGoogleApiClient!= null) &amp;&amp; (mGoogleApiClient.isConnected()) ) {</span>
+<span class="nc" id="L385">            mGoogleApiClient.disconnect();</span>
+        }
+<span class="fc" id="L387">    }</span>
+
+    @Override
+    protected void onDestroy() {
+<span class="nc" id="L391">        super.onDestroy();</span>
+
+<span class="nc" id="L393">        startButtonView.cleanUp();</span>
+//        buttonUserInfo = null;
+//        buttonSetting = null;
+//        buttonSessionData = null;
+//        buttonRecord = null;
+//
+//        textViewBatteryLevel = null;
+//        textViewCalorie = null;
+//        textViewSteps = null;
+//
+//        startButtonView = null;
+<span class="nc" id="L404">    }</span>
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+<span class="fc" id="L409">        getMenuInflater().inflate(R.menu.menu_main, menu);</span>
+<span class="fc" id="L410">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+<span class="fc" id="L418">        int id = item.getItemId();</span>
+
+        //noinspection SimplifiableIfStatement
+        //For Test
+<span class="pc bpc" id="L422" title="1 of 2 branches missed.">        if (id == R.id.action_settings) {</span>
+<span class="nc bnc" id="L423" title="All 2 branches missed.">            if (INTERVAL==1000) { // If 1sec</span>
+<span class="nc" id="L424">                INTERVAL = 60 * 1000; // 1 min</span>
+<span class="nc" id="L425">                Toast.makeText(getApplicationContext(), &quot;1 min period for battery read request&quot;, Toast.LENGTH_SHORT).show();</span>
+            }
+            else {
+<span class="nc" id="L428">                INTERVAL = 1000; // 1 sec</span>
+<span class="nc" id="L429">                Toast.makeText(getApplicationContext(), &quot;1 sec. period for battery read request&quot;, Toast.LENGTH_SHORT).show();</span>
+            }
+<span class="nc" id="L431">            return true;</span>
+        }
+<span class="pc bpc" id="L433" title="1 of 2 branches missed.">        else if (id == R.id.action_read_battery) {</span>
+<span class="fc" id="L434">            requestToReadBatteryLevel();</span>
+        }
+<span class="nc bnc" id="L436" title="All 2 branches missed.">        else if (id == R.id.action_reset_service) {</span>
+<span class="nc" id="L437">            Intent intent = new Intent(MainActivity.this, BluetoothLeService.class);</span>
+<span class="nc" id="L438">            stopService(intent);</span>
+
+<span class="nc" id="L440">            startButtonView.setStart(true);</span>
+<span class="nc" id="L441">            startButtonView.setBPM(0);</span>
+<span class="nc" id="L442">            startButtonView.setConnectionStatus(StartButtonView.NO_DEVICE);</span>
+
+<span class="nc" id="L444">            setBattery(0);</span>
+<span class="nc" id="L445">            setCalorie(0);</span>
+<span class="nc" id="L446">            setSteps(0);</span>
+<span class="nc" id="L447">            setDuration(0);</span>
+
+<span class="nc" id="L449">            canPressToStart = true;</span>
+
+<span class="nc" id="L451">            SharedPreferences pref = getApplicationContext().getSharedPreferences(MainActivity.prefName, 0);</span>
+<span class="nc" id="L452">            SharedPreferences.Editor editor = pref.edit();</span>
+
+<span class="nc" id="L454">            editor.putInt(MainActivity.connFlag, StartButtonView.NO_DEVICE);</span>
+<span class="nc" id="L455">            editor.putBoolean(MainActivity.discoveryFlag, false);</span>
+
+<span class="nc" id="L457">            editor.commit();</span>
+<span class="nc" id="L458">        }</span>
+<span class="nc bnc" id="L459" title="All 2 branches missed.">        else if (id == R.id.action_db_writing_mode) {</span>
+
+            //For protocol test
+//            canPressToStart = false;
+//            requestToReadStoredData();
+
+//            Test.dbStressTest(this);
+
+<span class="nc bnc" id="L467" title="All 2 branches missed.">            if (SessionData.DB_DEBUG == true) {</span>
+<span class="nc" id="L468">                SessionData.DB_DEBUG = false;</span>
+<span class="nc" id="L469">                Toast.makeText(this, &quot;Writing all data once &quot;, Toast.LENGTH_SHORT).show();</span>
+            } else {
+<span class="nc" id="L471">                SessionData.DB_DEBUG = true;</span>
+<span class="nc" id="L472">                Toast.makeText(this, &quot;Writing pieces of data&quot;, Toast.LENGTH_SHORT).show();</span>
+            }
+        }
+
+<span class="nc bnc" id="L476" title="All 2 branches missed.">        else if (id == R.id.action_log_mode) {</span>
+<span class="nc bnc" id="L477" title="All 2 branches missed.">            if (Log.DEBUG == true) {</span>
+<span class="nc" id="L478">                Log.DEBUG = false;</span>
+<span class="nc" id="L479">                Toast.makeText(this, &quot;Log disabled&quot;, Toast.LENGTH_SHORT).show();</span>
+            } else {
+<span class="nc" id="L481">                Log.DEBUG = true;</span>
+<span class="nc" id="L482">                Toast.makeText(this, &quot;Log enabled&quot;, Toast.LENGTH_SHORT).show();</span>
+            }
+        }
+//        else if ( id == R.id.action_gen_test_data_for_merge) {
+//            Test.writeDBForMergeTest(this);
+//        }
+
+<span class="fc" id="L489">        return super.onOptionsItemSelected(item);</span>
+    }
+
+
+
+    public void onClick(View v) {
+<span class="pc bpc" id="L495" title="1 of 2 branches missed.">        if(v == buttonUserInfo) {</span>
+<span class="nc" id="L496">            Intent intent = new Intent();</span>
+<span class="nc" id="L497">            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.UserSettingActivity&quot;);</span>
+<span class="nc" id="L498">            startActivityForResult(intent, 0);</span>
+<span class="nc" id="L499">        }</span>
+<span class="pc bpc" id="L500" title="1 of 2 branches missed.">        else if (v==buttonSetting) {</span>
+<span class="fc" id="L501">            Intent intent = new Intent();</span>
+<span class="fc" id="L502">            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.DeviceScanActivity&quot;);</span>
+<span class="fc" id="L503">            startActivityForResult(intent, 0);</span>
+<span class="fc" id="L504">        }</span>
+<span class="nc bnc" id="L505" title="All 2 branches missed.">        else if (v==buttonSessionData) {</span>
+<span class="nc" id="L506">            Intent intent = new Intent();</span>
+<span class="nc" id="L507">            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.SessionDataActivity&quot;);</span>
+<span class="nc" id="L508">            startActivityForResult(intent, 0);</span>
+<span class="nc" id="L509">        }</span>
+<span class="nc bnc" id="L510" title="All 2 branches missed.">        else if (v==buttonRecord) {</span>
+
+//            Intent intent = new Intent();
+//            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.GoogleFitActivity&quot;);
+//            startActivityForResult(intent, 0);
+
+<span class="nc" id="L516">            buildFitnessClient();</span>
+        }
+<span class="fc" id="L518">    }</span>
+
+
+    // Google Sync
+    private void buildFitnessClient() {
+
+        // Create the Google API Client
+<span class="nc" id="L525">        mGoogleApiClient = new GoogleApiClient.Builder(this)</span>
+<span class="nc" id="L526">                .addApi(Fitness.HISTORY_API)</span>
+<span class="nc" id="L527">                .addApi(Fitness.SESSIONS_API)</span>
+<span class="nc" id="L528">                .addScope(new Scope(Scopes.FITNESS_LOCATION_READ_WRITE))</span>
+<span class="nc" id="L529">                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))</span>
+<span class="nc" id="L530">                .addScope(new Scope(Scopes.FITNESS_BODY_READ_WRITE))</span>
+<span class="nc" id="L531">                .addConnectionCallbacks(</span>
+<span class="nc" id="L532">                        new GoogleApiClient.ConnectionCallbacks() {</span>
+                            @Override
+                            public void onConnected(Bundle bundle) {
+<span class="nc" id="L535">                                Log.i(TAG, &quot;Connected!!!&quot;);</span>
+
+<span class="nc" id="L537">                                handler.post(new Runnable() {</span>
+                                    @Override
+                                    public void run() {
+<span class="nc" id="L540">                                        Toast.makeText(MainActivity.this, &quot;Connected to Google Fit.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L541">                                    }</span>
+                                });
+<span class="nc" id="L543">                            }</span>
+
+                            @Override
+                            public void onConnectionSuspended(int i) {
+                                // If your connection to the sensor gets lost at some point,
+                                // you'll be able to determine the reason and react to it here.
+<span class="nc bnc" id="L549" title="All 2 branches missed.">                                if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {</span>
+<span class="nc" id="L550">                                    Log.i(TAG, &quot;Connection lost.  Cause: Network Lost.&quot;);</span>
+<span class="nc bnc" id="L551" title="All 2 branches missed.">                                } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {</span>
+<span class="nc" id="L552">                                    Log.i(TAG, &quot;Connection lost.  Reason: Service Disconnected&quot;);</span>
+                                }
+<span class="nc" id="L554">                            }</span>
+                        }
+                )
+<span class="nc" id="L557">                .addOnConnectionFailedListener(</span>
+<span class="nc" id="L558">                        new GoogleApiClient.OnConnectionFailedListener() {</span>
+                            // Called whenever the API client fails to connect.
+                            @Override
+                            public void onConnectionFailed(ConnectionResult result) {
+<span class="nc" id="L562">                                Log.i(TAG, &quot;Connection failed. Cause: &quot; + result.toString());</span>
+<span class="nc bnc" id="L563" title="All 2 branches missed.">                                if (!result.hasResolution()) {</span>
+                                    // Show the localized error dialog
+<span class="nc" id="L565">                                    GooglePlayServicesUtil.getErrorDialog(result.getErrorCode(),</span>
+<span class="nc" id="L566">                                            MainActivity.this, 0).show();</span>
+<span class="nc" id="L567">                                    return;</span>
+                                }
+                                // The failure has a resolution. Resolve it.
+                                // Called typically when the app is not yet authorized, and an
+                                // authorization dialog is displayed to the user.
+<span class="nc bnc" id="L572" title="All 2 branches missed.">                                if (!authInProgress) {</span>
+                                    try {
+<span class="nc" id="L574">                                        Log.i(TAG, &quot;Attempting to resolve failed connection&quot;);</span>
+<span class="nc" id="L575">                                        authInProgress = true;</span>
+<span class="nc" id="L576">                                        result.startResolutionForResult(MainActivity.this,</span>
+                                                REQUEST_OAUTH);
+<span class="nc" id="L578">                                    } catch (IntentSender.SendIntentException e) {</span>
+<span class="nc" id="L579">                                        Log.e(TAG,</span>
+<span class="nc" id="L580">                                                &quot;Exception while starting resolution activity &quot; + e.toString());</span>
+<span class="nc" id="L581">                                    }</span>
+                                }
+<span class="nc" id="L583">                            }</span>
+                        }
+                )
+<span class="nc" id="L586">                .build();</span>
+
+<span class="nc" id="L588">        mGoogleApiClient.connect();</span>
+<span class="nc" id="L589">    }</span>
+
+
+<span class="fc" id="L592">    private long INTERVAL = 1 * 60 * 1000; // Every 1 minute</span>
+    Thread thread;
+
+//    private void startPolling(long interval) {
+//        requestToReadBatteryLevel();
+//
+//        if (thread == null) {
+//            thread = new Thread(new PollingBatteryLevel(this, interval));
+//            thread.start();
+//        }
+//    }
+
+//    private void stopPolling() {
+//        if (thread != null) {
+//            thread.interrupt();
+//            thread = null;
+//        }
+//    }
+
+    class PollingBatteryLevel implements Runnable {
+        private Context context;
+        private long interval;
+<span class="nc" id="L614">        public PollingBatteryLevel(Context context, long interval) {</span>
+<span class="nc" id="L615">            this.context = context;</span>
+<span class="nc" id="L616">            this.interval = interval;</span>
+<span class="nc" id="L617">        }</span>
+
+        @Override
+        public void run() {
+<span class="nc" id="L621">            Log.i(TAG, &quot;PollingBatteryLevel.run() starts.(Request to read Battery Level)&quot;);</span>
+
+<span class="nc" id="L623">            boolean flag = true;</span>
+<span class="nc bnc" id="L624" title="All 2 branches missed.">            while(flag) {</span>
+                try {
+<span class="nc" id="L626">                    requestToReadBatteryLevel();</span>
+
+<span class="nc" id="L628">                    Thread.sleep(interval);</span>
+<span class="nc" id="L629">                } catch (InterruptedException e) {</span>
+<span class="nc" id="L630">                    flag = false;</span>
+<span class="nc" id="L631">                }</span>
+            }
+
+<span class="nc" id="L634">            Log.i(TAG, &quot;PollingBatteryLevel.run() ends.&quot;);</span>
+<span class="nc" id="L635">        }</span>
+    }
+
+    public void setBattery(int battery_level) {
+<span class="pc bpc" id="L639" title="1 of 2 branches missed.">        if (battery_level&lt;0) battery_level = 0;</span>
+<span class="pc bpc" id="L640" title="1 of 2 branches missed.">        else if (battery_level&gt;100) battery_level = 100;</span>
+
+<span class="fc" id="L642">        textViewBatteryLevel.setText(battery_level + &quot;&quot;);</span>
+<span class="fc" id="L643">    }</span>
+
+    public void setCalorie(int calorie) {
+<span class="pc bpc" id="L646" title="1 of 2 branches missed.">        if (calorie &lt; 0 ) calorie = 0;</span>
+
+<span class="fc" id="L648">        textViewCalorie.setText(calorie + &quot;&quot;);</span>
+<span class="fc" id="L649">    }</span>
+
+    public void setSteps(int steps) {
+<span class="pc bpc" id="L652" title="1 of 2 branches missed.">        if (steps &lt; 0) steps = 0;</span>
+
+<span class="fc" id="L654">        textViewSteps.setText(steps + &quot;&quot;);</span>
+<span class="fc" id="L655">    }</span>
+
+    public void setDuration(int duration) {
+<span class="pc bpc" id="L658" title="1 of 2 branches missed.">        if (duration &lt; 0) duration = 0;</span>
+<span class="fc" id="L659">        int hour = duration / (60 * 60);</span>
+<span class="fc" id="L660">        int min = (duration - hour * 60 * 60) / 60;</span>
+<span class="fc" id="L661">        int sec = duration - hour * 60 * 60 - min * 60;</span>
+
+<span class="fc" id="L663">        textViewDuration.setText(hour + &quot;:&quot; + min + &quot;:&quot; + sec);</span>
+<span class="fc" id="L664">    }</span>
+
+    // Receiver
+<span class="fc" id="L667">    MainActivityReceiver mainActivityReceiver = new MainActivityReceiver();</span>
+
+<span class="fc" id="L669">    class MainActivityReceiver extends BroadcastReceiver {</span>
+
+        @Override
+        public void onReceive(Context context, final Intent intent) {
+
+<span class="fc bfc" id="L674" title="All 2 branches covered.">            if (ACTION_DATA_HEALTH_MEASUREMENT_AVAILABLE.equals(intent.getAction())) {</span>
+<span class="fc" id="L675">                int heart_rate = intent.getIntExtra(HEALTH_MEASUREMENT_KEY, 0);</span>
+<span class="fc" id="L676">                int hr_status = intent.getIntExtra(HEALTH_MEASUREMENT_HR_STATUS_KEY, 0);</span>
+<span class="fc" id="L677">                int act_level = intent.getIntExtra(HEALTH_MEASUREMENT_ACT_LEVEL_KEY, 0);</span>
+<span class="fc" id="L678">                int calorie = intent.getIntExtra(HEALTH_MEASUREMENT_ENERGY_KEY, 0);</span>
+<span class="fc" id="L679">                int steps = intent.getIntExtra(HEALTH_MEASUREMENT_STEPS_KEY, 0);</span>
+<span class="fc" id="L680">                int duration = intent.getIntExtra(HEALTH_MEASUREMENT_DURATION_KEY, 0);</span>
+
+<span class="fc" id="L682">                startButtonView.setConnectionStatus(StartButtonView.MEASURING);</span>
+
+<span class="fc" id="L684">                startButtonView.setBPM(heart_rate);</span>
+<span class="fc" id="L685">                startButtonView.chkHearRateZone(heart_rate);</span>
+<span class="fc" id="L686">                startButtonView.setLastUpdate(StartButtonView.HEART_RATE);</span>
+<span class="fc" id="L687">                setCalorie(calorie);</span>
+<span class="fc" id="L688">                setSteps(steps);</span>
+<span class="fc" id="L689">                setDuration(duration);</span>
+
+<span class="fc" id="L691">                startButtonView.setStart(false);</span>
+
+<span class="fc" id="L693">                canPressToStart = true;</span>
+
+<span class="pc bpc" id="L695" title="1 of 2 branches missed.">            } else if (ACTION_DATA_HEART_RATE_AVAILABLE.equals(intent.getAction())) {</span>
+
+<span class="nc" id="L697">                int heart_rate = intent.getIntExtra(HEART_RATE_KEY, 0);</span>
+<span class="nc" id="L698">                startButtonView.setBPM(heart_rate);</span>
+<span class="nc" id="L699">                startButtonView.chkHearRateZone(heart_rate);</span>
+<span class="nc" id="L700">                startButtonView.setLastUpdate(StartButtonView.HEART_RATE);</span>
+
+<span class="pc bpc" id="L702" title="1 of 2 branches missed.">            } else if (ACTION_DATA_BATTERY_LEVEL_AVAILABLE.equals(intent.getAction())) {</span>
+
+<span class="nc" id="L704">                int battery_level = intent.getIntExtra(BATTERY_LEVEL_KEY, 0);</span>
+<span class="nc" id="L705">                startButtonView.setLastUpdate(StartButtonView.BATTERY);</span>
+<span class="nc" id="L706">                setBattery(battery_level);</span>
+
+<span class="pc bpc" id="L708" title="1 of 2 branches missed.">            } else if (BluetoothLeService.ACTION_GATT_CONNECTING.equals(intent.getAction())) {</span>
+
+<span class="nc" id="L710">                startButtonView.setConnectionStatus(StartButtonView.CONNECTING);</span>
+
+<span class="nc" id="L712">                canPressToStart = false;</span>
+
+<span class="pc bpc" id="L714" title="1 of 2 branches missed.">            } else if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(intent.getAction())) {</span>
+
+<span class="nc" id="L716">                startButtonView.setConnectionStatus(StartButtonView.CONNECTED);</span>
+
+<span class="nc" id="L718">                canPressToStart = false;</span>
+
+<span class="fc bfc" id="L720" title="All 2 branches covered.">            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(intent.getAction())) {</span>
+
+//                startPolling(INTERVAL);
+
+<span class="fc bfc" id="L724" title="All 2 branches covered.">            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(intent.getAction())) {</span>
+
+//                stopPolling();
+//                requestToUnbindService();
+//                requestToDisconnect();
+
+<span class="fc" id="L730">                startButtonView.setConnectionStatus(StartButtonView.NO_DEVICE);</span>
+
+<span class="fc" id="L732">                startButtonView.setStart(true);</span>
+<span class="fc" id="L733">                startButtonView.setBPM(0);</span>
+
+<span class="fc" id="L735">                setBattery(0);</span>
+<span class="fc" id="L736">                setCalorie(0);</span>
+<span class="fc" id="L737">                setSteps(0);</span>
+<span class="fc" id="L738">                setDuration(0);</span>
+
+<span class="fc" id="L740">                canPressToStart = true;</span>
+
+<span class="pc bpc" id="L742" title="1 of 4 branches missed.">                if ( (progressDialog!=null) &amp;&amp; (progressDialog.isShowing()) ) {</span>
+<span class="fc" id="L743">                    progressDialog.dismiss();</span>
+<span class="fc" id="L744">                    progressDialog = null;</span>
+                }
+
+
+<span class="fc bfc" id="L748" title="All 2 branches covered.">            } else if (BluetoothLeService.ACTION_DATA_STORE_AND_DISCONNECTED.equals(intent.getAction())) {</span>
+
+<span class="fc" id="L750">                startButtonView.setConnectionStatus(StartButtonView.NO_DEVICE);</span>
+
+<span class="fc" id="L752">                startButtonView.setStart(true);</span>
+<span class="fc" id="L753">                startButtonView.setBPM(0);</span>
+
+<span class="fc" id="L755">                setBattery(0);</span>
+<span class="fc" id="L756">                setCalorie(0);</span>
+<span class="fc" id="L757">                setSteps(0);</span>
+<span class="fc" id="L758">                setDuration(0);</span>
+
+<span class="fc" id="L760">                canPressToStart = true;</span>
+<span class="pc bpc" id="L761" title="3 of 4 branches missed.">                if ( (progressDialog!=null) &amp;&amp; (progressDialog.isShowing()) ) {</span>
+<span class="nc" id="L762">                    progressDialog.dismiss();</span>
+<span class="nc" id="L763">                    progressDialog = null;</span>
+                }
+
+
+<span class="fc" id="L767">                int sessionid = intent.getIntExtra(SessionDataActivity.SESSION_ID_KEY, -1);</span>
+<span class="fc" id="L768">                Intent i = new Intent();</span>
+<span class="fc" id="L769">                i.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.GraphActivity&quot;);</span>
+<span class="fc" id="L770">                i.putExtra(SessionDataActivity.SESSION_ID_KEY, sessionid);</span>
+<span class="fc" id="L771">                startActivity(i);</span>
+
+<span class="pc bpc" id="L773" title="1 of 2 branches missed.">            } else if (BluetoothLeService.ACTION_GATT_ABNORMAL_TERMINATION.equals(intent.getAction())) {</span>
+//                stopPolling();
+<span class="nc" id="L775">                startButtonView.setConnectionStatus(StartButtonView.NO_DEVICE);</span>
+
+<span class="nc" id="L777">                startButtonView.setStart(true);</span>
+<span class="nc" id="L778">                startButtonView.setBPM(0);</span>
+
+<span class="nc" id="L780">                setBattery(0);</span>
+<span class="nc" id="L781">                setCalorie(0);</span>
+<span class="nc" id="L782">                setSteps(0);</span>
+<span class="nc" id="L783">                setDuration(0);</span>
+
+<span class="nc" id="L785">                canPressToStart = true;</span>
+
+<span class="nc bnc" id="L787" title="All 4 branches missed.">                if ( (progressDialog!=null) &amp;&amp; (progressDialog.isShowing()) ) {</span>
+<span class="nc" id="L788">                    progressDialog.dismiss();</span>
+<span class="nc" id="L789">                    progressDialog = null;</span>
+                }
+
+<span class="nc" id="L792">                Toast.makeText(MainActivity.this, &quot;Connection failed&quot;, Toast.LENGTH_SHORT).show();</span>
+
+<span class="fc bfc" id="L794" title="All 2 branches covered.">            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(intent.getAction())) {</span>
+
+
+<span class="fc bfc" id="L797" title="All 2 branches covered.">            } else if (MainActivity.ACTION_PRESS_START_BUTTON.equals(intent.getAction())) {</span>
+<span class="fc" id="L798">                boolean start = intent.getBooleanExtra(MainActivity.START_KEY, false);</span>
+<span class="pc bpc" id="L799" title="1 of 2 branches missed.">                if (canPressToStart) {</span>
+<span class="pc bpc" id="L800" title="1 of 2 branches missed.">                    if (start) { // Time to &quot;START&quot;</span>
+
+<span class="nc" id="L802">                        Log.i(TAG, &quot;cnaPressToStart==true &amp;&amp; start==true&quot;);</span>
+
+                        // If a registered device is available
+<span class="nc" id="L805">                        DeviceScanActivity.MyDevice device = isRegisteredDeviceAvailable();</span>
+
+<span class="nc bnc" id="L807" title="All 2 branches missed.">                        if (device == null) {</span>
+<span class="nc" id="L808">                            Intent i = new Intent();</span>
+<span class="nc" id="L809">                            i.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.DeviceScanActivity&quot;);</span>
+<span class="nc" id="L810">                            i.setAction(DeviceScanActivity.AutoScanningAction);</span>
+<span class="nc" id="L811">                            startActivityForResult(i, 0);</span>
+<span class="nc" id="L812">                        } else {</span>
+<span class="nc" id="L813">                            Intent i = new Intent(MainActivity.this, BluetoothLeService.class);</span>
+<span class="nc" id="L814">                            i.setAction(BluetoothLeService.ACTION_CONNECT);</span>
+<span class="nc" id="L815">                            i.putExtra(BluetoothLeService.CONNECT_ADDRESS_KEY, device.getAddress());</span>
+//                            i.putExtra(BluetoothLeService.STORED_DATA_REQUEST_KEY, false);
+<span class="nc" id="L817">                            startService(i);</span>
+//                        makeConnection(device.getAddress(), device.getName());
+                        }
+
+
+<span class="nc" id="L822">                    } else { // Time to &quot;STOP&quot;</span>
+//                    makeDisconnection();
+//                    requestToUnbindService();
+<span class="fc" id="L825">                        Log.i(TAG, &quot;cnaPressToStart==true &amp;&amp; start==false&quot;);</span>
+
+<span class="fc" id="L827">                        requestToDisconnect();</span>
+                    }
+<span class="fc" id="L829">                    canPressToStart = false;</span>
+                }
+
+<span class="fc" id="L832">            }</span>
+<span class="fc bfc" id="L833" title="All 2 branches covered.">            else if (ACTION_STORED_DATA_AVAILABLE.equals(intent.getAction())) {</span>
+
+//                int session_count = intent.getIntExtra(SESSION_COUNT_KEY, 0);
+//                int session_index = intent.getIntExtra(SESSION_INDEX_KEY, 0);
+//
+//                Toast.makeText(MainActivity.this,
+//                        &quot;Current Session/Total Stored Session : &quot; + session_index + &quot;/&quot;
+//                                + session_count, Toast.LENGTH_SHORT).show();
+
+<span class="fc" id="L842">                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);</span>
+<span class="fc" id="L843">                builder.setTitle(&quot;Data Download&quot;)</span>
+<span class="fc" id="L844">                       .setMessage(&quot;Do you want to download data?&quot;)</span>
+<span class="fc" id="L845">                       .setPositiveButton(&quot;OK&quot;, new DialogInterface.OnClickListener() {</span>
+                           @Override
+                           public void onClick(DialogInterface dialog, int which) {
+<span class="fc" id="L848">                               Intent intent = new Intent();</span>
+<span class="fc" id="L849">                               intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.BluetoothLeService&quot;);</span>
+<span class="fc" id="L850">                               intent.setAction(BluetoothLeService.ACTION_REQUEST_TO_DOWNLOAD_STORED_DATA);</span>
+<span class="fc" id="L851">                               startService(intent);</span>
+<span class="fc" id="L852">                               Log.i(TAG, &quot;Request to download&quot;);</span>
+<span class="fc" id="L853">                           }</span>
+                       })
+<span class="fc" id="L855">                       .setNegativeButton(&quot;Cancel&quot;, new DialogInterface.OnClickListener() {</span>
+                           @Override
+                           public void onClick(DialogInterface dialog, int which) {
+<span class="fc" id="L858">                               Intent intent = new Intent();</span>
+<span class="fc" id="L859">                               intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.BluetoothLeService&quot;);</span>
+<span class="fc" id="L860">                               intent.setAction(BluetoothLeService.ACTION_REQUEST_REALTIME_DATA);</span>
+<span class="fc" id="L861">                               startService(intent);</span>
+<span class="fc" id="L862">                               Log.i(TAG, &quot;Request to realtime data&quot;);</span>
+<span class="fc" id="L863">                           }</span>
+                       })
+<span class="fc" id="L865">                       .setCancelable(false)</span>
+<span class="fc" id="L866">                       .show();</span>
+
+<span class="fc" id="L868">                canPressToStart = false;</span>
+
+<span class="fc" id="L870">            }</span>
+<span class="fc bfc" id="L871" title="All 2 branches covered.">            else if (ACTION_STORED_DATA_PROGRESS.equals(intent.getAction())) {</span>
+
+<span class="fc" id="L873">                int session_count = intent.getIntExtra(SESSION_COUNT_KEY, 0);</span>
+<span class="fc" id="L874">                int session_number = intent.getIntExtra(SESSION_INDEX_KEY, 0);</span>
+<span class="fc" id="L875">                int data_count = intent.getIntExtra(DATA_COUNT_KEY, 0);</span>
+<span class="fc" id="L876">                int data_number = intent.getIntExtra(DATA_INDEX_KEY, 0);</span>
+
+<span class="fc" id="L878">                double progress = (100.0/session_count) * (session_number-1);</span>
+
+<span class="fc bfc" id="L880" title="All 2 branches covered.">                if (data_count != 0) {</span>
+<span class="fc" id="L881">                    progress = progress + (100.0/session_count/data_count) * (data_number+1);</span>
+                }
+
+<span class="fc" id="L884">                Log.i(TAG, &quot;[session_count,session_number,data_count,data_number:progress]&quot;</span>
+                        + &quot;[&quot; + session_count + &quot;,&quot; + session_number + &quot;,&quot; + data_count + &quot;,&quot; + data_number + &quot;:&quot; + (int)progress + &quot;]&quot;);
+
+<span class="pc bpc" id="L887" title="1 of 4 branches missed.">                if (progressDialog == null || progressDialog.isShowing() == false) {</span>
+<span class="fc" id="L888">                    progressDialog = new ProgressDialog(MainActivity.this);</span>
+<span class="fc" id="L889">                    progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);</span>
+<span class="fc" id="L890">                    progressDialog.setMessage(&quot;Data Download&quot;);</span>
+<span class="fc" id="L891">                    progressDialog.setCancelable(false);</span>
+<span class="fc" id="L892">                    progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {</span>
+                        @Override
+                        public void onCancel(DialogInterface dialog) {
+<span class="nc" id="L895">                            Toast.makeText(MainActivity.this, &quot;Not cancelable (On debugging)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L896">                        }</span>
+                    });
+<span class="fc" id="L898">                    progressDialog.show();</span>
+                }
+
+<span class="fc" id="L901">                progressDialog.setProgress((int) progress);</span>
+<span class="fc" id="L902">            }</span>
+<span class="pc bpc" id="L903" title="1 of 2 branches missed.">            else if (ACTION_STORED_DATA_COMPLETED.equals(intent.getAction())) {</span>
+<span class="fc" id="L904">                progressDialog.dismiss();</span>
+<span class="fc" id="L905">                progressDialog = null;</span>
+
+<span class="fc" id="L907">                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);</span>
+<span class="fc" id="L908">                builder.setTitle(&quot;Data Download&quot;)</span>
+<span class="fc" id="L909">                        .setMessage(&quot;Download completed.&quot;)</span>
+<span class="fc" id="L910">                        .setPositiveButton(&quot;OK&quot;, new DialogInterface.OnClickListener() {</span>
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L913">                                dialog.dismiss();</span>
+<span class="nc" id="L914">                            }</span>
+                        })
+<span class="fc" id="L916">                        .setNegativeButton(&quot;Details&quot;, new DialogInterface.OnClickListener() {</span>
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+<span class="fc" id="L919">                                int sessionid = intent.getIntExtra(SessionDataActivity.SESSION_ID_KEY, -1);</span>
+<span class="fc" id="L920">                                Intent i = new Intent();</span>
+//                                intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.SessionDataActivity&quot;);
+<span class="fc" id="L922">                                i.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.GraphActivity&quot;);</span>
+<span class="fc" id="L923">                                i.putExtra(SessionDataActivity.SESSION_ID_KEY, sessionid);</span>
+<span class="fc" id="L924">                                startActivity(i);</span>
+<span class="fc" id="L925">                            }</span>
+                        })
+<span class="fc" id="L927">                        .show();</span>
+<span class="fc" id="L928">            }</span>
+<span class="nc bnc" id="L929" title="All 2 branches missed.">            else if (ACTION_RESPONSE_MEASURING_STATUS.equals(intent.getAction())) {</span>
+<span class="nc" id="L930">                boolean measuring_start_or_stop = intent.getBooleanExtra(MEASURING_START_OR_STOP_KEY, false);</span>
+
+<span class="nc bnc" id="L932" title="All 2 branches missed.">                if (measuring_start_or_stop==true) {</span>
+<span class="nc" id="L933">                    startButtonView.setConnectionStatus(StartButtonView.WAITING);</span>
+                } else {
+<span class="nc" id="L935">                    startButtonView.setConnectionStatus(StartButtonView.CONNECTED);</span>
+                }
+<span class="nc" id="L937">            }</span>
+            else {
+<span class="nc" id="L939">                Log.i(TAG, &quot;MainActivityReceiver.onReceive : no action is matched.&quot;);</span>
+            }
+<span class="fc" id="L941">        }</span>
+
+        private DeviceScanActivity.MyDevice isRegisteredDeviceAvailable() {
+<span class="nc" id="L944">            SharedPreferences pref = getSharedPreferences(DeviceScanActivity.prefName, 0);</span>
+
+<span class="nc" id="L946">            DeviceScanActivity.MyDevice device = null;</span>
+
+<span class="nc" id="L948">            String address = pref.getString(Integer.toString(0), &quot;&quot;);</span>
+<span class="nc" id="L949">            String name = pref.getString(address, &quot;&quot;);</span>
+
+<span class="nc bnc" id="L951" title="All 4 branches missed.">            if ( ! (address == null || address == &quot;&quot;) ) {</span>
+<span class="nc" id="L952">                device = new DeviceScanActivity.MyDevice(address, name);</span>
+            }
+
+<span class="nc" id="L955">            return device;</span>
+        }
+
+//        private void makeConnection(String mDeviceAddress, String mDeviceName) {
+//            // Connecting a BLE device
+//
+//            Intent gattServiceIntent = new Intent(MainActivity.this, BluetoothLeService.class);
+//            gattServiceIntent.putExtra(DeviceScanActivity.DEVICE_NAME, mDeviceName);
+//            gattServiceIntent.putExtra(DeviceScanActivity.DEVICE_ADDRESS, mDeviceAddress);
+//
+//            ServiceConnection mServiceConnection = new BLEServiceConnection(MainActivity.this);
+//
+//            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+////            startButtonView.setStart(false);
+//
+//            Log.i(TAG, &quot;A bluetooth device is automatically selected from registered list to connect...&quot;);
+//        }
+
+//        private void makeDisconnection() {
+//            if (mServiceConnection != null) {
+//                unbindService(mServiceConnection);
+//            }
+//
+////            startButtonView.setStart(true);
+//
+//            Log.i(TAG, &quot;A bluetooth device is selected automatically from registered list to disconnect...&quot;);
+//        }
+
+    }
+
+    private ProgressDialog progressDialog;
+
+    // Requests to BluetoothLeService
+    private void requestToReadBatteryLevel() {
+<span class="fc" id="L989">        Intent intent = new Intent();</span>
+<span class="fc" id="L990">        intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.BluetoothLeService&quot;);</span>
+<span class="fc" id="L991">        intent.setAction(BluetoothLeService.ACTION_READ_BATTERY_LEVEL);</span>
+<span class="fc" id="L992">        startService(intent);</span>
+<span class="fc" id="L993">        Log.i(TAG, &quot;Request to read Battery Level&quot;);</span>
+<span class="fc" id="L994">    }</span>
+
+    private void requestToDisconnect() {
+<span class="fc" id="L997">        Intent intent = new Intent(MainActivity.this, BluetoothLeService.class);</span>
+<span class="fc" id="L998">        intent.setAction(BluetoothLeService.ACTION_DISCONNECT);</span>
+<span class="fc" id="L999">        startService(intent);</span>
+<span class="fc" id="L1000">        Log.i(TAG, &quot;Request to disconnect BluetoothLeService&quot;);</span>
+
+<span class="fc" id="L1002">        canPressToStart = false;</span>
+<span class="fc" id="L1003">    }</span>
+
+//    private void requestToUnbindService() {
+//        Intent intent = new Intent();
+//        intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.BluetoothLeService&quot;);
+//        intent.setAction(BluetoothLeService.ACTION_UNBIND_SERVICE);
+//        startService(intent);
+//        Log.i(TAG, &quot;Request to unbind BluetoothLeService&quot;);
+//    }
+
+
+
+    // For protocol test, request to Read Stored Data
+    private void requestToReadStoredData() {
+
+<span class="nc" id="L1018">        SharedPreferences pref = getSharedPreferences(DeviceScanActivity.prefName, 0);</span>
+
+<span class="nc" id="L1020">        DeviceScanActivity.MyDevice device = null;</span>
+
+<span class="nc" id="L1022">        String address = pref.getString(Integer.toString(0), &quot;&quot;);</span>
+<span class="nc" id="L1023">        String name = pref.getString(address, &quot;&quot;);</span>
+
+<span class="nc bnc" id="L1025" title="All 4 branches missed.">        if ( ! (address == null || address == &quot;&quot;) ) {</span>
+<span class="nc" id="L1026">            device = new DeviceScanActivity.MyDevice(address, name);</span>
+        }
+
+<span class="nc bnc" id="L1029" title="All 2 branches missed.">        if (device == null) {</span>
+<span class="nc" id="L1030">            Toast.makeText(this, &quot;Please retry after registering a device&quot;, Toast.LENGTH_SHORT).show();</span>
+        } else {
+<span class="nc" id="L1032">            Intent i = new Intent(MainActivity.this, BluetoothLeService.class);</span>
+<span class="nc" id="L1033">            i.setAction(BluetoothLeService.ACTION_CONNECT);</span>
+<span class="nc" id="L1034">            i.putExtra(BluetoothLeService.CONNECT_ADDRESS_KEY, device.getAddress());</span>
+//            i.putExtra(BluetoothLeService.STORED_DATA_REQUEST_KEY, true);
+<span class="nc" id="L1036">            startService(i);</span>
+//                        makeConnection(device.getAddress(), device.getName());
+
+<span class="nc" id="L1039">            canPressToStart = false;</span>
+        }
+
+<span class="nc" id="L1042">    }</span>
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L1046" title="All 2 branches missed.">        if (event.getAction() == KeyEvent.ACTION_DOWN) {</span>
+<span class="nc bnc" id="L1047" title="All 2 branches missed.">            switch (keyCode) {</span>
+                case KeyEvent.KEYCODE_BACK:
+<span class="nc" id="L1049">                    new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)</span>
+<span class="nc" id="L1050">                            .setTitle(&quot;Quit&quot;)</span>
+<span class="nc" id="L1051">                            .setMessage(&quot;Do you want to quit?&quot;)</span>
+<span class="nc" id="L1052">                            .setPositiveButton(&quot;Yes&quot;, new DialogInterface.OnClickListener() {</span>
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L1055">                                    finish();</span>
+//                                    finishAffinity();
+<span class="nc" id="L1057">                                }</span>
+<span class="nc" id="L1058">                            }).setNegativeButton( &quot;No&quot;, null ).show();</span>
+<span class="nc" id="L1059">                    return true;</span>
+            }
+        }
+<span class="nc" id="L1062">        return super.onKeyDown(keyCode, event);</span>
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+<span class="fc" id="L1067">        super.onActivityResult(requestCode, resultCode, data);</span>
+
+<span class="pc bpc" id="L1069" title="1 of 2 branches missed.">        if (requestCode == REQUEST_OAUTH) {</span>
+<span class="nc" id="L1070">            authInProgress = false;</span>
+<span class="nc bnc" id="L1071" title="All 2 branches missed.">            if (resultCode == RESULT_OK) {</span>
+                // Make sure the app is not already connected or attempting to connect
+<span class="nc bnc" id="L1073" title="All 4 branches missed.">                if (!mGoogleApiClient.isConnecting() &amp;&amp; !mGoogleApiClient.isConnected()) {</span>
+<span class="nc" id="L1074">                    mGoogleApiClient.connect();</span>
+                }
+            }
+        }
+<span class="pc bpc" id="L1078" title="1 of 2 branches missed.">        else if (resultCode==RESULT_OK) {</span>
+<span class="nc" id="L1079">            String action = data.getAction();</span>
+<span class="nc bnc" id="L1080" title="All 4 branches missed.">            if (action != null &amp;&amp; ACTION_FINISH_ACTIVITY.equals(action)) {</span>
+<span class="nc" id="L1081">                finish();</span>
+            }
+        }
+<span class="fc" id="L1084">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

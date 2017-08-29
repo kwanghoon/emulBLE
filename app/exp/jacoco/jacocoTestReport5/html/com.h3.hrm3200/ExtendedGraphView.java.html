@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ExtendedGraphView.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">ExtendedGraphView.java</span></div><h1>ExtendedGraphView.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.util.AttributeSet;
+
+import com.jjoe64.graphview.GraphView;
+
+/**
+ * Created by moonhyeonah on 2015. 4. 22..
+ */
+public class ExtendedGraphView extends GraphView {
+
+    public ExtendedGraphView(Context context) {
+<span class="nc" id="L20">        super(context);</span>
+<span class="nc" id="L21">    }</span>
+
+    public ExtendedGraphView(Context context, AttributeSet attrs) {
+<span class="fc" id="L24">        super(context, attrs);</span>
+<span class="fc" id="L25">    }</span>
+
+    public ExtendedGraphView(Context context, AttributeSet attrs, int defStyle) {
+<span class="nc" id="L28">        super(context, attrs, defStyle);</span>
+<span class="nc" id="L29">    }</span>
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+
+        Paint paint;
+<span class="fc" id="L35">        int left = getGraphContentLeft();</span>
+<span class="fc" id="L36">        int top = getGraphContentTop();</span>
+<span class="fc" id="L37">        int width = getGraphContentWidth();</span>
+<span class="fc" id="L38">        float height = getGraphContentHeight();</span>
+<span class="fc" id="L39">        float part = getGraphContentHeight()/10;</span>
+
+<span class="fc" id="L41">        paint = new Paint();</span>
+<span class="fc" id="L42">        paint.setColor(Color.WHITE);</span>
+<span class="fc" id="L43">        paint.setTextSize(paint.getTextSize()*2);</span>
+<span class="fc" id="L44">        canvas.drawText(&quot;bpm&quot;,left,top,paint);</span>
+
+<span class="fc" id="L46">        paint.setStyle(Paint.Style.FILL);</span>
+
+<span class="fc" id="L48">        paint.setAlpha(Color.TRANSPARENT);</span>
+
+<span class="fc" id="L50">        paint.setColor(Color.RED);</span>
+<span class="fc" id="L51">        canvas.drawRect(left, top, left+width, top+part, paint);</span>
+
+<span class="fc" id="L53">        paint.setColor(0xffFFFF00);</span>
+<span class="fc" id="L54">        canvas.drawRect(left, top+part, left+width, top+part*2, paint);</span>
+
+<span class="fc" id="L56">        paint.setColor(0xff00FF00);</span>
+<span class="fc" id="L57">        canvas.drawRect(left, top+part*2, left+width, top+part*3, paint);</span>
+
+<span class="fc" id="L59">        paint.setColor(0xff00FFFF);</span>
+<span class="fc" id="L60">        canvas.drawRect(left, top+part*3, left+width, top+part*4, paint);</span>
+
+<span class="fc" id="L62">        paint.setColor(0xff0000FF);</span>
+<span class="fc" id="L63">        canvas.drawRect(left, top+part*4, left+width, top+part*5, paint);</span>
+
+<span class="fc" id="L65">        paint.setColor(Color.GRAY);</span>
+<span class="fc" id="L66">        canvas.drawRect(left, top+part*5, left+width, top+height, paint);</span>
+
+<span class="fc" id="L68">        super.onDraw(canvas);</span>
+<span class="fc" id="L69">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

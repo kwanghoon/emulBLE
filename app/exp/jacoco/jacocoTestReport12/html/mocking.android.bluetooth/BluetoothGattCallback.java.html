@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothGattCallback.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BluetoothGattCallback.java</span></div><h1>BluetoothGattCallback.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 22..
+ */
+<span class="fc" id="L6">public abstract class BluetoothGattCallback {</span>
+    public abstract void onConnectionStateChange (BluetoothGatt gatt, int status, int newState);
+    public abstract void onServicesDiscovered (BluetoothGatt gatt, int status);
+    public abstract void onCharacteristicChanged (BluetoothGatt gatt, BluetoothGattCharacteristic characteristic);
+    public abstract void onCharacteristicRead (BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status);
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -18,5 +18,6 @@ public class ApplicationTest extends ActivityUnitTestCase<MainActivity> {
         Intent intent = new Intent();
         intent.setClassName("com.h3.hrm3200", "com.h3.hrm3200.MainActivity");
         startActivity(intent, null, null);
+        jacoco.generateCoverageReport();
     }
 }

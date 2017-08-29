@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>CANCEL_DownloadStoredData_0x82_0x01_0x83.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul.model</a> &gt; <span class="el_source">CANCEL_DownloadStoredData_0x82_0x01_0x83.java</span></div><h1>CANCEL_DownloadStoredData_0x82_0x01_0x83.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul.model;
+
+import com.h3.hrm3200.emul.AutoHRM3200;
+
+import emul.bluetooth.BluetoothLE;
+import emul.bluetooth.model.BLEStateException;
+import emul.bluetooth.model.BLEWriteCharacteristicState;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+
+/**
+ * Created by khChoi on 2017-08-19.
+ */
+
+public class CANCEL_DownloadStoredData_0x82_0x01_0x83 extends BLEWriteCharacteristicState {
+    public CANCEL_DownloadStoredData_0x82_0x01_0x83(BluetoothLE bluetoothLE) {
+<span class="fc" id="L17">        super(bluetoothLE);</span>
+<span class="fc" id="L18">    }</span>
+
+    @Override
+    public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                       IBLEChangeCharacteristic ibleChangeCharacteristic) {
+        // Condition: This should be called in doWriteCharacteristic
+        //            and something in the following:
+
+<span class="fc" id="L26">        byte in[] = btGattCharacteristic.getValue();</span>
+<span class="pc bpc" id="L27" title="2 of 4 branches missed.">        if ((in[1] &amp; 0xff) == 0x82 &amp;&amp; (in[3] &amp; 0xff) == 0x01) {</span>
+<span class="fc" id="L28">            ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,</span>
+                    new byte[]{(byte) 0x80, (byte) 0x83, (byte) 0x01, (byte) 0x00, (byte) 0xEF});
+
+<span class="fc" id="L31">            return;</span>
+        }
+
+<span class="nc" id="L34">        throw new BLEStateException(&quot;doWriteCharacteristic: CANCEL_DownloadStoredData_0x82_0x01_0x83 : &quot; + (in[1] &amp; 0xff) + &quot;==&quot; + 0x82 + &quot;, &quot;</span>
+                + (in[3] &amp; 0xff) + &quot;==&quot; + 0x01);
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

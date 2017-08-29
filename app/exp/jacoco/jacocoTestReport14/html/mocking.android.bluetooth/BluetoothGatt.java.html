@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothGatt.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BluetoothGatt.java</span></div><h1>BluetoothGatt.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+
+import android.os.Message;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Created by moonhyeonah on 2016. 5. 22..
+ */
+public class BluetoothGatt {
+    public final static int GATT_SUCCESS = 0;
+    public final static int GATT_FAILURE = 257;
+    private List&lt;BluetoothGattService&gt; services;
+
+    private BluetoothDevice bluetoothDevice;
+    private PortingLayer portingLayer;
+
+<span class="fc" id="L21">    public BluetoothGatt(BluetoothDevice bluetoothDevice, PortingLayer portingLayer) {</span>
+<span class="fc" id="L22">        this.bluetoothDevice = bluetoothDevice;</span>
+<span class="fc" id="L23">        this.portingLayer = portingLayer;</span>
+<span class="fc" id="L24">        this.services = new ArrayList&lt;BluetoothGattService&gt;();</span>
+<span class="fc" id="L25">    }</span>
+
+    public boolean connect() {
+        // TODO
+<span class="nc bnc" id="L29" title="All 2 branches missed.">        if (bluetoothDevice != null) {</span>
+<span class="nc" id="L30">            return true;</span>
+        }
+        else {
+<span class="nc" id="L33">            return false;</span>
+        }
+
+    }
+    public void disconnect() {
+<span class="fc" id="L38">        portingLayer.disconnect();</span>
+<span class="fc" id="L39">    }</span>
+
+    public void close() {
+
+<span class="fc" id="L43">    }</span>
+
+    public boolean discoverServices() {
+<span class="fc" id="L46">        portingLayer.discoverServices();</span>
+
+<span class="fc" id="L48">        return true;</span>
+    }
+
+    public List&lt;BluetoothGattService&gt; getServices() {
+<span class="fc" id="L52">        return services;</span>
+    }
+
+    public boolean setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enable) {
+<span class="fc" id="L56">        return false;   // 由ы꽩媛믪쓣 諛쏆븘�꽌 泥섎━�븯�뒗 遺�遺꾩씠 �뾾�뼱�꽌 fasle 由ы꽩</span>
+    }
+
+    public boolean writeDescriptor(BluetoothGattDescriptor descriptor) {
+<span class="fc" id="L60">        return false;</span>
+    }
+
+    public boolean readCharacteristic (BluetoothGattCharacteristic characteristic) {
+<span class="nc" id="L64">        return false;</span>
+    }
+
+    public boolean writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if ( (characteristic.getProperties() &amp; BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) == 0 )</span>
+<span class="nc" id="L69">            return false;</span>
+
+<span class="fc" id="L71">        portingLayer.writeCharacteristic(characteristic);</span>
+<span class="fc" id="L72">        return true;</span>
+    }
+
+    public BluetoothDevice getDevice() {
+<span class="fc" id="L76">        return bluetoothDevice;</span>
+    }
+
+
+    public void addService(UUID serviceUuid) {
+<span class="fc" id="L81">        BluetoothGattService service = new BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY);</span>
+
+<span class="fc" id="L83">        services.add(service);</span>
+<span class="fc" id="L84">    }</span>
+    public BluetoothGattService getService(UUID uuid) {
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        for (BluetoothGattService service : services) {</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (service.getUuid().equals(uuid))</span>
+<span class="fc" id="L88">                return service;</span>
+<span class="fc" id="L89">        }</span>
+<span class="nc" id="L90">        return null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

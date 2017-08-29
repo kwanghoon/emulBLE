@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Test.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">Test.java</span></div><h1>Test.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.content.Context;
+//import android.util.Log;
+
+import com.google.android.gms.fitness.data.DataPoint;
+import com.google.android.gms.fitness.data.DataSet;
+import com.google.android.gms.fitness.data.DataSource;
+import com.google.android.gms.fitness.data.DataType;
+import com.google.android.gms.fitness.data.Field;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Created by moonhyeonah on 2015. 4. 23..
+ */
+<span class="nc" id="L20">public class Test {</span>
+    private static final String TAG = &quot;Test&quot;;
+
+    public static void dbStressTest(Context context) {
+
+<span class="nc" id="L25">        SessionData.DB_DEBUG = true;</span>
+
+        class DBTestThread extends Thread {
+            private Context context;
+<span class="nc" id="L29">            public DBTestThread(Context context) {</span>
+<span class="nc" id="L30">                this.context = context;</span>
+<span class="nc" id="L31">            }</span>
+
+            public void run() {
+
+<span class="nc" id="L35">                Calendar now = Calendar.getInstance();</span>
+<span class="nc" id="L36">                int year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L37">                int month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L38">                int day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L39">                int hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L40">                int min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L41">                int sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L43">                Log.i(TAG, &quot;DB Test (START) : &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L45">                SessionData sessionData = new SessionData(70);</span>
+                for (
+<span class="nc" id="L47">                        int i = 0;</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                        i &lt; 2 * 60 + 45; i++)</span>
+
+                { // 21600媛�
+<span class="nc" id="L51">                    sessionData.putData(context, 80, 10, 20, 30, 0, -1);</span>
+
+                    try {
+<span class="nc" id="L54">                        Thread.sleep(1000);</span>
+<span class="nc" id="L55">                    } catch (InterruptedException e) {</span>
+<span class="nc" id="L56">                    }</span>
+                }
+
+<span class="nc" id="L59">                now = Calendar.getInstance();</span>
+<span class="nc" id="L60">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L61">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L62">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L63">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L64">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L65">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L67">                Log.i(TAG, &quot;DB Test (All Added to ArrayList) : &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L69">                sessionData.writeToDB(context);</span>
+
+<span class="nc" id="L71">                now = Calendar.getInstance();</span>
+<span class="nc" id="L72">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L73">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L74">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L75">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L76">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L77">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L79">                Log.i(TAG, &quot;DB Test (END)&quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L81">                SessionData.DB_DEBUG = false;</span>
+
+<span class="nc" id="L83">            }</span>
+        }
+
+<span class="nc" id="L86">        new DBTestThread(context).start();</span>
+
+<span class="nc" id="L88">    }</span>
+
+    // Merge �뀒�뒪�듃瑜� �쐞�븳 媛��긽�쓽 DB �뜲�씠�꽣瑜� �벐�뒗 硫붿냼�뱶
+    public static void writeDBForMergeTest(Context context) {
+
+        class MyThread extends Thread {
+            private Context context;
+<span class="nc" id="L95">            public MyThread(Context context) {</span>
+<span class="nc" id="L96">                this.context = context;</span>
+<span class="nc" id="L97">            }</span>
+            public void run() {
+<span class="nc" id="L99">                Calendar now = Calendar.getInstance();</span>
+<span class="nc" id="L100">                int year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L101">                int month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L102">                int day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L103">                int hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L104">                int min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L105">                int sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L107">                Log.i(TAG, &quot;writeDBForMergeTest (START) : &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L109">                SessionData sessionData = new SessionData(75, 1); // �떎�떆媛� �뜲�씠�꽣</span>
+
+<span class="nc" id="L111">                Random random = new Random();</span>
+<span class="nc" id="L112">                int heartrate = 80;</span>
+<span class="nc" id="L113">                int calorie = -1;</span>
+<span class="nc" id="L114">                int steps = 0;</span>
+
+                for (
+<span class="nc" id="L117">                        int i = 0;</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">                        i &lt; 1000; i++)</span>
+
+                {
+                    // Heart Rate
+<span class="nc" id="L122">                    int r = random.nextInt() % 3;</span>
+<span class="nc bnc" id="L123" title="All 3 branches missed.">                    switch (r) {</span>
+                        case 0:
+<span class="nc" id="L125">                            heartrate--;</span>
+<span class="nc" id="L126">                            break;</span>
+                        case 1:
+<span class="nc" id="L128">                            heartrate++;</span>
+<span class="nc" id="L129">                            break;</span>
+                        default:
+                            break;
+                    }
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                    if (heartrate &lt; 50)</span>
+<span class="nc" id="L134">                        heartrate = 50;</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                    else if (heartrate &gt; 150)</span>
+<span class="nc" id="L136">                        heartrate = 150;</span>
+                    else
+                        ;
+
+                    // Calorie &amp; steps
+<span class="nc" id="L141">                    calorie = calorie + 2;</span>
+
+<span class="nc" id="L143">                    steps++;</span>
+
+<span class="nc" id="L145">                    sessionData.putData(context, heartrate, 10, calorie, steps, 0, -1);</span>
+
+                    // public void putData(Context context, int heart_rate, int act_level,
+                    //                                int calorie, int steps, int hr_status, int index)
+                }
+
+
+<span class="nc" id="L152">                now = Calendar.getInstance();</span>
+<span class="nc" id="L153">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L154">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L155">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L156">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L157">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L158">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L160">                Log.i(TAG, &quot;writeDBForMergeTest [real-time data] : &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L162">                sessionData.writeToDB(context);</span>
+
+<span class="nc" id="L164">                now = Calendar.getInstance();</span>
+<span class="nc" id="L165">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L166">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L167">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L168">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L169">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L170">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L172">                Log.i(TAG, &quot;writeDBForMergeTest (END)&quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+
+                // ���옣�맂 �뜲�씠�꽣瑜� DB�뿉 ���옣
+
+//                sessionData = new SessionData(75, 10); // ���옣�맂 �뜲�씠�꽣
+
+<span class="nc" id="L179">                Calendar calendar = Calendar.getInstance();</span>
+<span class="nc" id="L180">                calendar.set(sessionData.getYear(), sessionData.getMonth()-1, sessionData.getDay(),</span>
+<span class="nc" id="L181">                        sessionData.getHour(), sessionData.getMin(), sessionData.getSec());</span>
+<span class="nc" id="L182">                long millsec = calendar.getTimeInMillis();</span>
+
+<span class="nc" id="L184">                millsec = millsec + (1000+30) * 1000;  // �븵 �꽭�뀡: 1000珥�</span>
+
+<span class="nc" id="L186">                calendar.setTimeInMillis(millsec);</span>
+
+<span class="nc" id="L188">                sessionData = new SessionData(75, 10); // ���옣�맂 �뜲�씠�꽣</span>
+
+<span class="nc" id="L190">                sessionData.setYear(calendar.get(Calendar.YEAR));</span>
+<span class="nc" id="L191">                sessionData.setMonth(calendar.get(Calendar.MONTH)+1);</span>
+<span class="nc" id="L192">                sessionData.setDay(calendar.get(Calendar.DAY_OF_MONTH));</span>
+<span class="nc" id="L193">                sessionData.setHour(calendar.get(Calendar.HOUR_OF_DAY));</span>
+<span class="nc" id="L194">                sessionData.setMin(calendar.get(Calendar.MINUTE));</span>
+<span class="nc" id="L195">                sessionData.setSec(calendar.get(Calendar.SECOND));</span>
+
+                for (
+<span class="nc" id="L198">                        int i = 0;</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">                        i &lt; 500; i++)</span>
+
+                {
+                    // Heart Rate
+<span class="nc" id="L203">                    int r = random.nextInt() % 3;</span>
+<span class="nc bnc" id="L204" title="All 3 branches missed.">                    switch (r) {</span>
+                        case 0:
+<span class="nc" id="L206">                            heartrate--;</span>
+<span class="nc" id="L207">                            break;</span>
+                        case 1:
+<span class="nc" id="L209">                            heartrate++;</span>
+<span class="nc" id="L210">                            break;</span>
+                        default:
+                            break;
+                    }
+<span class="nc bnc" id="L214" title="All 2 branches missed.">                    if (heartrate &lt; 50)</span>
+<span class="nc" id="L215">                        heartrate = 50;</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">                    else if (heartrate &gt; 150)</span>
+<span class="nc" id="L217">                        heartrate = 150;</span>
+                    else
+                        ;
+
+                    // Calorie &amp; steps
+<span class="nc" id="L222">                    calorie = calorie + 2;</span>
+
+<span class="nc" id="L224">                    steps++;</span>
+
+<span class="nc bnc" id="L226" title="All 2 branches missed.">                    if (random.nextInt() % 100 != 50) {</span>
+<span class="nc" id="L227">                        sessionData.putData(context, heartrate, 10, calorie, steps, 0, i);</span>
+                    }
+
+                    // public void putData(Context context, int heart_rate, int act_level,
+                    //                                int calorie, int steps, int hr_status, int index)
+                }
+
+<span class="nc" id="L234">                now = Calendar.getInstance();</span>
+<span class="nc" id="L235">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L236">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L237">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L238">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L239">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L240">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L242">                Log.i(TAG, &quot;writeDBForMergeTest [stored data] : &quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+
+<span class="nc" id="L244">                sessionData.writeToDB(context);</span>
+
+<span class="nc" id="L246">                now = Calendar.getInstance();</span>
+<span class="nc" id="L247">                year = now.get(Calendar.YEAR);</span>
+<span class="nc" id="L248">                month = now.get(Calendar.MONTH) + 1;</span>
+<span class="nc" id="L249">                day = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="nc" id="L250">                hour = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="nc" id="L251">                min = now.get(Calendar.MINUTE);</span>
+<span class="nc" id="L252">                sec = now.get(Calendar.SECOND);</span>
+
+<span class="nc" id="L254">                Log.i(TAG, &quot;writeDBForMergeTest (END)&quot; + year + &quot;/&quot; + month + &quot;/&quot; + day + &quot;/&quot; + hour + &quot;/&quot; + min + &quot;/&quot; + sec);</span>
+<span class="nc" id="L255">            }</span>
+        }
+
+<span class="nc" id="L258">        new MyThread(context).start();</span>
+
+<span class="nc" id="L260">    }</span>
+
+//    public static DataSet insertFitnessData(Context context) {
+//        Log.i(TAG, &quot;Creating a new data insert request&quot;);
+//
+//        // [START build_insert_data_request]
+//        // Set a start and end time for our data, using a start time of 1 hour before this moment.
+//        Calendar cal = Calendar.getInstance();
+//        Date now = new Date();
+//        cal.setTime(now);
+//        long endTime = cal.getTimeInMillis();
+//        cal.add(Calendar.HOUR_OF_DAY, -1);
+//        long startTime = cal.getTimeInMillis();
+//
+//        // Create a data source
+//        DataSource dataSource = new DataSource.Builder()
+//                .setAppPackageName(context)
+//                .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
+//                .setName(TAG + &quot; - step count&quot;)
+//                .setType(DataSource.TYPE_RAW)
+//                .build();
+//
+//        // Create a data set
+//        int stepCountDelta = 1234;
+//        DataSet dataSet = DataSet.create(dataSource);
+//        // For each data point, specify a start time, end time, and the data value -- in this case,
+//        // the number of new steps.
+//        DataPoint dataPoint = dataSet.createDataPoint()
+//                .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);
+//        dataPoint.getValue(Field.FIELD_STEPS).setInt(stepCountDelta);
+//        dataSet.add(dataPoint);
+//        // [END build_insert_data_request]
+//
+//        return dataSet;
+//    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SessionData.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">SessionData.java</span></div><h1>SessionData.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+//import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+
+/**
+ * Created by moonhyeonah on 2015. 4. 7..
+ */
+public class SessionData {
+    private int sessionid;
+
+    // Session Starting Time
+    private int year;
+    private int month;
+    private int day;
+    private int hour;
+    private int min;
+    private int sec;
+
+    private int duration;
+    private double distance; // step*stride
+<span class="fc" id="L29">    private double stride = 0.0007;</span>
+    private int period; // Storing period
+    private int count; // �꽭�뀡蹂� �뜲�씠�꽣 �쟾泥� 媛��닔, �떎�떆媛� �뜲�씠���뒗 �닔�떊�븷�븣留덈떎 利앷�
+                        // ���옣�뜲�씠���뒗 �꽭�뀡�젙蹂� �닔�떊�븷�븣 諛쏆� �뜲�씠�� 珥앷갗�닔
+    private int numOfData; // �닔�떊諛쏆� 紐삵븯�뒗 �뜲�씠��瑜� 怨좊젮�빐 �닔�떊�븳 �뜲�씠��濡쒕쭔 �룊洹� 怨꾩궛�븯湲� �쐞�빐 異붽�
+
+    private double heart_rate_average;
+    private int heart_rate_min;
+    private int heart_rate_max;
+    private int calories;
+    private int time_red_zone;
+    private int time_yellow_zone;
+    private int time_green_zone;
+    private int time_cyan_zone;
+    private int time_blue_zone;
+
+
+    private ArrayList&lt;HeartRateMeasurement&gt; arrayList;
+
+    private boolean flag_to_write_db; // false =&gt; DB 湲곕줉 遺덊븘�슂 (�씠誘� 湲곕줉�븿), true =&gt; DB 湲곕줉 �븘�슂
+    private boolean flag_for_realTime_data; // �떎�떆媛� �뜲�씠���쓽 �꽭�뀡 �떆�옉�떆媛꾩� �뜲�씠��媛� 泥섏쓬 �뱾�뼱�삩 �떆媛꾩씠誘�濡�
+                                            // �꽭�뀡 �깮�꽦�떆 �떆媛꾩쓣 �뜲�씠�� 泥섏쓬 �닔�떊�떆 �떆媛꾩쑝濡� 蹂�寃쏀븯湲� �쐞�븳 �뵆�옒洹�
+
+<span class="fc" id="L52">    private final int DATA_THUNK_SIZE = 60; // 1珥� period�쓽 寃쎌슦 1遺꾩뿉 �븳踰덉뵫 DB writing</span>
+
+
+    //
+<span class="fc" id="L56">    private final String TAG = &quot;SessionData&quot;;</span>
+
+    //
+    public static final int NUM_OF_SESSION_ATTRIBUTES = 5;
+
+
+    public void setPeriod(int period) {
+<span class="fc" id="L63">        this.period = period;</span>
+<span class="fc" id="L64">    }</span>
+
+    public void setStride(int stride) {
+
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if (stride == 0) {</span>
+<span class="nc" id="L69">            this.stride = 0.0007; // default stride value</span>
+        } else {
+<span class="fc" id="L71">            this.stride = (double) stride / 100000;</span>
+        }
+//        Log.i(TAG, &quot;setStride: &quot; + this.stride);
+<span class="fc" id="L74">    }</span>
+
+    public Object getSessionAttribute(int i) {
+<span class="nc bnc" id="L77" title="All 6 branches missed.">        switch(i) {</span>
+<span class="nc" id="L78">            case 0: return duration;</span>
+<span class="nc" id="L79">            case 1: return distance;</span>
+<span class="nc" id="L80">            case 2: return heart_rate_average;</span>
+<span class="nc" id="L81">            case 3: return heart_rate_min;</span>
+<span class="nc" id="L82">            case 4: return heart_rate_max;</span>
+            default:
+<span class="nc" id="L84">                return null;</span>
+        }
+    }
+
+
+<span class="fc" id="L89">    public int getSessionId() { return sessionid; }</span>
+<span class="nc" id="L90">    public int getNumOfData() { return numOfData; }</span>
+
+<span class="nc" id="L92">    public int getYear() {        return year; }</span>
+<span class="nc" id="L93">    public int getMonth() {       return month; }</span>
+<span class="nc" id="L94">    public int getDay() {         return day; }</span>
+<span class="nc" id="L95">    public int getHour() {        return hour; }</span>
+<span class="nc" id="L96">    public int getMin() {         return min; }</span>
+<span class="nc" id="L97">    public int getSec() {         return sec; }</span>
+
+<span class="fc" id="L99">    public void setYear(int year) { this.year = year; }</span>
+<span class="fc" id="L100">    public void setMonth(int month) { this.month = month; }</span>
+<span class="fc" id="L101">    public void setDay(int day) { this.day = day; }</span>
+<span class="fc" id="L102">    public void setHour(int hour) { this.hour = hour; }</span>
+<span class="fc" id="L103">    public void setMin(int min) { this.min = min; }</span>
+<span class="fc" id="L104">    public void setSec(int sec) { this.sec = sec; }</span>
+
+<span class="nc" id="L106">    public void setCount(int count) { this.count = count;}</span>
+
+
+    // �꽭�뀡 �슂�빟 �젙蹂� �솕硫� 異쒕젰�떆 �씠�슜
+    public String getSessionAttributeTitle(int i) {
+<span class="nc bnc" id="L111" title="All 6 branches missed.">        switch(i) {</span>
+<span class="nc" id="L112">            case 0: return &quot;Duration&quot;;</span>
+<span class="nc" id="L113">            case 1: return &quot;Distance&quot;;</span>
+<span class="nc" id="L114">            case 2: return &quot;HR Avg.&quot;;</span>
+<span class="nc" id="L115">            case 3: return &quot;HR Min.&quot;;</span>
+<span class="nc" id="L116">            case 4: return &quot;HR Max.&quot;;</span>
+            default:
+<span class="nc" id="L118">                return null;</span>
+        }
+    }
+
+    public String getSessionAttributeString(int i) {
+<span class="nc bnc" id="L123" title="All 6 branches missed.">        switch(i) {</span>
+<span class="nc" id="L124">            case 0: return getDuration();</span>
+<span class="nc" id="L125">            case 1: return getDistance();</span>
+<span class="nc" id="L126">            case 2: return getHeart_rate_average();</span>
+<span class="nc" id="L127">            case 3: return getHeart_rate_min();</span>
+<span class="nc" id="L128">            case 4: return getHeart_rate_max();</span>
+            default:
+<span class="nc" id="L130">                return null;</span>
+        }
+    }
+
+    public int getIntDuration() {
+<span class="fc" id="L135">        return duration;</span>
+    }
+
+    public String getDuration() {
+<span class="nc" id="L139">        return getTimeString(duration);</span>
+    }
+
+    public String getTimeString(int time) {
+<span class="nc" id="L143">        int hour = time / (60 * 60);</span>
+<span class="nc" id="L144">        int min = (time - hour * 60 * 60) / 60;</span>
+<span class="nc" id="L145">        int sec = time - hour * 60 * 60 - min * 60;</span>
+
+<span class="nc" id="L147">        return hour + &quot;:&quot; + min + &quot;:&quot; + sec;</span>
+    }
+
+    public String getRedZoneTime() {
+<span class="nc" id="L151">        return getTimeString(time_red_zone);</span>
+    }
+    public String getYellowZoneTime() {
+<span class="nc" id="L154">        return getTimeString(time_yellow_zone);</span>
+    }
+    public String getGreenZoneTime() {
+<span class="nc" id="L157">        return getTimeString(time_green_zone);</span>
+    }
+    public String getCyanZoneTime() {
+<span class="nc" id="L160">        return getTimeString(time_cyan_zone);</span>
+    }
+    public String getBlueZoneTime() {
+<span class="nc" id="L163">        return getTimeString(time_blue_zone);</span>
+    }
+
+    public String getDistance() {
+
+//        double d = distance * stride;
+
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (distance &gt;= 0.1 ) {</span>
+<span class="nc" id="L171">            return String.format(&quot;%.1fkm&quot;, distance);</span>
+        } else {
+<span class="nc" id="L173">            return String.format(&quot;%.1fm&quot;, (distance * 1000));</span>
+        }
+    }
+<span class="nc" id="L176">    public String getCalories() { return calories + &quot;kcal&quot;; }</span>
+<span class="nc" id="L177">    public String getHeart_rate_min() { return heart_rate_min + &quot;bpm&quot;; }</span>
+<span class="nc" id="L178">    public String getHeart_rate_max() { return heart_rate_max + &quot;bpm&quot;; }</span>
+<span class="nc" id="L179">    public String getHeart_rate_average() { return (int)heart_rate_average + &quot;bpm&quot;; }</span>
+
+<span class="nc" id="L181">    public int getIntHeart_rate_min() { return heart_rate_min; }</span>
+<span class="nc" id="L182">    public int getIntHeart_rate_max() { return heart_rate_max; }</span>
+
+
+    class HeartRateMeasurement {
+        int heart_rate;
+        int act_level;
+        int calorie;
+        int steps;
+        int hr_status;
+<span class="pc" id="L191">        int hr_index = 0;</span>
+//        int measuring_time;
+
+<span class="nc" id="L194">        HeartRateMeasurement(int heart_rate, int act_level, int calorie, int steps, int hr_status) {</span>
+<span class="nc" id="L195">            this.heart_rate = heart_rate;</span>
+<span class="nc" id="L196">            this.act_level  = act_level;</span>
+<span class="nc" id="L197">            this.calorie    = calorie;</span>
+<span class="nc" id="L198">            this.steps      = steps;</span>
+<span class="nc" id="L199">            this.hr_status  = hr_status;</span>
+<span class="nc" id="L200">        }</span>
+
+<span class="fc" id="L202">        HeartRateMeasurement(int heart_rate, int act_level, int calorie, int steps, int hr_status, int index) {</span>
+<span class="fc" id="L203">            this.heart_rate = heart_rate;</span>
+<span class="fc" id="L204">            this.act_level  = act_level;</span>
+<span class="fc" id="L205">            this.calorie    = calorie;</span>
+<span class="fc" id="L206">            this.steps      = steps;</span>
+<span class="fc" id="L207">            this.hr_status  = hr_status;</span>
+<span class="fc" id="L208">            this.hr_index   = index;</span>
+<span class="fc" id="L209">        }</span>
+    }
+
+<span class="fc" id="L212">    public SessionData(int stride) {</span>
+<span class="fc" id="L213">        Calendar now = Calendar.getInstance();</span>
+<span class="fc" id="L214">        year  = now.get(Calendar.YEAR);</span>
+<span class="fc" id="L215">        month = now.get(Calendar.MONTH) + 1;</span>
+<span class="fc" id="L216">        day   = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="fc" id="L217">        hour  = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="fc" id="L218">        min   = now.get(Calendar.MINUTE);</span>
+<span class="fc" id="L219">        sec   = now.get(Calendar.SECOND);</span>
+
+<span class="fc" id="L221">        arrayList = new ArrayList&lt;HeartRateMeasurement&gt;();</span>
+
+<span class="fc" id="L223">        count = 0;</span>
+<span class="fc" id="L224">        numOfData = 0;</span>
+<span class="fc" id="L225">        duration = 0;</span>
+<span class="fc" id="L226">        distance = 0;</span>
+<span class="fc" id="L227">        calories = 0;</span>
+
+<span class="fc" id="L229">        time_red_zone = 0;</span>
+<span class="fc" id="L230">        time_yellow_zone = 0;</span>
+<span class="fc" id="L231">        time_green_zone = 0;</span>
+<span class="fc" id="L232">        time_cyan_zone = 0;</span>
+<span class="fc" id="L233">        time_blue_zone = 0;</span>
+
+<span class="fc" id="L235">        heart_rate_average = 0.0;</span>
+<span class="fc" id="L236">        heart_rate_min     = Integer.MAX_VALUE;</span>
+<span class="fc" id="L237">        heart_rate_max     = Integer.MIN_VALUE;</span>
+
+<span class="fc" id="L239">        setStride(stride);</span>
+
+<span class="fc" id="L241">        flag_to_write_db = false;</span>
+//        flag_for_realTime_data = true;
+
+<span class="fc" id="L244">        sessionid = -1;</span>
+//        session_id = -1;
+<span class="fc" id="L246">        old_index = -1;</span>
+<span class="fc" id="L247">    }</span>
+
+    public SessionData(int stride, int period) {
+<span class="fc" id="L250">        this(stride);</span>
+
+<span class="fc" id="L252">        setPeriod(period);</span>
+<span class="fc" id="L253">        flag_for_realTime_data = false;</span>
+<span class="fc" id="L254">    }</span>
+
+
+    public SessionData(int stride, int period, boolean real) {      // sessiondata for_realTime_data
+<span class="fc" id="L258">        this(stride);</span>
+
+<span class="fc" id="L260">        setPeriod(period);</span>
+<span class="fc" id="L261">        flag_for_realTime_data = real;</span>
+<span class="fc" id="L262">    }</span>
+
+    public SessionData(int stride, int period, int count) {         // sessiondata for_stored_data
+<span class="fc" id="L265">        this(stride, period);</span>
+<span class="fc" id="L266">        this.count = count;</span>
+<span class="fc" id="L267">    }</span>
+
+    public void putSessionData(
+            int sessionid,
+            int year, int month, int day, int hour, int min, int sec,
+            int duration, double distance, int calories,
+            int heart_rate_average, int heart_rate_min, int heart_rate_max,
+            int red, int yellow, int green, int cyan, int blue ) {
+<span class="nc" id="L275">        this.sessionid = sessionid;</span>
+<span class="nc" id="L276">        this.year = year;</span>
+<span class="nc" id="L277">        this.month = month;</span>
+<span class="nc" id="L278">        this.day = day;</span>
+<span class="nc" id="L279">        this.hour = hour;</span>
+<span class="nc" id="L280">        this.min = min;</span>
+<span class="nc" id="L281">        this.sec = sec;</span>
+<span class="nc" id="L282">        this.duration = duration;</span>
+<span class="nc" id="L283">        this.distance = distance;</span>
+<span class="nc" id="L284">        this.calories = calories;</span>
+<span class="nc" id="L285">        this.heart_rate_average = heart_rate_average;</span>
+<span class="nc" id="L286">        this.heart_rate_min = heart_rate_min;</span>
+<span class="nc" id="L287">        this.heart_rate_max = heart_rate_max;</span>
+<span class="nc" id="L288">        this.time_red_zone = red;</span>
+<span class="nc" id="L289">        this.time_yellow_zone = yellow;</span>
+<span class="nc" id="L290">        this.time_green_zone = green;</span>
+<span class="nc" id="L291">        this.time_cyan_zone = cyan;</span>
+<span class="nc" id="L292">        this.time_blue_zone = blue;</span>
+
+<span class="nc" id="L294">    }</span>
+
+<span class="fc" id="L296">    private int old_index = -1; // ���옣�뜲�씠���쓽 �넀�떎 �뜲�씠�� 泥섎━</span>
+
+    // �꽭�뀡�뿉 heart rate data 異�
+    public void putData(Context context, int heart_rate, int act_level,
+                        int calorie, int steps, int hr_status, int index) {
+
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        int index_for_both_cases =</span>
+                (index==-1) ? numOfData : index;
+
+//        count = count + 1;  // �꽭�뀡 蹂� �뜲�씠�꽣 �쟾泥� 媛��닔, �떎�떆媛� �뜲�씠���뒗 �닔�떊�븷�븣留덈떎 利앷�
+//                            // ���옣�뜲�씠���뒗 �꽭�뀡�젙蹂� �닔�떊�븷�븣 諛쏆� �뜲�씠�� 珥앷갗�닔
+
+<span class="fc bfc" id="L308" title="All 2 branches covered.">        if (flag_for_realTime_data) {               // �떎�떆媛� �뜲�씠�� �꽭�뀡�쓽 �떆�옉�떆媛꾩쓣 泥� �뜲�씠�� �닔�떊�떆媛꾩쑝濡� 蹂�寃�</span>
+<span class="fc" id="L309">            flag_for_realTime_data = false;</span>
+<span class="fc" id="L310">            Calendar now = Calendar.getInstance();</span>
+<span class="fc" id="L311">            year  = now.get(Calendar.YEAR);</span>
+<span class="fc" id="L312">            month = now.get(Calendar.MONTH) + 1;</span>
+<span class="fc" id="L313">            day   = now.get(Calendar.DAY_OF_MONTH);</span>
+<span class="fc" id="L314">            hour  = now.get(Calendar.HOUR_OF_DAY);</span>
+<span class="fc" id="L315">            min   = now.get(Calendar.MINUTE);</span>
+<span class="fc" id="L316">            sec   = now.get(Calendar.SECOND);</span>
+        }
+
+<span class="fc" id="L319">        calories = calorie;</span>
+
+<span class="fc" id="L321">        heart_rate_average = (heart_rate_average * numOfData + heart_rate) / (numOfData + 1);</span>
+
+<span class="fc bfc" id="L323" title="All 2 branches covered.">        if (heart_rate_min &gt; heart_rate) {</span>
+<span class="fc" id="L324">            heart_rate_min = heart_rate;</span>
+        }
+
+<span class="fc bfc" id="L327" title="All 2 branches covered.">        if (heart_rate_max &lt; heart_rate) {</span>
+<span class="fc" id="L328">            heart_rate_max = heart_rate;</span>
+        }
+
+<span class="fc" id="L331">        numOfData++;</span>
+
+<span class="fc bfc" id="L333" title="All 2 branches covered.">        if (index == -1) {                                  // �떎�떆媛꾨뜲�씠��</span>
+<span class="fc" id="L334">            addTimeHearRateZone(context, heart_rate, period);</span>
+<span class="fc" id="L335">            duration = duration + period;                   // TODO: �떎�젣 �떆媛� 痢≪젙�빐�꽌 援ы빐�빞 �븿</span>
+<span class="fc" id="L336">            count = numOfData;                              // �떎�떆媛꾩씤 寃쎌슦 �쟾泥� �뜲�씠��媛��닔 利앷�</span>
+        }
+        else {                                              // ���옣�뜲�씠��
+<span class="fc bfc" id="L339" title="All 2 branches covered.">            for (int i=old_index+1; i&lt;index; i++) {         // �뜲�씠�� �넀�떎 蹂댁젙</span>
+<span class="fc" id="L340">                Log.i(TAG, &quot;old_index: &quot; + old_index);</span>
+
+<span class="fc" id="L342">                addTimeHearRateZone(context, heart_rate, period);</span>
+<span class="fc" id="L343">                duration = duration + period;</span>
+            }
+
+<span class="fc" id="L346">            addTimeHearRateZone(context, heart_rate, period);</span>
+<span class="fc" id="L347">            duration = duration + period;</span>
+
+<span class="fc" id="L349">            old_index = index;</span>
+        }
+
+<span class="fc" id="L352">        distance = steps * stride;</span>
+
+<span class="fc" id="L354">        arrayList.add(new HeartRateMeasurement(heart_rate, act_level, calorie, steps, hr_status, index_for_both_cases));</span>
+
+<span class="fc" id="L356">        flag_to_write_db = true;</span>
+
+<span class="pc bpc" id="L358" title="1 of 2 branches missed.">        if (DB_DEBUG) {     // 60媛� �닔�떊�븯硫� ���옣 紐⑤뱶�씤 寃쎌슦</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">            if (arrayList.size() &gt;= DATA_THUNK_SIZE) {</span>
+<span class="nc" id="L360">                writeToDB(context);</span>
+            }
+        }
+<span class="fc" id="L363">    }</span>
+
+    public void addTimeHearRateZone(Context context, int heart_rate, int period) {
+
+<span class="fc" id="L367">        SharedPreferences pref = context.getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+//        int birth = pref.getInt(UserSettingActivity.keyBirth, 0);
+
+<span class="fc" id="L370">        int temp = pref.getInt(UserSettingActivity.keyAge, 0);</span>
+<span class="fc" id="L371">        int age=40;</span>
+<span class="pc bpc" id="L372" title="2 of 4 branches missed.">        if (temp&gt;0 &amp;&amp; temp&lt;200) age = temp;  //TODO: 珥덇린媛믪씠 �빆�긽 議댁옱�븯硫� 臾몄젣 �뾾�쑝誘�濡� �궘�젣�빐�빞�븿</span>
+
+<span class="fc" id="L374">        int max_heart_rate = 220 - age;</span>
+<span class="fc" id="L375">        double rate = (heart_rate*100)/max_heart_rate;</span>
+
+
+<span class="pc bpc" id="L378" title="3 of 4 branches missed.">        if (rate&gt;=50 &amp;&amp; rate&lt;60)</span>
+<span class="nc" id="L379">            time_blue_zone = time_blue_zone + period;</span>
+<span class="pc bpc" id="L380" title="3 of 4 branches missed.">        else if (rate&gt;=60 &amp;&amp; rate&lt;70)</span>
+<span class="nc" id="L381">            time_cyan_zone = time_cyan_zone + period;</span>
+<span class="pc bpc" id="L382" title="3 of 4 branches missed.">        else if (rate&gt;=70 &amp;&amp; rate&lt;80)</span>
+<span class="nc" id="L383">            time_green_zone = time_green_zone + period;</span>
+<span class="pc bpc" id="L384" title="3 of 4 branches missed.">        else if (rate&gt;=80 &amp;&amp; rate&lt;90)</span>
+<span class="nc" id="L385">            time_yellow_zone = time_yellow_zone + period;</span>
+<span class="pc bpc" id="L386" title="3 of 4 branches missed.">        else if (rate&gt;=90 &amp;&amp; rate&lt;100)</span>
+<span class="nc" id="L387">            time_red_zone = time_red_zone + period;</span>
+<span class="pc bpc" id="L388" title="1 of 2 branches missed.">        else if (rate&gt;=100)</span>
+<span class="nc" id="L389">            time_red_zone = time_red_zone + period;</span>
+<span class="fc" id="L390">    }</span>
+
+<span class="fc" id="L392">    public static boolean DB_DEBUG = false;</span>
+
+    public boolean writeToDB(Context context) {
+<span class="fc" id="L395">        Log.i(TAG, &quot;writeDB is called: &quot; + arrayList.size() + &quot; flag=&quot; + flag_to_write_db);</span>
+
+<span class="fc bfc" id="L397" title="All 2 branches covered.">        if (flag_to_write_db == true) {</span>
+
+<span class="fc" id="L399">            flag_to_write_db = false;  // 痢≪젙醫낅즺 �셿猷뚰썑 痢≪젙湲곗뿉�꽌 �뿰寃� �걡�뿀�쓣�븣 �몢踰� 湲곕줉�릺�뒗 寃� 諛⑹�</span>
+
+<span class="pc bpc" id="L401" title="1 of 2 branches missed.">            if (arrayList.size() &gt; 0) {</span>
+
+<span class="pc bpc" id="L403" title="1 of 2 branches missed.">                if (DB_DEBUG) {</span>
+                    class DBWriteThread extends Thread {
+                        private Context context;
+                        private ArrayList&lt;HeartRateMeasurement&gt; arrayList;
+
+<span class="nc" id="L408">                        public DBWriteThread(Context context, ArrayList&lt;HeartRateMeasurement&gt; arrayList) {</span>
+<span class="nc" id="L409">                            this.context = context;</span>
+<span class="nc" id="L410">                            this.arrayList = arrayList;</span>
+<span class="nc" id="L411">                        }</span>
+
+                        public void run() {
+<span class="nc" id="L414">                            Log.i(TAG, &quot;DBWriteThread (BEGIN) &quot; + this.getName() + &quot; &quot; + &quot;: &quot; + arrayList.size());</span>
+
+<span class="nc" id="L416">                            HeartRateDBHelper heartrateDBHelper = new HeartRateDBHelper(context, null, 1);</span>
+<span class="nc" id="L417">                            SQLiteDatabase db = heartrateDBHelper.getWritableDatabase();</span>
+
+                            // Session Info
+                            {
+<span class="nc" id="L421">                                ContentValues cv = new ContentValues();</span>
+<span class="nc" id="L422">                                cv.put(HeartRateDBHelper.COL_YEAR, year);</span>
+<span class="nc" id="L423">                                cv.put(HeartRateDBHelper.COL_MONTH, month);</span>
+<span class="nc" id="L424">                                cv.put(HeartRateDBHelper.COL_DAY, day);</span>
+<span class="nc" id="L425">                                cv.put(HeartRateDBHelper.COL_HOUR, hour);</span>
+<span class="nc" id="L426">                                cv.put(HeartRateDBHelper.COL_MIN, min);</span>
+<span class="nc" id="L427">                                cv.put(HeartRateDBHelper.COL_SEC, sec);</span>
+<span class="nc" id="L428">                                cv.put(HeartRateDBHelper.COL_DURATION, duration);</span>
+<span class="nc" id="L429">                                cv.put(HeartRateDBHelper.COL_DISTANCE, distance);</span>
+<span class="nc" id="L430">                                cv.put(HeartRateDBHelper.COL_CALORIES, calories);</span>
+<span class="nc" id="L431">                                cv.put(HeartRateDBHelper.COL_HR_AVG, heart_rate_average);</span>
+<span class="nc" id="L432">                                cv.put(HeartRateDBHelper.COL_HR_MIN, heart_rate_min);</span>
+<span class="nc" id="L433">                                cv.put(HeartRateDBHelper.COL_HR_MAX, heart_rate_max);</span>
+<span class="nc" id="L434">                                cv.put(HeartRateDBHelper.COL_TIME_RED, time_red_zone);</span>
+<span class="nc" id="L435">                                cv.put(HeartRateDBHelper.COL_TIME_YELLOW, time_yellow_zone);</span>
+<span class="nc" id="L436">                                cv.put(HeartRateDBHelper.COL_TIME_GREEN, time_green_zone);</span>
+<span class="nc" id="L437">                                cv.put(HeartRateDBHelper.COL_TIME_CYAN, time_cyan_zone);</span>
+<span class="nc" id="L438">                                cv.put(HeartRateDBHelper.COL_TIME_BLUE, time_blue_zone);</span>
+<span class="nc" id="L439">                                cv.put(HeartRateDBHelper.COL_COUNT, count);</span>
+<span class="nc" id="L440">                                cv.put(HeartRateDBHelper.COL_PERIOD, period);</span>
+<span class="nc" id="L441">                                cv.put(HeartRateDBHelper.COL_STRIDE, (int)(stride*100000));</span>
+
+<span class="nc" id="L443">                                long session_id = -1;</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">                                if (sessionid == -1) {</span>
+<span class="nc" id="L445">                                    session_id = db.insert(HeartRateDBHelper.TABLE_NAME_SESSION, null, cv);</span>
+<span class="nc" id="L446">                                    sessionid = (int)session_id;</span>
+
+<span class="nc" id="L448">                                    Log.i(TAG, &quot;session id: &quot; + sessionid);</span>
+                                } else {
+<span class="nc" id="L450">                                    db.update(HeartRateDBHelper.TABLE_NAME_SESSION, cv,</span>
+<span class="nc" id="L451">                                            HeartRateDBHelper.COL_ID + &quot; = &quot; + sessionid, null);</span>
+                                }
+                            }
+
+                            // Session Data
+<span class="nc bnc" id="L456" title="All 2 branches missed.">                            for (HeartRateMeasurement hrm : arrayList) {</span>
+<span class="nc" id="L457">                                ContentValues cv = new ContentValues();</span>
+
+<span class="nc" id="L459">                                cv.put(HeartRateDBHelper.COL_HEARTRATE, hrm.heart_rate);</span>
+<span class="nc" id="L460">                                cv.put(HeartRateDBHelper.COL_ACTLEVEL, hrm.act_level);</span>
+<span class="nc" id="L461">                                cv.put(HeartRateDBHelper.COL_CALORIE, hrm.calorie);</span>
+<span class="nc" id="L462">                                cv.put(HeartRateDBHelper.COL_STEP, hrm.steps);</span>
+<span class="nc" id="L463">                                cv.put(HeartRateDBHelper.COL_HRSTATUS, hrm.hr_status);</span>
+<span class="nc" id="L464">                                cv.put(HeartRateDBHelper.COL_HR_INDEX, hrm.hr_index);</span>
+<span class="nc" id="L465">                                cv.put(HeartRateDBHelper.COL_SESSION_ID, sessionid);</span>
+//                                cv.put(HeartRateDBHelper.COL_MEASURING_TIME, hrm.measuring_time);
+
+<span class="nc" id="L468">                                db.insert(HeartRateDBHelper.TABLE_NAME_HR, null, cv);</span>
+<span class="nc" id="L469">                            }</span>
+
+<span class="nc" id="L471">                            db.close();</span>
+<span class="nc" id="L472">                            heartrateDBHelper.close();</span>
+
+<span class="nc" id="L474">                            Log.i(TAG, &quot;DBWriteThread (END) &quot; + this.getName());</span>
+<span class="nc" id="L475">                        }</span>
+                    }
+
+<span class="nc" id="L478">                    new DBWriteThread(context, arrayList).start();</span>
+
+<span class="nc" id="L480">                    arrayList = new ArrayList&lt;HeartRateMeasurement&gt;();</span>
+                }
+
+                else {
+
+                    // Original Code
+<span class="fc" id="L486">                    HeartRateDBHelper heartrateDBHelper = new HeartRateDBHelper(context, null, 1);</span>
+<span class="fc" id="L487">                    SQLiteDatabase db = heartrateDBHelper.getWritableDatabase();</span>
+
+<span class="fc" id="L489">                    ContentValues cv = new ContentValues();</span>
+<span class="fc" id="L490">                    cv.put(HeartRateDBHelper.COL_YEAR, year);</span>
+<span class="fc" id="L491">                    cv.put(HeartRateDBHelper.COL_MONTH, month);</span>
+<span class="fc" id="L492">                    cv.put(HeartRateDBHelper.COL_DAY, day);</span>
+<span class="fc" id="L493">                    cv.put(HeartRateDBHelper.COL_HOUR, hour);</span>
+<span class="fc" id="L494">                    cv.put(HeartRateDBHelper.COL_MIN, min);</span>
+<span class="fc" id="L495">                    cv.put(HeartRateDBHelper.COL_SEC, sec);</span>
+<span class="fc" id="L496">                    cv.put(HeartRateDBHelper.COL_DURATION, duration);</span>
+<span class="fc" id="L497">                    cv.put(HeartRateDBHelper.COL_DISTANCE, distance);</span>
+<span class="fc" id="L498">                    cv.put(HeartRateDBHelper.COL_CALORIES, calories);</span>
+<span class="fc" id="L499">                    cv.put(HeartRateDBHelper.COL_HR_AVG, heart_rate_average);</span>
+<span class="fc" id="L500">                    cv.put(HeartRateDBHelper.COL_HR_MIN, heart_rate_min);</span>
+<span class="fc" id="L501">                    cv.put(HeartRateDBHelper.COL_HR_MAX, heart_rate_max);</span>
+<span class="fc" id="L502">                    cv.put(HeartRateDBHelper.COL_TIME_RED, time_red_zone);</span>
+<span class="fc" id="L503">                    cv.put(HeartRateDBHelper.COL_TIME_YELLOW, time_yellow_zone);</span>
+<span class="fc" id="L504">                    cv.put(HeartRateDBHelper.COL_TIME_GREEN, time_green_zone);</span>
+<span class="fc" id="L505">                    cv.put(HeartRateDBHelper.COL_TIME_CYAN, time_cyan_zone);</span>
+<span class="fc" id="L506">                    cv.put(HeartRateDBHelper.COL_TIME_BLUE, time_blue_zone);</span>
+<span class="fc" id="L507">                    cv.put(HeartRateDBHelper.COL_COUNT, count);</span>
+<span class="fc" id="L508">                    cv.put(HeartRateDBHelper.COL_PERIOD, period);</span>
+<span class="fc" id="L509">                    cv.put(HeartRateDBHelper.COL_STRIDE, (int)(stride*100000));</span>
+//                    Log.i(TAG, &quot;stride: &quot; + stride);
+
+<span class="fc" id="L512">                    long session_id = db.insert(HeartRateDBHelper.TABLE_NAME_SESSION, null, cv);</span>
+<span class="fc" id="L513">                    sessionid = (int)session_id;</span>
+
+<span class="fc" id="L515">                    Log.i(TAG, &quot;session id: &quot; + session_id);</span>
+
+
+<span class="fc bfc" id="L518" title="All 2 branches covered.">                    for (HeartRateMeasurement hrm : arrayList) {</span>
+<span class="fc" id="L519">                        cv.clear();</span>
+
+<span class="fc" id="L521">                        cv.put(HeartRateDBHelper.COL_HEARTRATE, hrm.heart_rate);</span>
+<span class="fc" id="L522">                        cv.put(HeartRateDBHelper.COL_ACTLEVEL, hrm.act_level);</span>
+<span class="fc" id="L523">                        cv.put(HeartRateDBHelper.COL_CALORIE, hrm.calorie);</span>
+<span class="fc" id="L524">                        cv.put(HeartRateDBHelper.COL_STEP, hrm.steps);</span>
+<span class="fc" id="L525">                        cv.put(HeartRateDBHelper.COL_HRSTATUS, hrm.hr_status);</span>
+<span class="fc" id="L526">                        cv.put(HeartRateDBHelper.COL_HR_INDEX, hrm.hr_index);</span>
+<span class="fc" id="L527">                        cv.put(HeartRateDBHelper.COL_SESSION_ID, session_id);</span>
+//                        cv.put(HeartRateDBHelper.COL_MEASURING_TIME, hrm.measuring_time);
+
+<span class="fc" id="L530">                        db.insert(HeartRateDBHelper.TABLE_NAME_HR, null, cv);</span>
+<span class="fc" id="L531">                    }</span>
+
+<span class="fc" id="L533">                    db.close();</span>
+<span class="fc" id="L534">                    heartrateDBHelper.close();</span>
+<span class="fc" id="L535">                }</span>
+            }
+        } else {
+<span class="fc" id="L538">            return false;  // �떎�젣濡� db write�븳 寃쎌슦留� 洹몃옒�봽�솕硫댁쑝濡� 媛�湲� �쐞�빐, db write �떎�뙣 由ы꽩</span>
+        }
+
+<span class="fc" id="L541">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BluetoothLE.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">emul.bluetooth</a> &gt; <span class="el_source">BluetoothLE.java</span></div><h1>BluetoothLE.java</h1><pre class="source lang-java linenums">package emul.bluetooth;
+
+import android.os.Message;
+
+import java.util.ArrayList;
+
+import mocking.android.bluetooth.BLEService;
+import mocking.android.bluetooth.BluetoothDeviceEmulator;
+import mocking.android.bluetooth.BluetoothGatt;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.BluetoothProfile;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+import mocking.android.bluetooth.IBLEConnect;
+import mocking.android.bluetooth.IBLEDisconnect;
+import mocking.android.bluetooth.IBLEDiscoverService;
+import mocking.android.bluetooth.IBLEScan;
+import mocking.android.bluetooth.PortingLayer;
+
+/**
+ * Created by moonhyeonah on 2016. 10. 3..
+ */
+<span class="fc" id="L22">public class BluetoothLE {</span>
+<span class="fc" id="L23">    private String btdev_address = &quot;00:11:22:AA:BB:CC&quot;;</span>
+<span class="fc" id="L24">    private String btdev_name = &quot;HRM3200&quot;;</span>
+
+    private BluetoothDeviceEmulator btDevEmulator;
+
+    // Setter/Getter functions
+    public void setBluetoothDeviceAddress(String bedev_address) {
+<span class="nc" id="L30">        this.btdev_address = btdev_address;</span>
+<span class="nc" id="L31">    }</span>
+
+    public void setBluetoothDeviceName(String name) {
+<span class="nc" id="L34">        this.btdev_name = name;</span>
+<span class="nc" id="L35">    }</span>
+
+<span class="fc" id="L37">    public String getBluetoothDeviceAddress() { return btdev_address; }</span>
+
+<span class="fc" id="L39">    public String getBluetoothDeviceName() { return btdev_name; }</span>
+
+    public void setBluetoothDeviceEmulator(BluetoothDeviceEmulator btDevEmulator) {
+<span class="fc" id="L42">        this.btDevEmulator = btDevEmulator;</span>
+<span class="fc" id="L43">    }</span>
+    // Callback functions
+
+    public void doBLEScan(IBLEScan iblescan) {
+<span class="nc" id="L47">        iblescan.setBLEAddressName(new String[]{</span>
+                btdev_address,
+                btdev_name
+        });
+<span class="nc" id="L51">    }</span>
+
+    public void doConnect(IBLEConnect ibleconnect) {
+<span class="nc" id="L54">        ibleconnect.setConnectResult(</span>
+                BluetoothGatt.GATT_SUCCESS,
+                BluetoothProfile.STATE_CONNECTED);
+<span class="nc" id="L57">    }</span>
+
+    public void doDiscoverService(IBLEDiscoverService ibleDiscoverService) {
+<span class="nc" id="L60">        ibleDiscoverService.setResult(BluetoothGatt.GATT_SUCCESS, new ArrayList&lt;BLEService&gt;());</span>
+<span class="nc" id="L61">    }</span>
+
+    public void doDisconnect(IBLEDisconnect ibleDisconnect) {
+<span class="nc" id="L64">        ibleDisconnect.setDisconnectResult(</span>
+                BluetoothGatt.GATT_SUCCESS,
+                BluetoothProfile.STATE_DISCONNECTED);
+<span class="nc" id="L67">    }</span>
+
+    public void doReadCharacteristic(Message msg) {
+
+<span class="nc" id="L71">    }</span>
+
+    public void doWriteCharacteristic(BluetoothGattCharacteristic btGattCharacteristic,
+                                      IBLEChangeCharacteristic ibleChangeCharacteristic) {
+<span class="nc" id="L75">    }</span>
+
+    public void doNotification(IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+<span class="nc" id="L79">    }</span>
+
+    public void callAfter(int msec, String methodName) {
+<span class="fc" id="L82">        btDevEmulator.callAfter(msec, methodName);</span>
+<span class="fc" id="L83">    }</span>
+
+    public void callDoDisconnectAfter(int msec) {
+<span class="fc" id="L86">        btDevEmulator.callDoDisconnectAfter(msec);</span>
+<span class="fc" id="L87">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BLEService.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">mocking.android.bluetooth</a> &gt; <span class="el_source">BLEService.java</span></div><h1>BLEService.java</h1><pre class="source lang-java linenums">package mocking.android.bluetooth;
+
+import java.util.UUID;
+
+/**
+ * Created by moonh on 2016-10-08.
+ */
+
+public class BLEService {
+    private int kind;
+
+    public static final int SERVICE_UUID_ONLY=1;
+    public static final int SERVICE_UUID_WITH_CHARACTERISTICS=2;
+    public static final int SERVICE_UUID_WITH_CHARACTERISTICS_AND_DESCRIPTOR=3;
+
+    private UUID serviceUuid;
+    private UUID characteristicUuid;
+    private int properties;
+    private int permission;
+    private UUID descriptorUuid;
+
+<span class="fc" id="L22">    public BLEService(UUID serviceUuid) {</span>
+<span class="fc" id="L23">        kind = SERVICE_UUID_ONLY;</span>
+<span class="fc" id="L24">        this.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L25">    }</span>
+
+<span class="fc" id="L27">    public BLEService(UUID serviceUuid, UUID characteristicUuid, int properties, int permission) {</span>
+<span class="fc" id="L28">        kind = SERVICE_UUID_WITH_CHARACTERISTICS;</span>
+<span class="fc" id="L29">        this.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L30">        this.characteristicUuid = characteristicUuid;</span>
+<span class="fc" id="L31">        this.properties = properties;</span>
+<span class="fc" id="L32">        this.permission = permission;</span>
+<span class="fc" id="L33">    }</span>
+
+<span class="fc" id="L35">    public BLEService(UUID serviceUuid, UUID characteristicUuid, int properties, int permission, UUID descriptorUuid) {</span>
+<span class="fc" id="L36">        kind = SERVICE_UUID_WITH_CHARACTERISTICS_AND_DESCRIPTOR;</span>
+<span class="fc" id="L37">        this.serviceUuid = serviceUuid;</span>
+<span class="fc" id="L38">        this.characteristicUuid = characteristicUuid;</span>
+<span class="fc" id="L39">        this.properties = properties;</span>
+<span class="fc" id="L40">        this.permission = permission;</span>
+<span class="fc" id="L41">        this.descriptorUuid = descriptorUuid;</span>
+<span class="fc" id="L42">    }</span>
+
+
+<span class="fc" id="L45">    public int kind() { return kind; }</span>
+<span class="fc" id="L46">    public UUID serviceUuid() { return serviceUuid; }</span>
+<span class="fc" id="L47">    public UUID characteristicUuid() { return characteristicUuid; }</span>
+<span class="fc" id="L48">    public int properties() { return properties; }</span>
+<span class="fc" id="L49">    public int permission() { return permission; }</span>
+<span class="fc" id="L50">    public UUID descriptorUuid() { return descriptorUuid; }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

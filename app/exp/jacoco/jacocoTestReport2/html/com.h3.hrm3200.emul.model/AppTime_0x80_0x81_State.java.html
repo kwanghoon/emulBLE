@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AppTime_0x80_0x81_State.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200.emul.model</a> &gt; <span class="el_source">AppTime_0x80_0x81_State.java</span></div><h1>AppTime_0x80_0x81_State.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200.emul.model;
+
+import com.h3.hrm3200.emul.AutoHRM3200;
+
+import emul.bluetooth.BluetoothLE;
+import emul.bluetooth.model.BLEStateException;
+import emul.bluetooth.model.BLEWriteCharacteristicState;
+import mocking.android.bluetooth.BluetoothGattCharacteristic;
+import mocking.android.bluetooth.IBLEChangeCharacteristic;
+
+/**
+ * Created by khChoi on 2017-08-17.
+ */
+public class AppTime_0x80_0x81_State extends BLEWriteCharacteristicState {
+    // storeddata : 0x01 ==&gt; no stored data, 0x00 ==&gt; stored data available
+    // downloadable : 0x01 ==&gt; not downloadable, 0x00 ==&gt; ddownloadable
+    private int storeddata;
+    private int downloadable;
+
+    public AppTime_0x80_0x81_State(BluetoothLE bluetoothLE, int storeddata, int downloadable) {
+<span class="fc" id="L21">        super(bluetoothLE);</span>
+
+<span class="fc" id="L23">        this.storeddata = storeddata;</span>
+<span class="fc" id="L24">        this.downloadable = downloadable;</span>
+<span class="fc" id="L25">    }</span>
+
+    @Override
+    public void action(BluetoothGattCharacteristic btGattCharacteristic,
+                       IBLEChangeCharacteristic ibleChangeCharacteristic) {
+
+        // Condition: This should be called in doWriteCharacteristic
+        //            and something in the following:
+
+<span class="fc" id="L34">        byte in[] = btGattCharacteristic.getValue();</span>
+<span class="pc bpc" id="L35" title="1 of 2 branches missed.">        if ((in[1] &amp; 0xff) == 0x80) {</span>
+
+            // out[3] 0x01: ���옣 �뜲�씠�꽣 �뾾�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="pc bpc" id="L38" title="1 of 4 branches missed.">            if (storeddata == 0x01 &amp;&amp; downloadable == 0x01) {</span>
+<span class="fc" id="L39">                ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,</span>
+                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x01, (byte) 0x01, (byte) 0xEF});
+            }
+            // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x01 : �떎�슫濡쒕뱶 遺덇� �긽�깭(痢≪젙以�)
+<span class="pc bpc" id="L43" title="2 of 4 branches missed.">            else if (storeddata == 0x00 &amp;&amp; downloadable == 0x01) {</span>
+<span class="fc" id="L44">                ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,</span>
+                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x01, (byte) 0xEF});
+            }
+            // out[4] : 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭, �씠 硫붿떆吏� �쟾�넚�썑 0x82 硫붿떆吏� 湲곕떎�젮�빞 �븿
+            // out[3] 0x00: ���옣 �뜲�씠�꽣 �엳�쓬 &amp;&amp; out[4] 0x00 : �떎�슫濡쒕뱶 媛��뒫 �긽�깭
+<span class="nc bnc" id="L49" title="All 4 branches missed.">            else if (storeddata == 0x00 &amp;&amp; downloadable == 0x00) {</span>
+<span class="nc" id="L50">                ibleChangeCharacteristic.setResult(AutoHRM3200.serviceUuid, AutoHRM3200.characteristicUuid,</span>
+                        new byte[]{(byte) 0x80, (byte) 0x81, (byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0xEF});
+            } else {
+<span class="nc" id="L53">                throw new BLEStateException(&quot;doWriteCharacteristic: AppTime_0x80_State : &quot;</span>
+                        + &quot;storeddata = &quot; + storeddata + &quot;, &quot;
+                        + &quot;downloadable = &quot; + downloadable);
+            }
+
+<span class="fc" id="L58">            return;</span>
+        }
+
+<span class="nc" id="L61">        throw new BLEStateException(&quot;doWriteCharacteristic: AppTime_0x80_State : &quot; + (in[1] &amp; 0xff) + &quot;==&quot; + 0x80);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

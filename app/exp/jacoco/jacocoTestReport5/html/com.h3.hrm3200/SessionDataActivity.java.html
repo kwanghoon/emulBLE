@@ -1,0 +1,1199 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="ko"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SessionDataActivity.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">app</a> &gt; <a href="index.source.html" class="el_package">com.h3.hrm3200</a> &gt; <span class="el_source">SessionDataActivity.java</span></div><h1>SessionDataActivity.java</h1><pre class="source lang-java linenums">package com.h3.hrm3200;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.DataSetObservable;
+import android.database.DataSetObserver;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.preference.PreferenceManager;
+import android.support.v7.app.ActionBarActivity;
+import android.os.Bundle;
+//import android.util.Log;
+import android.util.SparseBooleanArray;
+import android.view.ActionMode;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.BaseExpandableListAdapter;
+import android.widget.CheckBox;
+import android.widget.CheckedTextView;
+import android.widget.CompoundButton;
+import android.widget.ExpandableListAdapter;
+import android.widget.ExpandableListView;
+import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.Scopes;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.fitness.Fitness;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.zip.Inflater;
+
+
+<span class="nc" id="L67">public class SessionDataActivity extends Activity {</span>
+
+    // db
+    private HeartRateDBHelper dbHelper;
+    private SQLiteDatabase db;
+
+    private ExpandableListView expandableListView;
+
+    private LayoutInflater inflater;
+
+
+    final static String SESSION_ID_KEY = &quot;session id&quot;;
+    final static String DURATION_KEY = &quot;duration&quot;;
+    final static String DISTANCE_KEY = &quot;distance&quot;;
+    final static String CALORIES_KEY = &quot;calories&quot;;
+    final static String HR_AVG_KEY = &quot;hr avg&quot;;
+    final static String HR_MAX_KEY = &quot;hr max&quot;;
+    final static String HR_MIN_KEY = &quot;hr min&quot;;
+    final static String RED_ZONE_KEY = &quot;red zone&quot;;
+    final static String YELLOW_ZONE_KEY = &quot;yellow zone&quot;;
+    final static String GREEN_ZONE_KEY = &quot;green zone&quot;;
+    final static String CYAN_ZONE_KEY = &quot;cyan zone&quot;;
+    final static String BLUE_ZONE_KEY = &quot;blue zone&quot;;
+    final static String SESSION_TIME_KEY = &quot;session time&quot;;
+
+    private ImageButton buttonDelete;
+    private ImageButton buttonGoogleSync;
+
+
+    public String[] check_string_array;
+
+    // Google Sync account management
+    private static final int REQUEST_OAUTH = 1001;
+
+    private static final String AUTH_PENDING = &quot;auth_state_pending&quot;;
+<span class="nc" id="L102">    private boolean authInProgress = false;</span>
+
+<span class="nc" id="L104">    private GoogleApiClient mClient = null;</span>
+
+<span class="nc" id="L106">    private Boolean canDeleteFlag = true; // false =&gt; Cannot Delete, true =&gt; Can Delete</span>
+
+    //
+<span class="nc" id="L109">    private final String TAG = &quot;SessionDataActivity&quot;;</span>
+    private static final String TIME_FORMAT = &quot;HH:mm:ss&quot;;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+<span class="nc" id="L114">        super.onCreate(savedInstanceState);</span>
+<span class="nc" id="L115">        setContentView(R.layout.activity_session_data);</span>
+
+<span class="nc" id="L117">        getActionBar().setHomeButtonEnabled(true);</span>
+<span class="nc" id="L118">        getActionBar().setDisplayShowTitleEnabled(false);</span>
+
+
+<span class="nc" id="L121">        buttonDelete = (ImageButton)findViewById(R.id.imageBtnSDDelete);</span>
+<span class="nc" id="L122">        buttonGoogleSync = (ImageButton)findViewById(R.id.imageBtnSDGooglesync);</span>
+
+
+<span class="nc" id="L125">        dbHelper = new HeartRateDBHelper(this, null, 1);</span>
+<span class="nc" id="L126">        db = dbHelper.getWritableDatabase();</span>
+
+<span class="nc" id="L128">        expandableListAdapter = new MyExpandableListAdapter();</span>
+
+<span class="nc" id="L130">        inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);</span>
+
+<span class="nc" id="L132">        expandableListView = (ExpandableListView)findViewById(R.id.expandableListView);</span>
+<span class="nc" id="L133">        expandableListView.setAdapter(expandableListAdapter);</span>
+//        expandableListView.setChoiceMode(ExpandableListView.CHOICE_MODE_MULTIPLE);
+
+
+//        boolean isModeDelete = true;
+
+//        expandableListView.setOnGroupClickListener(new ExpandableListView.OnGroupClickListener() {
+//
+//            @Override
+//            public boolean onGroupClick(ExpandableListView parent, View v, int groupPosition, long id) {
+//
+//                parent.setItemChecked(groupPosition, isModeDelete);
+//                return isModeDelete;
+////                Log.i(&quot;SessionDataActivity&quot;, &quot;onGroupClick:&quot;);
+////                return false;
+//            }
+//        });
+
+
+
+
+
+<span class="nc" id="L155">        expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {</span>
+            @Override
+            public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">                if (childPosition == SessionData.NUM_OF_SESSION_ATTRIBUTES) {</span>
+                    // Details is selected! ==&gt; Graph activity
+<span class="nc" id="L161">                    SessionData sessionData = (SessionData)expandableListAdapter.getGroup(groupPosition);</span>
+<span class="nc" id="L162">                    int sessionid = sessionData.getSessionId();</span>
+//                    String duration = sessionData.getDuration();
+//                    String distance = sessionData.getDistance();
+//                    String hr_avg_str = sessionData.getHeart_rate_average();
+//                    String calories = sessionData.getCalories();
+//                    int hr_max = sessionData.getIntHeart_rate_max();
+//                    int hr_min = sessionData.getIntHeart_rate_min();
+//                    String sessionTime =
+//                            sessionData.getYear() + &quot;.&quot; + sessionData.getMonth() + &quot;.&quot; + sessionData.getDay()
+//                            + &quot; &quot;
+//                            + sessionData.getHour() + &quot;:&quot; + sessionData.getMin() + &quot;:&quot; + sessionData.getSec();
+
+<span class="nc" id="L174">                    Intent intent = new Intent(SessionDataActivity.this, GraphActivity.class);</span>
+<span class="nc" id="L175">                    intent.putExtra(SESSION_ID_KEY, sessionid);</span>
+//                    intent.putExtra(DURATION_KEY, duration);
+//                    intent.putExtra(DISTANCE_KEY, distance);
+//                    intent.putExtra(CALORIES_KEY, calories);
+//                    intent.putExtra(HR_AVG_KEY, hr_avg_str);
+//                    intent.putExtra(HR_MAX_KEY, hr_max);
+//                    intent.putExtra(HR_MIN_KEY, hr_min);
+//                    intent.putExtra(RED_ZONE_KEY, sessionData.getRedZoneTime());
+//                    intent.putExtra(YELLOW_ZONE_KEY, sessionData.getYellowZoneTime());
+//                    intent.putExtra(GREEN_ZONE_KEY, sessionData.getGreenZoneTime());
+//                    intent.putExtra(CYAN_ZONE_KEY, sessionData.getCyanZoneTime());
+//                    intent.putExtra(BLUE_ZONE_KEY, sessionData.getBlueZoneTime());
+//                    intent.putExtra(SESSION_TIME_KEY, sessionTime);
+
+<span class="nc" id="L189">                    startActivityForResult(intent, 0);</span>
+<span class="nc" id="L190">                    return true;</span>
+                }
+<span class="nc" id="L192">                return false;</span>
+            }
+        });
+
+
+        // Google Sync
+<span class="nc bnc" id="L198" title="All 2 branches missed.">        if (savedInstanceState != null) {</span>
+<span class="nc" id="L199">            authInProgress = savedInstanceState.getBoolean(AUTH_PENDING);</span>
+        }
+
+<span class="nc" id="L202">    }</span>
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+<span class="nc" id="L207">        super.onSaveInstanceState(outState);</span>
+<span class="nc" id="L208">        outState.putBoolean(AUTH_PENDING, authInProgress);</span>
+<span class="nc" id="L209">    }</span>
+
+    @Override
+    protected void onStop() {
+<span class="nc" id="L213">        super.onStop();</span>
+//        if (mClient!=null &amp;&amp; mClient.isConnected()) {
+//            mClient.disconnect();
+//        }
+<span class="nc" id="L217">    }</span>
+
+    @Override
+    protected void onDestroy() {
+<span class="nc" id="L221">        super.onDestroy();</span>
+
+<span class="nc" id="L223">        db.close();</span>
+<span class="nc" id="L224">        dbHelper.close();</span>
+<span class="nc" id="L225">    }</span>
+
+    private MyExpandableListAdapter expandableListAdapter;
+
+    class MyExpandableListAdapter extends BaseExpandableListAdapter implements ExpandableListAdapter {
+
+        private ArrayList&lt;SessionData&gt; arrayList;
+
+<span class="nc" id="L233">        HashMap&lt;Long,Boolean&gt; checkboxMap = new HashMap&lt;Long,Boolean&gt;();</span>
+
+<span class="nc" id="L235">        private DataSetObservable dataSetObservable = new DataSetObservable();</span>
+
+
+        private DataSetObservable getDataSetObservable() {
+<span class="nc" id="L239">            return dataSetObservable;</span>
+        }
+
+        public void notifyDataSetChanged() {
+<span class="nc" id="L243">            this.getDataSetObservable().notifyChanged();</span>
+<span class="nc" id="L244">        }</span>
+        public void notifyDataSetInvalidated() {
+<span class="nc" id="L246">            this.getDataSetObservable().notifyInvalidated();</span>
+<span class="nc" id="L247">        }</span>
+
+
+
+<span class="nc" id="L251">        public MyExpandableListAdapter() {</span>
+
+<span class="nc" id="L253">            arrayList = new ArrayList&lt;SessionData&gt;();</span>
+
+<span class="nc" id="L255">            Cursor cursor = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION</span>
+                                + &quot; ORDER BY &quot; + HeartRateDBHelper.COL_YEAR + &quot; DESC, &quot;
+                                               + HeartRateDBHelper.COL_MONTH + &quot; DESC, &quot;
+                                               + HeartRateDBHelper.COL_DAY + &quot; DESC, &quot;
+                                               + HeartRateDBHelper.COL_HOUR + &quot; DESC, &quot;
+                                               + HeartRateDBHelper.COL_MIN + &quot; DESC, &quot;
+                                               + HeartRateDBHelper.COL_SEC + &quot; DESC &quot;, null);
+
+<span class="nc" id="L263">            int count = cursor.getCount();</span>
+<span class="nc" id="L264">            cursor.moveToFirst();</span>
+<span class="nc bnc" id="L265" title="All 2 branches missed.">            while(count &gt; 0) {</span>
+<span class="nc" id="L266">                SharedPreferences userinfoPref = getSharedPreferences(UserSettingActivity.prefName, 0);</span>
+<span class="nc" id="L267">                int userStride = userinfoPref.getInt(UserSettingActivity.keyStride, 0);</span>
+<span class="nc" id="L268">                int period = userinfoPref.getInt(UserSettingActivity.keyPeriod, 10);</span>
+
+<span class="nc" id="L270">                SessionData sessionData = new SessionData(userStride, period); // count瑜� �궗�슜�븯吏� �븡�쓬 UI �슜�룄</span>
+
+
+<span class="nc" id="L273">                sessionData.putSessionData(</span>
+<span class="nc" id="L274">                        cursor.getInt(0),</span>
+<span class="nc" id="L275">                        cursor.getInt(1),cursor.getInt(2),cursor.getInt(3),</span>
+<span class="nc" id="L276">                        cursor.getInt(4),cursor.getInt(5),cursor.getInt(6),</span>
+<span class="nc" id="L277">                        cursor.getInt(7),cursor.getDouble(8),cursor.getInt(9),</span>
+<span class="nc" id="L278">                        cursor.getInt(10),cursor.getInt(11),cursor.getInt(12),</span>
+<span class="nc" id="L279">                        cursor.getInt(13),cursor.getInt(14),cursor.getInt(15),</span>
+<span class="nc" id="L280">                        cursor.getInt(16),cursor.getInt(17)</span>
+                );
+
+<span class="nc" id="L283">                arrayList.add(sessionData);</span>
+
+<span class="nc" id="L285">                cursor.moveToNext();</span>
+<span class="nc" id="L286">                count = count - 1;</span>
+<span class="nc" id="L287">            }</span>
+<span class="nc" id="L288">            cursor.close();</span>
+
+
+<span class="nc" id="L291">            clearChoice();</span>
+<span class="nc" id="L292">        }</span>
+
+        public void clearChoice() {
+<span class="nc" id="L295">            int data_size = arrayList.size();</span>
+//            Log.i(&quot;MyExpandableListAdapter&quot;, &quot;clearCheck() arrayList.size:&quot; + data_size);
+<span class="nc" id="L297">            check_string_array = null;</span>
+<span class="nc" id="L298">            checkboxMap.clear();</span>
+            //checkboxMap = new HashMap&lt;Long,Boolean&gt;();
+
+<span class="nc" id="L301">            check_string_array = new String[data_size];</span>
+<span class="nc bnc" id="L302" title="All 2 branches missed.">            for(int i=0; i&lt;data_size; i++) {</span>
+<span class="nc" id="L303">                checkboxMap.put((long) i, false);</span>
+//                Log.i(&quot;MyExpandableListAdapter&quot;, &quot;clearCheck() checkboxMap:&quot; + checkboxMap.get((long)i));
+<span class="nc" id="L305">                check_string_array[i] = &quot;false&quot;;</span>
+            }
+<span class="nc" id="L307">        }</span>
+
+<span class="nc" id="L309">        public class CheckListener implements OnCheckedChangeListener {</span>
+
+            long pos;
+
+            public void setPosition(long p){
+<span class="nc" id="L314">                pos = p;</span>
+<span class="nc" id="L315">            }</span>
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+//                Log.i(&quot;checkListenerChanged&quot;, String.valueOf(pos)+&quot;:&quot;+String.valueOf(isChecked));
+<span class="nc" id="L321">                checkboxMap.put(pos, isChecked);</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">                if(isChecked == true)</span>
+<span class="nc" id="L323">                    check_string_array[(int)pos] = &quot;true&quot;;</span>
+                else
+<span class="nc" id="L325">                    check_string_array[(int)pos] = &quot;false&quot;;</span>
+
+<span class="nc" id="L327">            }</span>
+        }
+
+        public void clear() {
+<span class="nc" id="L331">            arrayList.clear();</span>
+<span class="nc" id="L332">        }</span>
+
+        @Override
+        public void registerDataSetObserver(DataSetObserver observer) {
+<span class="nc" id="L336">            this.getDataSetObservable().registerObserver(observer);</span>
+<span class="nc" id="L337">        }</span>
+
+        @Override
+        public void unregisterDataSetObserver(DataSetObserver observer) {
+<span class="nc" id="L341">            this.getDataSetObservable().unregisterObserver(observer);</span>
+<span class="nc" id="L342">        }</span>
+
+        @Override
+        public int getGroupCount() {
+<span class="nc" id="L346">            return arrayList.size();</span>
+        }
+
+        @Override
+        public int getChildrenCount(int groupPosition) {
+<span class="nc" id="L351">            return SessionData.NUM_OF_SESSION_ATTRIBUTES + 1;</span>
+        }
+
+        @Override
+        public Object getGroup(int groupPosition) {
+<span class="nc" id="L356">            return arrayList.get(groupPosition);</span>
+        }
+
+        @Override
+        public Object getChild(int groupPosition, int childPosition) {
+<span class="nc bnc" id="L361" title="All 2 branches missed.">            if (childPosition &lt; SessionData.NUM_OF_SESSION_ATTRIBUTES) {</span>
+<span class="nc" id="L362">                return arrayList.get(groupPosition).getSessionAttribute(childPosition);</span>
+            } else {
+<span class="nc" id="L364">                return &quot;DETAILS&quot;;</span>
+            }
+        }
+
+        @Override
+        public long getGroupId(int groupPosition) {
+<span class="nc" id="L370">            return arrayList.get(groupPosition).getSessionId();</span>
+        }
+
+        @Override
+        public long getChildId(int groupPosition, int childPosition) {
+<span class="nc" id="L375">            return 0;</span>
+        }
+
+        @Override
+        public boolean hasStableIds() {
+<span class="nc" id="L380">            return true;</span>
+        }
+
+        @Override
+        public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
+
+<span class="nc bnc" id="L386" title="All 2 branches missed.">            if (convertView==null) {</span>
+<span class="nc" id="L387">                convertView = inflater.inflate(R.layout.listitem_session_data1, parent, false);</span>
+            }
+
+<span class="nc" id="L390">            TextView tv = (TextView) convertView.findViewById(R.id.time);</span>
+<span class="nc" id="L391">            CheckBox cb = (CheckBox) convertView.findViewById(R.id.checkBoxGroup);</span>
+
+<span class="nc" id="L393">            SessionData sd = arrayList.get(groupPosition);</span>
+<span class="nc" id="L394">            tv.setText(sd.getYear() + &quot;.&quot; + sd.getMonth() + &quot;.&quot; + sd.getDay()</span>
+                        + &quot; &quot;
+<span class="nc" id="L396">                        + sd.getHour() + &quot;:&quot; + sd.getMin() + &quot;:&quot; + sd.getSec());</span>
+
+
+<span class="nc bnc" id="L399" title="All 2 branches missed.">            if (groupPosition &lt;= arrayList.size()-1) {</span>
+<span class="nc" id="L400">                cb.setFocusable(false);</span>
+<span class="nc" id="L401">                CheckListener checkL = new CheckListener();</span>
+<span class="nc" id="L402">                checkL.setPosition(groupPosition);</span>
+<span class="nc" id="L403">                cb.setOnCheckedChangeListener(checkL);</span>
+//                Log.i(&quot;SessionDataActivity&quot;, &quot;groupPosition:&quot; + groupPosition);
+<span class="nc" id="L405">                cb.setChecked(checkboxMap.get((long)groupPosition));</span>
+            }
+<span class="nc" id="L407">            return convertView;</span>
+        }
+
+        @Override
+        public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
+
+<span class="nc bnc" id="L413" title="All 2 branches missed.">            if(convertView==null) {</span>
+<span class="nc bnc" id="L414" title="All 2 branches missed.">                if (childPosition &lt; SessionData.NUM_OF_SESSION_ATTRIBUTES) {</span>
+<span class="nc" id="L415">                    convertView = inflater.inflate(R.layout.listitem_session_data_detail1, parent, false);</span>
+                } else {
+<span class="nc" id="L417">                    convertView = inflater.inflate(R.layout.listitem_session_data_detail2, parent, false);</span>
+                }
+            }
+
+<span class="nc bnc" id="L421" title="All 2 branches missed.">            if (childPosition &lt; SessionData.NUM_OF_SESSION_ATTRIBUTES) {</span>
+<span class="nc" id="L422">                TextView tvTitle = (TextView) convertView.findViewById(R.id.sessionDetailTitle);</span>
+<span class="nc" id="L423">                TextView tvData = (TextView) convertView.findViewById(R.id.sessionDetailData);</span>
+
+<span class="nc bnc" id="L425" title="All 4 branches missed.">                if (tvTitle == null || tvData == null) {</span>
+<span class="nc" id="L426">                    convertView = inflater.inflate(R.layout.listitem_session_data_detail1, parent, false);</span>
+
+<span class="nc" id="L428">                    tvTitle = (TextView) convertView.findViewById(R.id.sessionDetailTitle);</span>
+<span class="nc" id="L429">                    tvData = (TextView) convertView.findViewById(R.id.sessionDetailData);</span>
+                }
+
+<span class="nc" id="L432">                tvTitle.setText(arrayList.get(groupPosition).getSessionAttributeTitle(childPosition));</span>
+<span class="nc" id="L433">                tvData.setText(arrayList.get(groupPosition).getSessionAttributeString(childPosition));</span>
+<span class="nc" id="L434">            } else {</span>
+<span class="nc" id="L435">                TextView tv = (TextView) convertView.findViewById(R.id.detail);</span>
+
+<span class="nc bnc" id="L437" title="All 2 branches missed.">                if (tv == null) {</span>
+<span class="nc" id="L438">                    convertView = inflater.inflate(R.layout.listitem_session_data_detail2, parent, false);</span>
+
+<span class="nc" id="L440">                    tv = (TextView) convertView.findViewById(R.id.detail);</span>
+                }
+<span class="nc" id="L442">                tv.setText(&quot;DETAILS&quot;);</span>
+            }
+
+            // HR_avg,max,min child view�쓽 諛곌꼍�깋
+//            if (childPosition == 2) {
+//                convertView.setBackgroundColor(Color.BLUE);
+//            } else if (childPosition == 3) {
+//                convertView.setBackgroundColor(Color.GREEN);
+//            } else if (childPosition == 4) {
+//                convertView.setBackgroundColor(Color.RED);
+//            } else {
+//                convertView.setBackgroundColor(Color.TRANSPARENT);
+//            }
+            //
+
+
+<span class="nc" id="L458">            return convertView;</span>
+        }
+
+        @Override
+        public boolean isChildSelectable(int groupPosition, int childPosition) {
+<span class="nc" id="L463">            return true;</span>
+        }
+
+        @Override
+        public boolean areAllItemsEnabled() {
+<span class="nc" id="L468">            return true;</span>
+        }
+
+        @Override
+        public boolean isEmpty() {
+<span class="nc" id="L473">            return false;</span>
+        }
+
+        @Override
+        public void onGroupExpanded(int groupPosition) {
+<span class="nc" id="L478">        }</span>
+
+        @Override
+        public void onGroupCollapsed(int groupPosition) {
+
+<span class="nc" id="L483">        }</span>
+
+        @Override
+        public long getCombinedChildId(long groupId, long childId) {
+<span class="nc" id="L487">            return 0;</span>
+        }
+
+        @Override
+        public long getCombinedGroupId(long groupId) {
+<span class="nc" id="L492">            return 0;</span>
+        }
+    };
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+<span class="nc" id="L499">        getMenuInflater().inflate(R.menu.menu_session_data, menu);</span>
+<span class="nc" id="L500">        return true;</span>
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+<span class="nc" id="L508">        int id = item.getItemId();</span>
+
+        //noinspection SimplifiableIfStatement
+<span class="nc bnc" id="L511" title="All 2 branches missed.">        if (id == R.id.action_settings) {</span>
+<span class="nc" id="L512">            expandableListAdapter.clear();</span>
+
+<span class="nc" id="L514">            db.execSQL(&quot;DELETE FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION);</span>
+<span class="nc" id="L515">            db.execSQL(&quot;DELETE FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR);</span>
+
+<span class="nc" id="L517">            expandableListAdapter.notifyDataSetChanged();</span>
+
+<span class="nc" id="L519">            return true;</span>
+        }
+<span class="nc bnc" id="L521" title="All 2 branches missed.">        else if (id == android.R.id.home)</span>
+        {
+//            Intent intent = new Intent(this, MainActivity.class);
+//            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//            startActivity(intent);
+<span class="nc" id="L526">            Intent intent = new Intent();</span>
+<span class="nc" id="L527">            setResult(RESULT_OK, intent);</span>
+<span class="nc" id="L528">            finish();</span>
+<span class="nc" id="L529">            return true;</span>
+        }
+<span class="nc bnc" id="L531" title="All 2 branches missed.">        else if (id == R.id.action_gen_csv) {</span>
+<span class="nc" id="L532">            generate_csv_file();</span>
+        }
+<span class="nc bnc" id="L534" title="All 2 branches missed.">        else if (id == R.id.action_merge_sessions) {</span>
+<span class="nc" id="L535">            merge_sessions();</span>
+        }
+<span class="nc bnc" id="L537" title="All 2 branches missed.">        else if (id == R.id.action_read_googlefit_upload_data) {</span>
+<span class="nc" id="L538">            Intent intent = new Intent();</span>
+<span class="nc" id="L539">            intent.setClassName(&quot;com.h3.hrm3200&quot;, &quot;com.h3.hrm3200.GoogleFitActivity&quot;);</span>
+<span class="nc" id="L540">            startActivityForResult(intent, 0);</span>
+        }
+
+<span class="nc" id="L543">        return super.onOptionsItemSelected(item);</span>
+    }
+
+    public void onClick(View v) {
+<span class="nc bnc" id="L547" title="All 2 branches missed.">        if(v == buttonDelete) {</span>
+
+<span class="nc bnc" id="L549" title="All 2 branches missed.">            if (canDeleteFlag) {</span>
+<span class="nc" id="L550">                String buffer = null;</span>
+<span class="nc" id="L551">                String output_String = &quot;&quot;;</span>
+//            Log.i(&quot;onClick&quot;, &quot;check_string_array.length:&quot; + check_string_array.length);
+<span class="nc bnc" id="L553" title="All 2 branches missed.">                for (int i = check_string_array.length - 1; i &gt;= 0; i--) {</span>
+//                Log.i(&quot;onClick&quot;, &quot;check_string_array[i]:&quot; + check_string_array[i]);
+<span class="nc" id="L555">                    buffer = check_string_array[i];</span>
+<span class="nc bnc" id="L556" title="All 2 branches missed.">                    if (buffer.equals(&quot;true&quot;)) {</span>
+<span class="nc" id="L557">                        db.execSQL(&quot;DELETE FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION</span>
+                                + &quot; WHERE &quot; + HeartRateDBHelper.COL_ID + &quot; = &quot;
+<span class="nc" id="L559">                                + expandableListAdapter.getGroupId(i));</span>
+<span class="nc" id="L560">                        db.execSQL(&quot;DELETE FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR</span>
+                                + &quot; WHERE &quot; + HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot;
+<span class="nc" id="L562">                                + expandableListAdapter.getGroupId(i));</span>
+
+<span class="nc" id="L564">                        expandableListAdapter.arrayList.remove(i);</span>
+<span class="nc" id="L565">                        output_String += &quot;group &quot; + i + &quot; &quot;;</span>
+                    }
+                }
+<span class="nc" id="L568">                expandableListAdapter.clearChoice();</span>
+<span class="nc" id="L569">                expandableListAdapter.notifyDataSetChanged();</span>
+
+<span class="nc" id="L571">                output_String += &quot;is checked&quot;;</span>
+//            Toast.makeText(this, output_String, Toast.LENGTH_SHORT).show();
+
+<span class="nc" id="L574">                Log.i(TAG, &quot;onClick() Delete: &quot; + output_String);</span>
+<span class="nc" id="L575">            }</span>
+            else {
+<span class="nc" id="L577">                Toast.makeText(this, &quot;Cannot delete sessions on uploading to Goolge Fit&quot;, Toast.LENGTH_SHORT).show();</span>
+            }
+
+        }
+<span class="nc bnc" id="L581" title="All 2 branches missed.">        else if (v==buttonGoogleSync) {</span>
+//            Toast.makeText(this, &quot;Feature Disabled...(On Debugging)&quot;, Toast.LENGTH_SHORT).show();
+
+<span class="nc" id="L584">            ArrayList&lt;Integer&gt; sessionIds = new ArrayList&lt;Integer&gt;();</span>
+
+<span class="nc bnc" id="L586" title="All 2 branches missed.">            for (int i = check_string_array.length-1; i&gt;=0; i--) {</span>
+<span class="nc bnc" id="L587" title="All 2 branches missed.">                if (&quot;true&quot;.equals(check_string_array[i])) {</span>
+<span class="nc" id="L588">                    sessionIds.add((int) expandableListAdapter.getGroupId(i));</span>
+                }
+            }
+
+<span class="nc" id="L592">            buildFitnessClient(sessionIds);</span>
+
+//            GoogleFitSync googleFitSync = new GoogleFitSync(this, sessionIds);
+            //googleFitSync.uploadSessions(this, sessionIds);
+        }
+<span class="nc" id="L597">    }</span>
+
+
+    // Merge
+<span class="nc" id="L601">    private boolean flag_do_merge = false;</span>
+    private Handler mergeHandler;
+    private static final int TIME_GAP = 10; // �몢 �꽭�뀡�쓽 merge 媛��뒫�븳 �떆媛� 媛꾧꺽 10遺�
+
+
+    private void merge_sessions() {
+
+<span class="nc" id="L608">        final ProgressDialog progressDialog = new ProgressDialog(SessionDataActivity.this);</span>
+
+<span class="nc bnc" id="L610" title="All 2 branches missed.">        if (flag_do_merge == false) {</span>
+<span class="nc" id="L611">            flag_do_merge = true;</span>
+
+<span class="nc" id="L613">            mergeHandler = new Handler() {</span>
+                @Override
+                public void handleMessage(Message msg) {
+<span class="nc" id="L616">                    super.handleMessage(msg);</span>
+
+<span class="nc bnc" id="L618" title="All 2 branches missed.">                    if (msg.what == 1) {</span>
+
+<span class="nc" id="L620">                        progressDialog.setTitle(&quot;Merging&quot;);</span>
+<span class="nc" id="L621">                        progressDialog.setMessage(&quot;Wait...&quot;);</span>
+<span class="nc" id="L622">                        progressDialog.setCancelable(false);</span>
+<span class="nc" id="L623">                        progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {</span>
+                            @Override
+                            public void onCancel(DialogInterface dialog) {
+<span class="nc" id="L626">                                Toast.makeText(SessionDataActivity.this, &quot;Not cancelable (On debugging)&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L627">                            }</span>
+                        });
+<span class="nc" id="L629">                        progressDialog.show();</span>
+
+                    } else {
+
+<span class="nc bnc" id="L633" title="All 4 branches missed.">                        if ((progressDialog != null) &amp;&amp; (progressDialog.isShowing())) {</span>
+<span class="nc" id="L634">                            progressDialog.dismiss();</span>
+                        }
+
+                        // Merge �셿猷� ���솕�긽�옄 �쓣�슦湲�
+<span class="nc" id="L638">                        new AlertDialog.Builder(SessionDataActivity.this).setIcon(android.R.drawable.ic_dialog_alert)</span>
+<span class="nc" id="L639">                                .setMessage(&quot;The two sessions have been merged.&quot;)</span>
+<span class="nc" id="L640">                                .setPositiveButton(&quot;OK&quot;, new DialogInterface.OnClickListener() {</span>
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+
+<span class="nc bnc" id="L644" title="All 2 branches missed.">                                        for (int i = check_string_array.length - 1; i &gt;= 0; i--) {</span>
+<span class="nc bnc" id="L645" title="All 2 branches missed.">                                            if (&quot;true&quot;.equals(check_string_array[i])) {</span>
+<span class="nc" id="L646">                                                expandableListAdapter.arrayList.remove(i);</span>
+<span class="nc" id="L647">                                                Log.i(TAG, &quot;Merge/Remove session index: &quot; + i);</span>
+                                            }
+                                        }
+
+<span class="nc" id="L651">                                        expandableListAdapter.clearChoice();</span>
+<span class="nc" id="L652">                                        expandableListAdapter.notifyDataSetChanged();</span>
+<span class="nc" id="L653">                                        expandableListAdapter = new MyExpandableListAdapter();</span>
+<span class="nc" id="L654">                                        expandableListView.setAdapter(expandableListAdapter);</span>
+<span class="nc" id="L655">                                    }</span>
+<span class="nc" id="L656">                                }).show();</span>
+                    }
+
+<span class="nc" id="L659">                }</span>
+            };
+
+
+            class MyThread extends Thread {
+                private Context context;
+                private Handler handler;
+<span class="nc" id="L666">                public MyThread(Context context, Handler handler) {</span>
+<span class="nc" id="L667">                    this.context = context;</span>
+<span class="nc" id="L668">                    this.handler = handler;</span>
+<span class="nc" id="L669">                }</span>
+
+                @Override
+                public void run() {
+<span class="nc" id="L673">                    doRun();</span>
+<span class="nc" id="L674">                    flag_do_merge = false;</span>
+<span class="nc" id="L675">                }</span>
+
+
+                public void doRun() {
+
+<span class="nc" id="L680">                    ArrayList&lt;Integer&gt; sessionIds = new ArrayList&lt;Integer&gt;();</span>
+<span class="nc" id="L681">                    ArrayList&lt;Integer&gt; indexList = new ArrayList&lt;Integer&gt;();</span>
+
+<span class="nc bnc" id="L683" title="All 2 branches missed.">                    for (int i = check_string_array.length - 1; i &gt;= 0; i--) {</span>
+<span class="nc bnc" id="L684" title="All 2 branches missed.">                        if (&quot;true&quot;.equals(check_string_array[i])) {</span>
+<span class="nc" id="L685">                            sessionIds.add((int) expandableListAdapter.getGroupId(i));</span>
+<span class="nc" id="L686">                            indexList.add(i);</span>
+                        }
+                    }
+
+<span class="nc bnc" id="L690" title="All 2 branches missed.">                    if (sessionIds.size() != 2) {</span>
+<span class="nc" id="L691">                        handler.post(new Runnable() {</span>
+                            public void run() {
+<span class="nc" id="L693">                                Toast.makeText(context, &quot;More than two sessions are chosen.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L694">                            }</span>
+                        });
+<span class="nc" id="L696">                        return;</span>
+                    }
+
+<span class="nc" id="L699">                    Cursor cursor = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION</span>
+<span class="nc" id="L700">                            + &quot; WHERE &quot; + HeartRateDBHelper.COL_ID + &quot; = &quot; + sessionIds.get(0), null);</span>
+
+
+<span class="nc" id="L703">                    cursor.moveToFirst();</span>
+<span class="nc" id="L704">                    int session1Id = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_ID));</span>
+<span class="nc" id="L705">                    int session1Year = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_YEAR));</span>
+<span class="nc" id="L706">                    int session1Month = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_MONTH));</span>
+<span class="nc" id="L707">                    int session1Day = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_DAY));</span>
+<span class="nc" id="L708">                    int session1Hour = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HOUR));</span>
+<span class="nc" id="L709">                    int session1Min = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_MIN));</span>
+<span class="nc" id="L710">                    int session1Sec = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_SEC));</span>
+<span class="nc" id="L711">                    int duration1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_DURATION));</span>
+<span class="nc" id="L712">                    double distance1 = cursor.getDouble(cursor.getColumnIndex(HeartRateDBHelper.COL_DISTANCE));</span>
+<span class="nc" id="L713">                    int calories1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_CALORIES));</span>
+<span class="nc" id="L714">                    int hr_avg1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_AVG));</span>
+<span class="nc" id="L715">                    int hr_min1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_MIN));</span>
+<span class="nc" id="L716">                    int hr_max1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_MAX));</span>
+<span class="nc" id="L717">                    int red_zone1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_RED));</span>
+<span class="nc" id="L718">                    int yellow_zone1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_YELLOW));</span>
+<span class="nc" id="L719">                    int green_zone1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_GREEN));</span>
+<span class="nc" id="L720">                    int cyan_zone1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_CYAN));</span>
+<span class="nc" id="L721">                    int blue_zone1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_BLUE));</span>
+<span class="nc" id="L722">                    int num_of_data1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_COUNT));</span>
+<span class="nc" id="L723">                    int period1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_PERIOD));</span>
+<span class="nc" id="L724">                    int stride1 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_STRIDE));</span>
+
+<span class="nc" id="L726">                    cursor.close();</span>
+
+
+<span class="nc" id="L729">                    cursor = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION</span>
+<span class="nc" id="L730">                            + &quot; WHERE &quot; + HeartRateDBHelper.COL_ID + &quot; = &quot; + sessionIds.get(1), null);</span>
+
+<span class="nc" id="L732">                    cursor.moveToFirst();</span>
+<span class="nc" id="L733">                    int session2Id = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_ID));</span>
+<span class="nc" id="L734">                    int session2Year = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_YEAR));</span>
+<span class="nc" id="L735">                    int session2Month = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_MONTH));</span>
+<span class="nc" id="L736">                    int session2Day = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_DAY));</span>
+<span class="nc" id="L737">                    int session2Hour = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HOUR));</span>
+<span class="nc" id="L738">                    int session2Min = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_MIN));</span>
+<span class="nc" id="L739">                    int session2Sec = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_SEC));</span>
+<span class="nc" id="L740">                    int duration2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_DURATION));</span>
+<span class="nc" id="L741">                    double distance2 = cursor.getDouble(cursor.getColumnIndex(HeartRateDBHelper.COL_DISTANCE));</span>
+<span class="nc" id="L742">                    int calories2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_CALORIES));</span>
+<span class="nc" id="L743">                    int hr_avg2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_AVG));</span>
+<span class="nc" id="L744">                    int hr_min2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_MIN));</span>
+<span class="nc" id="L745">                    int hr_max2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_HR_MAX));</span>
+<span class="nc" id="L746">                    int red_zone2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_RED));</span>
+<span class="nc" id="L747">                    int yellow_zone2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_YELLOW));</span>
+<span class="nc" id="L748">                    int green_zone2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_GREEN));</span>
+<span class="nc" id="L749">                    int cyan_zone2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_CYAN));</span>
+<span class="nc" id="L750">                    int blue_zone2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_TIME_BLUE));</span>
+<span class="nc" id="L751">                    int num_of_data2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_COUNT));</span>
+<span class="nc" id="L752">                    int period2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_PERIOD));</span>
+<span class="nc" id="L753">                    int stride2 = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_STRIDE));</span>
+
+<span class="nc" id="L755">                    cursor.close();</span>
+
+
+<span class="nc" id="L758">                    Calendar calendar1 = Calendar.getInstance();</span>
+<span class="nc" id="L759">                    calendar1.set(session1Year, session1Month - 1, session1Day, session1Hour, session1Min, session1Sec); // Calendar�쓽 month�뒗 0遺��꽣 �떆�옉�븯誘�濡� month - 1</span>
+<span class="nc" id="L760">                    long session1StartTime = calendar1.getTimeInMillis();</span>
+<span class="nc" id="L761">                    long session1EndTime = session1StartTime + duration1 * 1000;</span>
+
+<span class="nc" id="L763">                    Calendar calendar2 = Calendar.getInstance();</span>
+<span class="nc" id="L764">                    calendar2.set(session2Year, session2Month - 1, session2Day, session2Hour, session2Min, session2Sec);</span>
+<span class="nc" id="L765">                    long session2StartTime = calendar2.getTimeInMillis();</span>
+
+                    // 1. �몢 �꽭�뀡�씠 �떆媛꾩쟻�쑝濡� �뿰�냽�쟻�씤吏� 寃��궗
+<span class="nc bnc" id="L768" title="All 6 branches missed.">                    if (session1StartTime &gt; session2StartTime</span>
+                            || session1EndTime &gt; session2StartTime
+                            || session2StartTime - session1EndTime &gt; TIME_GAP * 60 * 1000)
+                    {
+<span class="nc" id="L772">                        handler.post(new Runnable() {</span>
+                            public void run() {
+<span class="nc" id="L774">                                Toast.makeText(context, &quot;One session does not immediately follow the other session.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L775">                            }</span>
+                        });
+<span class="nc" id="L777">                        return;</span>
+                    }
+
+
+                    // 2. �몢 �꽭�뀡�씠 移쇰줈由ъ� �뒪�뀦�씠 �뿰�냽�쟻�씤吏� 寃��궗
+<span class="nc" id="L782">                    Cursor cursor1 = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR</span>
+                            + &quot; WHERE &quot; + HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + session1Id
+                            + &quot; ORDER BY &quot; + HeartRateDBHelper.COL_HR_INDEX + &quot; ASC &quot;, null);
+
+<span class="nc" id="L786">                    cursor1.moveToLast();</span>
+<span class="nc" id="L787">                    int calorie1 = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_CALORIE));</span>
+<span class="nc" id="L788">                    int step1 = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_STEP));</span>
+
+<span class="nc" id="L790">                    Cursor cursor2 = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR</span>
+                            + &quot; WHERE &quot; + HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + session2Id
+                            + &quot; ORDER BY &quot; + HeartRateDBHelper.COL_HR_INDEX + &quot; ASC &quot;, null);
+
+<span class="nc" id="L794">                    cursor2.moveToFirst();</span>
+<span class="nc" id="L795">                    int calorie2 = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_CALORIE));</span>
+<span class="nc" id="L796">                    int step2 = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_STEP));</span>
+
+<span class="nc bnc" id="L798" title="All 8 branches missed.">                    if (cursor1.getCount() &lt;= 0  || cursor2.getCount() &lt;= 0 || calorie1 &gt; calorie2 || step1 &gt; step2) {</span>
+<span class="nc" id="L799">                        handler.post(new Runnable() {</span>
+                            @Override
+                            public void run() {
+<span class="nc" id="L802">                                Toast.makeText(context, &quot;One session does not immediately follow the other session.&quot;, Toast.LENGTH_SHORT).show();</span>
+<span class="nc" id="L803">                            }</span>
+                        });
+
+<span class="nc" id="L806">                        cursor1.close();</span>
+<span class="nc" id="L807">                        cursor2.close();</span>
+
+<span class="nc" id="L809">                        return;</span>
+                    }
+
+
+<span class="nc" id="L813">                    handler.sendEmptyMessage(1); // Merge Start</span>
+
+<span class="nc bnc" id="L815" title="All 2 branches missed.">                    int max_period = (period1&gt;=period2) ? period1 : period2;</span>
+
+<span class="nc" id="L817">                    SessionData mergedSession = new SessionData(stride1, max_period);</span>
+
+//                    int time_elapsed = 0;
+<span class="nc" id="L820">                    int time_elapsed = max_period; // 理쒖큹 �뜲�씠���뒗 臾댁“嫄� 異붽��븯湲� �쐞�빐</span>
+
+
+                    // HeartRate DB1 update
+<span class="nc" id="L824">                    int new_index = -1;</span>
+
+<span class="nc" id="L826">                    int count1 = cursor1.getCount();</span>
+<span class="nc" id="L827">                    cursor1.moveToFirst();</span>
+
+<span class="nc" id="L829">                    int old_hr_index = -1;</span>
+<span class="nc" id="L830">                    int hr_index = 0;</span>
+
+<span class="nc bnc" id="L832" title="All 2 branches missed.">                    while (count1 &gt; 0) {</span>
+<span class="nc" id="L833">                        int hr_id = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_ID));</span>
+<span class="nc" id="L834">                        int heart_rate = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_HEARTRATE));</span>
+<span class="nc" id="L835">                        int act_level = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_ACTLEVEL));</span>
+<span class="nc" id="L836">                        int calorie = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_CALORIE));</span>
+<span class="nc" id="L837">                        int step = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_STEP));</span>
+<span class="nc" id="L838">                        int hrstatus = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_HRSTATUS));</span>
+<span class="nc" id="L839">                        hr_index = cursor1.getInt(cursor1.getColumnIndex(HeartRateDBHelper.COL_HR_INDEX));</span>
+
+<span class="nc" id="L841">                        int delta_index = hr_index - old_hr_index;</span>
+<span class="nc" id="L842">                        time_elapsed = time_elapsed + period1 * delta_index;</span>
+<span class="nc" id="L843">                        old_hr_index = hr_index;</span>
+
+<span class="nc bnc" id="L845" title="All 2 branches missed.">                        if (time_elapsed &gt;= max_period) {</span>
+<span class="nc" id="L846">                            new_index = new_index + delta_index;</span>
+
+<span class="nc" id="L848">                            mergedSession.putData(context, heart_rate, act_level, calorie, step, hrstatus, new_index);</span>
+
+<span class="nc" id="L850">                            time_elapsed = 0;</span>
+                        } else {
+                            // do nothing
+                        }
+
+<span class="nc" id="L855">                        cursor1.moveToNext();</span>
+<span class="nc" id="L856">                        count1 = count1 - 1;</span>
+<span class="nc" id="L857">                    }</span>
+
+<span class="nc" id="L859">                    cursor1.close();</span>
+
+<span class="nc" id="L861">                    long gap = (session2StartTime - session1EndTime) / 1000; // gap�� 珥덈떒�쐞</span>
+//                    int index_gap = hr_index + (int)(gap / max_period) + 1; // �븵 �꽭�뀡 �씤�뜳�뒪 �떎�쓬 �씤�뜳�뒪 + �꽭�뀡 媛� �떆媛� 媛꾧꺽�뿉 �쓽�븳 index_gap
+<span class="nc" id="L863">                    new_index = new_index + (int)(gap / max_period + 0.5);      // �떎�쓬 �꽭�뀡 �씤�뜳�뒪�쓽 �떆�옉(�븵 �꽭�뀡 �씤�뜳�뒪 �떎�쓬 �씤�뜳�뒪 + �꽭�뀡 媛� �떆媛� 媛꾧꺽)</span>
+<span class="nc" id="L864">                    int index_gap = new_index;                                // index_gap</span>
+
+
+<span class="nc" id="L867">                    time_elapsed = 0; // 珥덇린媛�</span>
+
+                    // HeartRate DB2 update
+<span class="nc" id="L870">                    int count2 = cursor2.getCount();</span>
+<span class="nc" id="L871">                    cursor2.moveToFirst();</span>
+
+<span class="nc" id="L873">                    old_hr_index = -1 + index_gap;</span>
+
+<span class="nc bnc" id="L875" title="All 2 branches missed.">                    while (count2 &gt; 0) {</span>
+<span class="nc" id="L876">                        int hr_id = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_ID));</span>
+<span class="nc" id="L877">                        int heart_rate = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_HEARTRATE));</span>
+<span class="nc" id="L878">                        int act_level = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_ACTLEVEL));</span>
+<span class="nc" id="L879">                        int calorie = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_CALORIE));</span>
+<span class="nc" id="L880">                        int step = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_STEP));</span>
+<span class="nc" id="L881">                        int hrstatus = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_HRSTATUS));</span>
+<span class="nc" id="L882">                        hr_index = cursor2.getInt(cursor2.getColumnIndex(HeartRateDBHelper.COL_HR_INDEX));</span>
+
+<span class="nc" id="L884">                        hr_index = hr_index + index_gap; // �븵 �꽭�뀡怨쇱쓽 gap�쑝濡� �씤�븳 index瑜� 諛섏쁺</span>
+
+<span class="nc" id="L886">                        int delta_index = hr_index - old_hr_index;</span>
+<span class="nc" id="L887">                        time_elapsed = time_elapsed + period2 * delta_index;</span>
+<span class="nc" id="L888">                        old_hr_index = hr_index;</span>
+
+<span class="nc bnc" id="L890" title="All 2 branches missed.">                        if (time_elapsed &gt;= max_period) {</span>
+<span class="nc" id="L891">                            new_index = new_index + delta_index;</span>
+
+<span class="nc" id="L893">                            mergedSession.putData(context, heart_rate, act_level, calorie, step, hrstatus, new_index);</span>
+
+<span class="nc" id="L895">                            time_elapsed = 0;</span>
+                        } else {
+                            // do nothing
+                        }
+
+<span class="nc" id="L900">                        cursor2.moveToNext();</span>
+<span class="nc" id="L901">                        count2 = count2 - 1;</span>
+<span class="nc" id="L902">                    }</span>
+
+<span class="nc" id="L904">                    cursor2.close();</span>
+
+                    // �떆�옉 �떆媛꾩쓣 session1�쓽 �떆媛꾩쑝濡� �꽕�젙
+<span class="nc" id="L907">                    mergedSession.setYear(session1Year);</span>
+<span class="nc" id="L908">                    mergedSession.setMonth(session1Month);</span>
+<span class="nc" id="L909">                    mergedSession.setDay(session1Day);</span>
+<span class="nc" id="L910">                    mergedSession.setHour(session1Hour);</span>
+<span class="nc" id="L911">                    mergedSession.setMin(session1Min);</span>
+<span class="nc" id="L912">                    mergedSession.setSec(session1Sec);</span>
+<span class="nc" id="L913">                    mergedSession.setCount(mergedSession.getNumOfData()); // merge�븳 寃쎌슦�뒗 �쟾泥� �뜲�씠��媛��닔媛� 蹂�寃쎈맖</span>
+
+<span class="nc" id="L915">                    mergedSession.writeToDB(context);</span>
+
+
+                    // �꽭�뀡 info�� �빐�떦 �뜲�씠�꽣瑜� 紐⑤몢 �궘�젣
+<span class="nc" id="L919">                    db.delete(HeartRateDBHelper.TABLE_NAME_SESSION, HeartRateDBHelper.COL_ID + &quot; = &quot; + session1Id, null);</span>
+<span class="nc" id="L920">                    db.delete(HeartRateDBHelper.TABLE_NAME_SESSION, HeartRateDBHelper.COL_ID + &quot; = &quot; + session2Id, null);</span>
+
+<span class="nc" id="L922">                    db.delete(HeartRateDBHelper.TABLE_NAME_HR, HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + session1Id, null);</span>
+<span class="nc" id="L923">                    db.delete(HeartRateDBHelper.TABLE_NAME_HR, HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + session2Id, null);</span>
+
+<span class="nc" id="L925">                    handler.sendEmptyMessage(0); // Merge End</span>
+
+<span class="nc" id="L927">                }</span>
+            }
+
+
+<span class="nc" id="L931">            new MyThread(this, mergeHandler).start();</span>
+
+        }
+<span class="nc" id="L934">    }</span>
+
+
+    private void generate_csv_file() {
+
+<span class="nc" id="L939">        FileWriter fout = null;</span>
+<span class="nc" id="L940">        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + &quot;/hrdata.csv&quot;;</span>
+
+<span class="nc" id="L942">        File file = new File(path);</span>
+
+        try {
+<span class="nc" id="L945">            fout = new FileWriter(file);</span>
+<span class="nc" id="L946">        } catch (IOException e) {</span>
+<span class="nc" id="L947">            e.printStackTrace();</span>
+<span class="nc" id="L948">        }</span>
+
+<span class="nc" id="L950">        final Uri fileUri = Uri.fromFile(file);</span>
+
+
+<span class="nc bnc" id="L953" title="All 2 branches missed.">        for(int i=0; i&lt;expandableListAdapter.getGroupCount(); i++) {</span>
+<span class="nc bnc" id="L954" title="All 2 branches missed.">            if (check_string_array[i].equals(&quot;true&quot;)) {</span>
+<span class="nc" id="L955">                long id = expandableListAdapter.getGroupId(i);</span>
+
+<span class="nc" id="L957">                Cursor cursor = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_SESSION</span>
+                        + &quot; WHERE &quot; + HeartRateDBHelper.COL_ID + &quot; = &quot; + id, null);
+
+                try {
+<span class="nc" id="L961">                    fout.write(&quot;year,month,day,hour,min,sec,duration,distance,calories,&quot; +</span>
+                            &quot;hr_avg,hr_min,hr_max,&quot; +
+                            &quot;red_zone,yellow_zone,green_zone,cyan_zone,blue_zone,&quot; +
+                            &quot;num_of_data,period,stride,session_id&quot; + &quot;\n&quot;);
+<span class="nc" id="L965">                    fout.flush();</span>
+<span class="nc" id="L966">                } catch (IOException e) {</span>
+//                        e.printStackTrace();
+<span class="nc" id="L968">                }</span>
+
+<span class="nc" id="L970">                long startTime = 0;</span>
+<span class="nc" id="L971">                int period = 1;</span>
+
+<span class="nc" id="L973">                int count = cursor.getCount();</span>
+<span class="nc" id="L974">                cursor.moveToFirst();</span>
+<span class="nc bnc" id="L975" title="All 2 branches missed.">                while(count &gt; 0) {</span>
+<span class="nc" id="L976">                    int sessionid   = cursor.getInt(0);</span>
+<span class="nc" id="L977">                    int year        = cursor.getInt(1);</span>
+<span class="nc" id="L978">                    int month       = cursor.getInt(2);</span>
+<span class="nc" id="L979">                    int day         = cursor.getInt(3);</span>
+<span class="nc" id="L980">                    int hour        = cursor.getInt(4);</span>
+<span class="nc" id="L981">                    int min         = cursor.getInt(5);</span>
+<span class="nc" id="L982">                    int sec         = cursor.getInt(6);</span>
+<span class="nc" id="L983">                    int duration    = cursor.getInt(7);</span>
+<span class="nc" id="L984">                    double distance = cursor.getDouble(8);</span>
+<span class="nc" id="L985">                    int calories    = cursor.getInt(9);</span>
+<span class="nc" id="L986">                    int hr_avg      = cursor.getInt(10);</span>
+<span class="nc" id="L987">                    int hr_min      = cursor.getInt(11);</span>
+<span class="nc" id="L988">                    int hr_max      = cursor.getInt(12);</span>
+<span class="nc" id="L989">                    int red_zone    = cursor.getInt(13);</span>
+<span class="nc" id="L990">                    int yellow_zone = cursor.getInt(14);</span>
+<span class="nc" id="L991">                    int green_zone  = cursor.getInt(15);</span>
+<span class="nc" id="L992">                    int cyan_zone   = cursor.getInt(16);</span>
+<span class="nc" id="L993">                    int blue_zone   = cursor.getInt(17);</span>
+<span class="nc" id="L994">                    int num_of_data = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_COUNT));</span>
+<span class="nc" id="L995">                    period      = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_PERIOD));</span>
+<span class="nc" id="L996">                    int stride      = cursor.getInt(cursor.getColumnIndex(HeartRateDBHelper.COL_STRIDE));</span>
+
+<span class="nc" id="L998">                    Calendar calendar = Calendar.getInstance();</span>
+<span class="nc" id="L999">                    calendar.set(year, month-1, day, hour, min, sec); // month - 1</span>
+<span class="nc" id="L1000">                    startTime = calendar.getTimeInMillis();</span>
+
+<span class="nc" id="L1002">                    String s = year + &quot;,&quot; + month + &quot;,&quot; + day + &quot;,&quot;</span>
+                                + hour + &quot;,&quot; + min + &quot;,&quot; + sec + &quot;,&quot;
+                                + duration + &quot;,&quot; + distance + &quot;,&quot; + calories + &quot;,&quot;
+                                + hr_avg + &quot;,&quot; + hr_min + &quot;,&quot; + hr_max + &quot;,&quot;
+                                + red_zone + &quot;,&quot; + yellow_zone + &quot;,&quot; + green_zone + &quot;,&quot;
+                                + cyan_zone + &quot;,&quot; + blue_zone + &quot;,&quot;
+                                + num_of_data + &quot;,&quot; + period + &quot;,&quot; + stride + &quot;,&quot;
+                                + sessionid + &quot;\n&quot;;
+                    try {
+<span class="nc" id="L1011">                        fout.write(s);</span>
+<span class="nc" id="L1012">                        fout.flush();</span>
+<span class="nc" id="L1013">                    } catch (IOException e) {</span>
+//                        e.printStackTrace();
+<span class="nc" id="L1015">                    }</span>
+
+<span class="nc" id="L1017">                    cursor.moveToNext();</span>
+<span class="nc" id="L1018">                    count = count - 1;</span>
+<span class="nc" id="L1019">                }</span>
+<span class="nc" id="L1020">                cursor.close();</span>
+
+                try {
+<span class="nc" id="L1023">                    fout.write(&quot;measuring_time,hr_index,heart_rate,act_level,calorie,step,hr_status,hr_id,session_id&quot; + &quot;\n&quot;);</span>
+<span class="nc" id="L1024">                    fout.flush();</span>
+<span class="nc" id="L1025">                } catch (IOException e) {</span>
+//                        e.printStackTrace();
+<span class="nc" id="L1027">                }</span>
+
+<span class="nc" id="L1029">                cursor = db.rawQuery(&quot;SELECT * FROM &quot; + HeartRateDBHelper.TABLE_NAME_HR</span>
+                        + &quot; WHERE &quot; + HeartRateDBHelper.COL_SESSION_ID + &quot; = &quot; + id
+                        + &quot; ORDER BY &quot; + HeartRateDBHelper.COL_HR_INDEX + &quot; ASC &quot;, null);
+
+<span class="nc" id="L1033">                count = cursor.getCount();</span>
+<span class="nc" id="L1034">                cursor.moveToFirst();</span>
+<span class="nc bnc" id="L1035" title="All 2 branches missed.">                while(count &gt; 0) {</span>
+<span class="nc" id="L1036">                    int hr_id       = cursor.getInt(0);</span>
+<span class="nc" id="L1037">                    int heart_rate  = cursor.getInt(1);</span>
+<span class="nc" id="L1038">                    int act_level   = cursor.getInt(2);</span>
+<span class="nc" id="L1039">                    int calorie     = cursor.getInt(3);</span>
+<span class="nc" id="L1040">                    int step        = cursor.getInt(4);</span>
+<span class="nc" id="L1041">                    int hr_status   = cursor.getInt(5);</span>
+<span class="nc" id="L1042">                    int hr_index    = cursor.getInt(6);</span>
+<span class="nc" id="L1043">                    int session_id  = cursor.getInt(7);</span>
+
+<span class="nc" id="L1045">                    long measuring_time = startTime + hr_index * period * 1000;</span>
+<span class="nc" id="L1046">                    SimpleDateFormat timeFormat = new SimpleDateFormat(TIME_FORMAT);</span>
+
+<span class="nc" id="L1048">                    String s = timeFormat.format(measuring_time) + &quot;,&quot; + hr_index + &quot;,&quot;</span>
+                            + heart_rate + &quot;,&quot; + act_level + &quot;,&quot; + calorie + &quot;,&quot;
+                            + step + &quot;,&quot; + hr_status + &quot;,&quot; + hr_id + &quot;,&quot; + session_id + &quot;\n&quot;;
+
+                    try {
+<span class="nc" id="L1053">                        fout.write(s);</span>
+<span class="nc" id="L1054">                        fout.flush();</span>
+<span class="nc" id="L1055">                    } catch (IOException e) {</span>
+//                        e.printStackTrace();
+<span class="nc" id="L1057">                    }</span>
+
+<span class="nc" id="L1059">                    cursor.moveToNext();</span>
+<span class="nc" id="L1060">                    count = count - 1;</span>
+<span class="nc" id="L1061">                }</span>
+<span class="nc" id="L1062">                cursor.close();</span>
+            }
+
+        }
+        try {
+<span class="nc" id="L1067">            fout.close();</span>
+<span class="nc" id="L1068">        } catch (IOException e) {</span>
+
+<span class="nc" id="L1070">        }</span>
+
+<span class="nc" id="L1072">        Intent intent = new Intent(Intent.ACTION_SEND);</span>
+<span class="nc" id="L1073">        intent.setType(&quot;plain/text&quot;);</span>
+
+<span class="nc" id="L1075">        intent.putExtra(Intent.EXTRA_SUBJECT, &quot;Session Data&quot;);</span>
+<span class="nc" id="L1076">        intent.putExtra(Intent.EXTRA_STREAM, fileUri);</span>
+<span class="nc" id="L1077">        startActivity(intent);</span>
+<span class="nc" id="L1078">    }</span>
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+<span class="nc bnc" id="L1082" title="All 2 branches missed.">        if (event.getAction() == KeyEvent.ACTION_DOWN) {</span>
+<span class="nc bnc" id="L1083" title="All 2 branches missed.">            switch (keyCode) {</span>
+                case KeyEvent.KEYCODE_BACK:
+<span class="nc" id="L1085">                    new AlertDialog.Builder(this).setIcon(android.R.drawable.ic_dialog_alert)</span>
+<span class="nc" id="L1086">                            .setTitle(&quot;Quit&quot;)</span>
+<span class="nc" id="L1087">                            .setMessage(&quot;Do you want to quit?&quot;)</span>
+<span class="nc" id="L1088">                            .setPositiveButton(&quot;Yes&quot;, new DialogInterface.OnClickListener() {</span>
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+<span class="nc" id="L1091">                                    Intent intent = new Intent();</span>
+<span class="nc" id="L1092">                                    intent.setAction(MainActivity.ACTION_FINISH_ACTIVITY);</span>
+<span class="nc" id="L1093">                                    setResult(RESULT_OK, intent);</span>
+<span class="nc" id="L1094">                                    finish();</span>
+//                                    finishAffinity();
+<span class="nc" id="L1096">                                }</span>
+<span class="nc" id="L1097">                            }).setNegativeButton( &quot;No&quot;, null ).show();</span>
+<span class="nc" id="L1098">                    return true;</span>
+            }
+        }
+<span class="nc" id="L1101">        return super.onKeyDown(keyCode, event);</span>
+    }
+
+    // Google Sync
+    private void buildFitnessClient(ArrayList&lt;Integer&gt; sessionIds) {
+<span class="nc" id="L1106">        final ArrayList&lt;Integer&gt; _sessionIds = sessionIds;</span>
+
+<span class="nc" id="L1108">        canDeleteFlag = false;</span>
+//        canGoogleSync = false;
+
+        // Create the Google API Client
+<span class="nc" id="L1112">        mClient = new GoogleApiClient.Builder(this)</span>
+<span class="nc" id="L1113">                .addApi(Fitness.HISTORY_API)</span>
+<span class="nc" id="L1114">                .addApi(Fitness.SESSIONS_API)</span>
+<span class="nc" id="L1115">                .addScope(new Scope(Scopes.FITNESS_LOCATION_READ_WRITE))</span>
+<span class="nc" id="L1116">                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))</span>
+<span class="nc" id="L1117">                .addScope(new Scope(Scopes.FITNESS_BODY_READ_WRITE))</span>
+<span class="nc" id="L1118">                .addConnectionCallbacks(</span>
+<span class="nc" id="L1119">                        new GoogleApiClient.ConnectionCallbacks() {</span>
+                            @Override
+                            public void onConnected(Bundle bundle) {
+<span class="nc" id="L1122">                                Log.i(TAG, &quot;Connected!!!&quot;);</span>
+                                // Now you can make calls to the Fitness APIs.  What to do?
+                                // Play with some sessions!!
+<span class="nc" id="L1125">                                new GoogleFitSync(SessionDataActivity.this, mClient, _sessionIds, canDeleteFlag).execute();</span>
+<span class="nc" id="L1126">                            }</span>
+
+                            @Override
+                            public void onConnectionSuspended(int i) {
+                                // If your connection to the sensor gets lost at some point,
+                                // you'll be able to determine the reason and react to it here.
+<span class="nc bnc" id="L1132" title="All 2 branches missed.">                                if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {</span>
+<span class="nc" id="L1133">                                    Log.i(TAG, &quot;Connection lost.  Cause: Network Lost.&quot;);</span>
+<span class="nc bnc" id="L1134" title="All 2 branches missed.">                                } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {</span>
+<span class="nc" id="L1135">                                    Log.i(TAG, &quot;Connection lost.  Reason: Service Disconnected&quot;);</span>
+                                }
+<span class="nc" id="L1137">                            }</span>
+                        }
+                )
+<span class="nc" id="L1140">                .addOnConnectionFailedListener(</span>
+<span class="nc" id="L1141">                        new GoogleApiClient.OnConnectionFailedListener() {</span>
+                            // Called whenever the API client fails to connect.
+                            @Override
+                            public void onConnectionFailed(ConnectionResult result) {
+<span class="nc" id="L1145">                                Log.i(TAG, &quot;Connection failed. Cause: &quot; + result.toString());</span>
+<span class="nc bnc" id="L1146" title="All 2 branches missed.">                                if (!result.hasResolution()) {</span>
+                                    // Show the localized error dialog
+<span class="nc" id="L1148">                                    GooglePlayServicesUtil.getErrorDialog(result.getErrorCode(),</span>
+<span class="nc" id="L1149">                                            SessionDataActivity.this, 0).show();</span>
+<span class="nc" id="L1150">                                    return;</span>
+                                }
+                                // The failure has a resolution. Resolve it.
+                                // Called typically when the app is not yet authorized, and an
+                                // authorization dialog is displayed to the user.
+<span class="nc bnc" id="L1155" title="All 2 branches missed.">                                if (!authInProgress) {</span>
+                                    try {
+<span class="nc" id="L1157">                                        Log.i(TAG, &quot;Attempting to resolve failed connection&quot;);</span>
+<span class="nc" id="L1158">                                        authInProgress = true;</span>
+<span class="nc" id="L1159">                                        result.startResolutionForResult(SessionDataActivity.this,</span>
+                                                REQUEST_OAUTH);
+<span class="nc" id="L1161">                                    } catch (IntentSender.SendIntentException e) {</span>
+<span class="nc" id="L1162">                                        Log.e(TAG,</span>
+<span class="nc" id="L1163">                                                &quot;Exception while starting resolution activity &quot; + e.toString());</span>
+<span class="nc" id="L1164">                                    }</span>
+                                }
+<span class="nc" id="L1166">                            }</span>
+                        }
+                )
+<span class="nc" id="L1169">                .build();</span>
+
+<span class="nc" id="L1171">        mClient.connect();</span>
+<span class="nc" id="L1172">    }</span>
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+<span class="nc" id="L1176">        super.onActivityResult(requestCode, resultCode, data);</span>
+<span class="nc bnc" id="L1177" title="All 2 branches missed.">        if (requestCode == REQUEST_OAUTH) {</span>
+<span class="nc" id="L1178">            authInProgress = false;</span>
+<span class="nc bnc" id="L1179" title="All 2 branches missed.">            if (resultCode == RESULT_OK) {</span>
+                // Make sure the app is not already connected or attempting to connect
+<span class="nc bnc" id="L1181" title="All 4 branches missed.">                if (!mClient.isConnecting() &amp;&amp; !mClient.isConnected()) {</span>
+<span class="nc" id="L1182">                    mClient.connect();</span>
+                }
+            }
+        }
+<span class="nc bnc" id="L1186" title="All 2 branches missed.">        else if (resultCode==RESULT_OK) {</span>
+<span class="nc" id="L1187">            String action = data.getAction();</span>
+<span class="nc bnc" id="L1188" title="All 4 branches missed.">            if (action != null &amp;&amp; MainActivity.ACTION_FINISH_ACTIVITY.equals(action)) {</span>
+<span class="nc" id="L1189">                Intent intent = new Intent();</span>
+<span class="nc" id="L1190">                intent.setAction(MainActivity.ACTION_FINISH_ACTIVITY);</span>
+<span class="nc" id="L1191">                setResult(RESULT_OK, intent);</span>
+<span class="nc" id="L1192">                finish();</span>
+            }
+        }
+<span class="nc" id="L1195">    }</span>
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
